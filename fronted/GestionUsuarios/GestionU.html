@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Usuarios - Sistema Na'Guara</title>
+    <link rel="stylesheet" href="GestionU.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+        
+</head>
+<body class="min-h-full">
+    <main class="container mx-auto p-6 max-w-7xl">
+        <!-- Header -->
+        <header class="card p-8 mb-8 fade-in">
+            <section class="flex items-center justify-between">
+                <hgroup>
+                    <h1 class="text-4xl font-bold gradient-text mb-2">
+                        <i class="fas fa-users-cog mr-3"></i>
+                        Gestión de Usuarios
+                    </h1>
+                    <p class="text-gray-600 text-lg">Control de accesos y permisos del sistema</p>
+          
+                </hgroup>
+
+            </section>
+        </header>
+
+        <!-- Estadísticas Rápidas -->
+        <section class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <article class="card p-6 text-center fade-in">
+                <div class="text-3xl font-bold text-purple-600 mb-2" id="total-users">5</div>
+                <div class="text-gray-600">Total Usuarios</div>
+            </article>
+            <article class="card p-6 text-center fade-in">
+                <div class="text-3xl font-bold text-purple-600 mb-2" id="active-users">4</div>
+                <div class="text-gray-600">Usuarios Activos</div>
+            </article>
+            <article class="card p-6 text-center fade-in">
+                <div class="text-3xl font-bold text-purple-600 mb-2" id="admin-users">2</div>
+                <div class="text-gray-600">Administradores</div>
+            </article>
+            <article class="card p-6 text-center fade-in">
+                <div class="text-3xl font-bold text-orange-600 mb-2" id="temp-access">1</div>
+                <div class="text-gray-600">Accesos Temporales</div>
+            </article>
+        </section>
+
+        <!-- Controles Principales -->
+        <section class="card p-6 mb-8 fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center space-x-4">
+                    <button id="add-user" class="btn-primary">
+                        <i class="fas fa-user-plus mr-2"></i>
+                        Nuevo Usuario
+                    </button>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <input type="text" id="search-users" placeholder="Buscar usuarios..." 
+                               class="input-field pl-12 w-64">
+                        <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <select id="filter-role" class="input-field">
+                        <option value="">Todos los roles</option>
+                        <option value="super_admin">Super Administrador</option>
+                        <option value="admin">Administrador</option>
+                        <option value="vendor">Vendedor</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tabla de Usuarios -->
+        <section class="card overflow-hidden fade-in">
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <caption class="sr-only">Lista de usuarios del sistema</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">
+                                <input type="checkbox" id="select-all" class="permission-checkbox">
+                            </th>
+                            <th scope="col">Usuario</th>
+                            <th scope="col">Rol</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col">Último Acceso</th>
+                            <th scope="col">Permisos Especiales</th>
+                            <th scope="col">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <!-- Los usuarios se cargarán dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+
+    </main>
+
+    <!-- Modal: Nuevo/Editar Usuario -->
+    <div id="user-modal" class="modal hidden">
+        <div class="modal-content">
+            <header class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold gradient-text" id="user-modal-title">
+                    <i class="fas fa-user-plus mr-2"></i>
+                    Nuevo Usuario
+                </h2>
+                <button id="close-user-modal" class="text-gray-500 hover:text-gray-700 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+            
+            <form id="user-form" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="user-name" class="block text-sm font-medium text-gray-700 mb-2">
+                            Nombre Completo *
+                        </label>
+                        <input type="text" id="user-name" name="name" class="input-field w-full" required>
+                    </div>
+                    <div>
+                        <label for="user-email" class="block text-sm font-medium text-gray-700 mb-2">
+                            Correo Electrónico *
+                        </label>
+                        <input type="email" id="user-email" name="email" class="input-field w-full" required>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="user-role" class="block text-sm font-medium text-gray-700 mb-2">
+                            Rol del Usuario *
+                        </label>
+                        <select id="user-role" name="role" class="input-field w-full" required>
+                            <option value="">Seleccionar rol</option>
+                            <option value="admin">Administrador</option>
+                            <option value="vendor">Vendedor</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="user-status" class="block text-sm font-medium text-gray-700 mb-2">
+                            Estado
+                        </label>
+                        <select id="user-status" name="status" class="input-field w-full">
+                            <option value="active">Activo</option>
+                            <option value="inactive">Inactivo</option>
+                            <option value="suspended">Suspendido</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="password-section">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="user-password" class="block text-sm font-medium text-gray-700 mb-2">
+                                Contraseña *
+                            </label>
+                            <input type="password" id="user-password" name="password" class="input-field w-full">
+                        </div>
+                        <div>
+                            <label for="user-password-confirm" class="block text-sm font-medium text-gray-700 mb-2">
+                                Confirmar Contraseña *
+                            </label>
+                            <input type="password" id="user-password-confirm" name="password_confirm" class="input-field w-full">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-4 pt-6 border-t">
+                    <button type="button" id="cancel-user" class="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-all">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save mr-2"></i>
+                        Guardar Usuario
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Editor de Permisos -->
+    <div id="permissions-modal" class="modal hidden">
+        <div class="modal-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold gradient-text">
+                        <i class="fas fa-shield-alt mr-2"></i>
+                        Editor de Permisos
+                    </h2>
+                    <p class="text-gray-600 mt-1">Usuario: <span id="permissions-user-name" class="font-semibold"></span></p>
+                </div>
+                <button id="close-permissions-modal" class="text-gray-500 hover:text-gray-700 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+            
+            <div class="mb-6">
+                <div class="flex items-center space-x-4">
+                    <button id="select-all-permissions" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all">
+                        <i class="fas fa-check-double mr-2"></i>
+                        Seleccionar Todo
+                    </button>
+                    <button id="clear-all-permissions" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all">
+                        <i class="fas fa-times-circle mr-2"></i>
+                        Limpiar Todo
+                    </button>
+                    <button id="apply-template" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all">
+                        <i class="fas fa-clipboard-list mr-2"></i>
+                        Aplicar Plantilla
+                    </button>
+                </div>
+            </div>
+            
+            <div id="permissions-container" class="space-y-4 max-h-96 overflow-y-auto">
+                <!-- Los módulos de permisos se cargarán dinámicamente -->
+            </div>
+            
+            <div class="flex justify-end space-x-4 pt-6 border-t mt-6">
+                <button type="button" id="cancel-permissions" class="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-all">
+                    Cancelar
+                </button>
+                <button type="button" id="save-permissions" class="btn-success">
+                    <i class="fas fa-shield-check mr-2"></i>
+                    Guardar Permisos
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Acceso Temporal -->
+    <div id="temp-access-modal" class="modal hidden">
+        <div class="modal-content max-w-md">
+            <header class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-orange-600">
+                    <i class="fas fa-clock mr-2"></i>
+                    Acceso Temporal
+                </h2>
+                <button id="close-temp-modal" class="text-gray-500 hover:text-gray-700 text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+            
+            <div class="space-y-4">
+                <p class="text-gray-700">Otorgar acceso temporal a: <span id="temp-user-name" class="font-semibold"></span></p>
+                
+                <div>
+                    <label for="temp-module" class="block text-sm font-medium text-gray-700 mb-2">
+                        Módulo *
+                    </label>
+                    <select id="temp-module" class="input-field w-full" required>
+                        <option value="">Seleccionar módulo</option>
+                        <option value="inventario">Inventario Completo</option>
+                        <option value="reportes">Reportes Avanzados</option>
+                        <option value="configuracion">Configuración</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="temp-expiry" class="block text-sm font-medium text-gray-700 mb-2">
+                        Fecha de Expiración *
+                    </label>
+                    <input type="datetime-local" id="temp-expiry" class="input-field w-full" required>
+                </div>
+                
+                <div>
+                    <label for="temp-reason" class="block text-sm font-medium text-gray-700 mb-2">
+                        Motivo
+                    </label>
+                    <textarea id="temp-reason" class="input-field w-full" rows="3" placeholder="Ej: Inventario físico mensual"></textarea>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button id="cancel-temp-access" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all">
+                    Cancelar
+                </button>
+                <button id="grant-temp-access" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                    <i class="fas fa-clock mr-2"></i>
+                    Otorgar Acceso
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Clave Maestra -->
+    <div id="master-key-modal" class="modal hidden">
+        <div class="modal-content max-w-md">
+            <header class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-red-600">
+                    <i class="fas fa-key mr-2"></i>
+                    Verificación de Seguridad
+                </h2>
+                <button id="close-master-key-modal" class="text-gray-500 hover:text-gray-700 text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+            
+            <div class="space-y-4">
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p class="text-red-800 text-sm">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Esta acción requiere confirmación con clave maestra
+                    </p>
+                </div>
+                
+                <div>
+                    <label for="master-key-input" class="block text-sm font-medium text-gray-700 mb-2">
+                        Clave Maestra *
+                    </label>
+                    <input type="password" id="master-key-input" class="input-field w-full" placeholder="Ingrese la clave maestra">
+                </div>
+                
+                <div id="master-key-error" class="hidden text-red-600 text-sm">
+                    <i class="fas fa-times-circle mr-1"></i>
+                    Clave maestra incorrecta
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button id="cancel-master-key" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all">
+                    Cancelar
+                </button>
+                <button id="confirm-master-key" class="btn-danger">
+                    <i class="fas fa-shield-alt mr-2"></i>
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Confirmación -->
+    <div id="confirm-modal" class="modal hidden">
+        <div class="modal-content max-w-md">
+            <header class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-orange-600">
+                    <i class="fas fa-question-circle mr-2"></i>
+                    Confirmar Acción
+                </h2>
+                <button id="close-confirm-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </header>
+            <div class="mb-6">
+                <p id="confirm-title" class="text-gray-800 font-semibold mb-2"></p>
+                <p id="confirm-message" class="text-gray-600 text-sm"></p>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="cancel-confirm" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all">
+                    Cancelar
+                </button>
+                <button id="accept-confirm" class="btn-danger">
+                    <i class="fas fa-check mr-2"></i>
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulación de Base de Datos
+        let usersDB = [
+            {
+                id: 1,
+                name: 'Super Administrador',
+                email: 'super@naguara.com',
+                role: 'super_admin',
+                status: 'active',
+                lastAccess: new Date('2024-01-15T10:30:00'),
+                permissions: {
+                    ventas: { read: true, write: true, delete: true },
+                    inventario: { read: true, write: true, delete: true },
+                    compras: { read: true, write: true, delete: true },
+                    reportes: { read: true, write: true, delete: true },
+                    configuracion: { read: true, write: true, delete: true },
+                    usuarios: { read: true, write: true, delete: true }
+                },
+                tempAccess: []
+            },
+            {
+                id: 2,
+                name: 'María González',
+                email: 'maria@naguara.com',
+                role: 'admin',
+                status: 'active',
+                lastAccess: new Date('2024-01-15T09:15:00'),
+                permissions: {
+                    ventas: { read: true, write: true, delete: true },
+                    inventario: { read: true, write: true, delete: false },
+                    compras: { read: true, write: true, delete: false },
+                    reportes: { read: true, write: false, delete: false },
+                    configuracion: { read: true, write: false, delete: false },
+                    usuarios: { read: true, write: true, delete: false }
+                },
+                tempAccess: [
+                    {
+                        module: 'inventario',
+                        expiry: new Date('2024-01-20T23:59:59'),
+                        reason: 'Inventario físico mensual',
+                        grantedBy: 1,
+                        grantedAt: new Date('2024-01-15T08:00:00')
+                    }
+                ]
+            },
+            {
+                id: 3,
+                name: 'Carlos Mendoza',
+                email: 'carlos@naguara.com',
+                role: 'vendor',
+                status: 'active',
+                lastAccess: new Date('2024-01-15T08:45:00'),
+                permissions: {
+                    ventas: { read: true, write: true, delete: false },
+                    inventario: { read: true, write: false, delete: false },
+                    compras: { read: false, write: false, delete: false },
+                    reportes: { read: true, write: false, delete: false },
+                    configuracion: { read: false, write: false, delete: false },
+                    usuarios: { read: false, write: false, delete: false }
+                },
+                tempAccess: []
+            },
+            {
+                id: 4,
+                name: 'Ana Rodríguez',
+                email: 'ana@naguara.com',
+                role: 'vendor',
+                status: 'active',
+                lastAccess: new Date('2024-01-14T16:20:00'),
+                permissions: {
+                    ventas: { read: true, write: true, delete: false },
+                    inventario: { read: true, write: false, delete: false },
+                    compras: { read: false, write: false, delete: false },
+                    reportes: { read: true, write: false, delete: false },
+                    configuracion: { read: false, write: false, delete: false },
+                    usuarios: { read: false, write: false, delete: false }
+                },
+                tempAccess: []
+            },
+            {
+                id: 5,
+                name: 'Luis Pérez',
+                email: 'luis@naguara.com',
+                role: 'admin',
+                status: 'suspended',
+                lastAccess: new Date('2024-01-10T14:30:00'),
+                permissions: {
+                    ventas: { read: true, write: true, delete: true },
+                    inventario: { read: true, write: true, delete: false },
+                    compras: { read: true, write: true, delete: false },
+                    reportes: { read: true, write: false, delete: false },
+                    configuracion: { read: true, write: false, delete: false },
+                    usuarios: { read: true, write: true, delete: false }
+                },
+                tempAccess: []
+            }
+        ];
+
+        let activityLogsDB = [
+            {
+                id: 1,
+                userId: 2,
+                action: 'permissions_updated',
+                description: 'Permisos actualizados para Carlos Mendoza',
+                timestamp: new Date('2024-01-15T10:15:00'),
+                performedBy: 1
+            },
+            {
+                id: 2,
+                userId: 2,
+                action: 'temp_access_granted',
+                description: 'Acceso temporal otorgado al módulo Inventario',
+                timestamp: new Date('2024-01-15T08:00:00'),
+                performedBy: 1
+            },
+            {
+                id: 3,
+                userId: 5,
+                action: 'user_suspended',
+                description: 'Usuario suspendido por violación de políticas',
+                timestamp: new Date('2024-01-12T16:45:00'),
+                performedBy: 1
+            }
+        ];
+
+        // Constantes
+        const MASTER_KEY = 'NAGUARA2024';
+        const CURRENT_USER_ID = 1; // Super Admin
+        let currentEditingUser = null;
+        let pendingAction = null;
+
+        // Módulos y permisos disponibles
+        const MODULES = {
+            ventas: {
+                name: 'Ventas',
+                icon: 'fas fa-shopping-cart',
+                color: 'text-green-600',
+                permissions: ['read', 'write', 'delete']
+            },
+            inventario: {
+                name: 'Inventario',
+                icon: 'fas fa-boxes',
+                color: 'text-blue-600',
+                permissions: ['read', 'write', 'delete']
+            },
+            compras: {
+                name: 'Compras',
+                icon: 'fas fa-truck',
+                color: 'text-purple-600',
+                permissions: ['read', 'write', 'delete']
+            },
+            reportes: {
+                name: 'Reportes',
+                icon: 'fas fa-chart-bar',
+                color: 'text-indigo-600',
+                permissions: ['read', 'write', 'delete']
+            },
+            configuracion: {
+                name: 'Configuración',
+                icon: 'fas fa-cogs',
+                color: 'text-orange-600',
+                permissions: ['read', 'write', 'delete']
+            },
+            usuarios: {
+                name: 'Usuarios',
+                icon: 'fas fa-users',
+                color: 'text-red-600',
+                permissions: ['read', 'write', 'delete']
+            }
+        };
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+        });
+
+        function initializeApp() {
+            loadUsers();
+            updateStatistics();
+        }
+
+        function setupEventListeners() {
+            // Botones principales
+            document.getElementById('add-user').addEventListener('click', showAddUserModal);
+            document.getElementById('search-users').addEventListener('input', filterUsers);
+            document.getElementById('filter-role').addEventListener('change', filterUsers);
+
+            // Modal usuario
+            document.getElementById('close-user-modal').addEventListener('click', closeUserModal);
+            document.getElementById('cancel-user').addEventListener('click', closeUserModal);
+            document.getElementById('user-form').addEventListener('submit', saveUser);
+
+            // Modal permisos
+            document.getElementById('close-permissions-modal').addEventListener('click', closePermissionsModal);
+            document.getElementById('cancel-permissions').addEventListener('click', closePermissionsModal);
+            document.getElementById('save-permissions').addEventListener('click', savePermissions);
+            document.getElementById('select-all-permissions').addEventListener('click', selectAllPermissions);
+            document.getElementById('clear-all-permissions').addEventListener('click', clearAllPermissions);
+
+            // Modal acceso temporal
+            document.getElementById('close-temp-modal').addEventListener('click', closeTempAccessModal);
+            document.getElementById('cancel-temp-access').addEventListener('click', closeTempAccessModal);
+            document.getElementById('grant-temp-access').addEventListener('click', grantTempAccess);
+
+            // Modal clave maestra
+            document.getElementById('close-master-key-modal').addEventListener('click', closeMasterKeyModal);
+            document.getElementById('cancel-master-key').addEventListener('click', closeMasterKeyModal);
+            document.getElementById('confirm-master-key').addEventListener('click', confirmMasterKey);
+
+            // Modal confirmación
+            document.getElementById('close-confirm-modal').addEventListener('click', closeConfirmModal);
+            document.getElementById('cancel-confirm').addEventListener('click', closeConfirmModal);
+            document.getElementById('accept-confirm').addEventListener('click', acceptConfirm);
+        }
+
+        function loadUsers() {
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = '';
+
+            usersDB.forEach(user => {
+                const row = createUserRow(user);
+                tbody.appendChild(row);
+            });
+        }
+
+        function createUserRow(user) {
+            const tr = document.createElement('tr');
+            tr.dataset.userId = user.id;
+            
+            // Verificar accesos temporales activos
+            const activeTempAccess = user.tempAccess.filter(access => new Date(access.expiry) > new Date());
+            
+            tr.innerHTML = `
+                <td>
+                    <input type="checkbox" class="permission-checkbox user-checkbox" value="${user.id}">
+                </td>
+                <td>
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 flex items-center justify-center text-white font-bold mr-3">
+                            ${user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div class="font-semibold text-gray-800">${user.name}</div>
+                            <div class="text-sm text-gray-500">${user.email}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="role-badge role-${user.role.replace('_', '-')}">${getRoleName(user.role)}</span>
+                </td>
+                <td>
+                    <span class="role-badge status-${user.status}">${getStatusName(user.status)}</span>
+                </td>
+                <td>
+                    <div class="text-sm text-gray-600">
+                        ${formatDate(user.lastAccess)}
+                    </div>
+                </td>
+                <td>
+                    ${activeTempAccess.length > 0 ? 
+                        `<span class="temp-access-badge">${activeTempAccess.length} temporal${activeTempAccess.length > 1 ? 'es' : ''}</span>` : 
+                        '<span class="text-gray-400 text-sm">Ninguno</span>'
+                    }
+                </td>
+                <td>
+                    <div class="flex items-center">
+                        <button onclick="editUser(${user.id})" class="action-btn bg-blue-500 text-white hover:bg-blue-600" title="Editar usuario">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="editPermissions(${user.id})" class="action-btn bg-purple-500 text-white hover:bg-purple-600" title="Editar permisos">
+                            <i class="fas fa-shield-alt"></i>
+                        </button>
+                        ${user.role !== 'super_admin' ? `
+                            <button onclick="showTempAccessModal(${user.id})" class="action-btn bg-orange-500 text-white hover:bg-orange-600" title="Acceso temporal">
+                                <i class="fas fa-clock"></i>
+                            </button>
+                            <button onclick="toggleUserStatus(${user.id})" class="action-btn ${user.status === 'active' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'} text-white" title="${user.status === 'active' ? 'Suspender' : 'Activar'}">
+                                <i class="fas fa-${user.status === 'active' ? 'pause' : 'play'}"></i>
+                            </button>
+                            <button onclick="deleteUser(${user.id})" class="action-btn bg-red-500 text-white hover:bg-red-600" title="Eliminar usuario">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </td>
+            `;
+            
+            return tr;
+        }
+
+        function getRoleName(role) {
+            const names = {
+                'super_admin': 'Super Admin',
+                'admin': 'Administrador',
+                'vendor': 'Vendedor'
+            };
+            return names[role] || role;
+        }
+
+        function getStatusName(status) {
+            const names = {
+                'active': 'Activo',
+                'inactive': 'Inactivo',
+                'suspended': 'Suspendido'
+            };
+            return names[status] || status;
+        }
+
+        function formatDate(date) {
+            return new Date(date).toLocaleString('es-VE', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function updateStatistics() {
+            const totalUsers = usersDB.length;
+            const activeUsers = usersDB.filter(u => u.status === 'active').length;
+            const adminUsers = usersDB.filter(u => u.role === 'admin' || u.role === 'super_admin').length;
+            const tempAccessCount = usersDB.reduce((count, user) => {
+                return count + user.tempAccess.filter(access => new Date(access.expiry) > new Date()).length;
+            }, 0);
+
+            document.getElementById('total-users').textContent = totalUsers;
+            document.getElementById('active-users').textContent = activeUsers;
+            document.getElementById('admin-users').textContent = adminUsers;
+            document.getElementById('temp-access').textContent = tempAccessCount;
+        }
+
+
+
+        function showAddUserModal() {
+            currentEditingUser = null;
+            document.getElementById('user-modal-title').innerHTML = '<i class="fas fa-user-plus mr-2"></i>Nuevo Usuario';
+            document.getElementById('user-form').reset();
+            document.getElementById('password-section').style.display = 'block';
+            document.getElementById('user-password').required = true;
+            document.getElementById('user-password-confirm').required = true;
+            
+            // Solo mostrar roles permitidos
+            const roleSelect = document.getElementById('user-role');
+            roleSelect.innerHTML = `
+                <option value="">Seleccionar rol</option>
+                <option value="admin">Administrador</option>
+                <option value="vendor">Vendedor</option>
+            `;
+            
+            document.getElementById('user-modal').classList.remove('hidden');
+        }
+
+        function editUser(userId) {
+            const user = usersDB.find(u => u.id === userId);
+            if (!user) return;
+
+            // Verificar permisos
+            if (user.role === 'super_admin' && CURRENT_USER_ID !== 1) {
+                showAlert('No tienes permisos para editar al Super Administrador');
+                return;
+            }
+
+            currentEditingUser = user;
+            document.getElementById('user-modal-title').innerHTML = '<i class="fas fa-user-edit mr-2"></i>Editar Usuario';
+            
+            // Llenar formulario
+            document.getElementById('user-name').value = user.name;
+            document.getElementById('user-email').value = user.email;
+            document.getElementById('user-status').value = user.status;
+            
+            // Configurar roles permitidos
+            const roleSelect = document.getElementById('user-role');
+            if (user.role === 'super_admin') {
+                roleSelect.innerHTML = '<option value="super_admin" selected>Super Administrador</option>';
+                roleSelect.disabled = true;
+            } else {
+                roleSelect.innerHTML = `
+                    <option value="">Seleccionar rol</option>
+                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador</option>
+                    <option value="vendor" ${user.role === 'vendor' ? 'selected' : ''}>Vendedor</option>
+                `;
+                roleSelect.disabled = false;
+            }
+            
+            // Ocultar sección de contraseña en edición
+            document.getElementById('password-section').style.display = 'none';
+            document.getElementById('user-password').required = false;
+            document.getElementById('user-password-confirm').required = false;
+            
+            document.getElementById('user-modal').classList.remove('hidden');
+        }
+
+        function saveUser(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const userData = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                role: formData.get('role'),
+                status: formData.get('status'),
+                password: formData.get('password'),
+                password_confirm: formData.get('password_confirm')
+            };
+
+            // Validaciones
+            if (!userData.name || !userData.email || !userData.role) {
+                showAlert('Por favor complete todos los campos obligatorios');
+                return;
+            }
+
+            if (!currentEditingUser && (!userData.password || userData.password !== userData.password_confirm)) {
+                showAlert('Las contraseñas no coinciden');
+                return;
+            }
+
+            // Verificar email único
+            const existingUser = usersDB.find(u => u.email === userData.email && u.id !== currentEditingUser?.id);
+            if (existingUser) {
+                showAlert('Ya existe un usuario con este correo electrónico');
+                return;
+            }
+
+            if (currentEditingUser) {
+                // Editar usuario existente
+                currentEditingUser.name = userData.name;
+                currentEditingUser.email = userData.email;
+                currentEditingUser.role = userData.role;
+                currentEditingUser.status = userData.status;
+                
+                addActivityLog(currentEditingUser.id, 'user_updated', `Usuario ${userData.name} actualizado`);
+            } else {
+                // Crear nuevo usuario
+                const newUser = {
+                    id: Math.max(...usersDB.map(u => u.id)) + 1,
+                    name: userData.name,
+                    email: userData.email,
+                    role: userData.role,
+                    status: userData.status,
+                    lastAccess: new Date(),
+                    permissions: getDefaultPermissions(userData.role),
+                    tempAccess: []
+                };
+                
+                usersDB.push(newUser);
+                addActivityLog(newUser.id, 'user_created', `Usuario ${userData.name} creado`);
+            }
+
+            closeUserModal();
+            loadUsers();
+            updateStatistics();
+            showAlert('Usuario guardado exitosamente', 'success');
+        }
+
+        function getDefaultPermissions(role) {
+            const templates = {
+                admin: {
+                    ventas: { read: true, write: true, delete: true },
+                    inventario: { read: true, write: true, delete: false },
+                    compras: { read: true, write: true, delete: false },
+                    reportes: { read: true, write: false, delete: false },
+                    configuracion: { read: true, write: false, delete: false },
+                    usuarios: { read: true, write: true, delete: false }
+                },
+                vendor: {
+                    ventas: { read: true, write: true, delete: false },
+                    inventario: { read: true, write: false, delete: false },
+                    compras: { read: false, write: false, delete: false },
+                    reportes: { read: true, write: false, delete: false },
+                    configuracion: { read: false, write: false, delete: false },
+                    usuarios: { read: false, write: false, delete: false }
+                }
+            };
+            
+            return templates[role] || templates.vendor;
+        }
+
+        function editPermissions(userId) {
+            const user = usersDB.find(u => u.id === userId);
+            if (!user) return;
+
+            // Verificar permisos
+            if (user.role === 'super_admin' && CURRENT_USER_ID !== 1) {
+                showAlert('No tienes permisos para editar los permisos del Super Administrador');
+                return;
+            }
+
+            currentEditingUser = user;
+            document.getElementById('permissions-user-name').textContent = user.name;
+            
+            loadPermissionsEditor(user);
+            document.getElementById('permissions-modal').classList.remove('hidden');
+        }
+
+        function loadPermissionsEditor(user) {
+            const container = document.getElementById('permissions-container');
+            container.innerHTML = '';
+
+            Object.keys(MODULES).forEach(moduleKey => {
+                const module = MODULES[moduleKey];
+                const userPermissions = user.permissions[moduleKey] || {};
+                
+                const moduleDiv = document.createElement('div');
+                moduleDiv.className = 'permission-module';
+                
+                moduleDiv.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <i class="${module.icon} ${module.color} text-xl mr-3"></i>
+                            <h3 class="text-lg font-semibold text-gray-800">${module.name}</h3>
+                        </div>
+                        <button onclick="toggleModulePermissions('${moduleKey}')" class="text-sm text-purple-600 hover:text-purple-800">
+                            Alternar todo
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        ${module.permissions.map(permission => `
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" 
+                                       class="permission-checkbox" 
+                                       data-module="${moduleKey}" 
+                                       data-permission="${permission}"
+                                       ${userPermissions[permission] ? 'checked' : ''}>
+                                <span class="text-sm font-medium text-gray-700 capitalize">${getPermissionName(permission)}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                
+                container.appendChild(moduleDiv);
+            });
+        }
+
+        function getPermissionName(permission) {
+            const names = {
+                'read': 'Consultar',
+                'write': 'Modificar',
+                'delete': 'Eliminar'
+            };
+            return names[permission] || permission;
+        }
+
+        function toggleModulePermissions(moduleKey) {
+            const checkboxes = document.querySelectorAll(`input[data-module="${moduleKey}"]`);
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            
+            checkboxes.forEach(cb => {
+                cb.checked = !allChecked;
+            });
+        }
+
+        function selectAllPermissions() {
+            document.querySelectorAll('.permission-checkbox').forEach(cb => {
+                cb.checked = true;
+            });
+        }
+
+        function clearAllPermissions() {
+            document.querySelectorAll('.permission-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+        }
+
+        function savePermissions() {
+            if (!currentEditingUser) return;
+
+            const newPermissions = {};
+            
+            Object.keys(MODULES).forEach(moduleKey => {
+                newPermissions[moduleKey] = {};
+                MODULES[moduleKey].permissions.forEach(permission => {
+                    const checkbox = document.querySelector(`input[data-module="${moduleKey}"][data-permission="${permission}"]`);
+                    newPermissions[moduleKey][permission] = checkbox ? checkbox.checked : false;
+                });
+            });
+
+            // Verificar si es una acción crítica que requiere clave maestra
+            const isCriticalChange = checkCriticalPermissionChange(currentEditingUser.permissions, newPermissions);
+            
+            if (isCriticalChange) {
+                pendingAction = () => {
+                    currentEditingUser.permissions = newPermissions;
+                    addActivityLog(currentEditingUser.id, 'permissions_updated', `Permisos actualizados para ${currentEditingUser.name}`);
+                    closePermissionsModal();
+                    loadUsers();
+                    showAlert('Permisos actualizados exitosamente', 'success');
+                };
+                showMasterKeyModal();
+            } else {
+                currentEditingUser.permissions = newPermissions;
+                addActivityLog(currentEditingUser.id, 'permissions_updated', `Permisos actualizados para ${currentEditingUser.name}`);
+                closePermissionsModal();
+                loadUsers();
+                showAlert('Permisos actualizados exitosamente', 'success');
+            }
+        }
+
+        function checkCriticalPermissionChange(oldPermissions, newPermissions) {
+            // Verificar si se están otorgando permisos críticos
+            const criticalModules = ['usuarios', 'configuracion'];
+            const criticalPermissions = ['write', 'delete'];
+            
+            for (const module of criticalModules) {
+                for (const permission of criticalPermissions) {
+                    if (!oldPermissions[module]?.[permission] && newPermissions[module]?.[permission]) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        function showTempAccessModal(userId) {
+            const user = usersDB.find(u => u.id === userId);
+            if (!user) return;
+
+            currentEditingUser = user;
+            document.getElementById('temp-user-name').textContent = user.name;
+            
+            // Configurar fecha mínima (ahora + 1 hora)
+            const minDate = new Date();
+            minDate.setHours(minDate.getHours() + 1);
+            document.getElementById('temp-expiry').min = minDate.toISOString().slice(0, 16);
+            
+            // Limpiar formulario
+            document.getElementById('temp-module').value = '';
+            document.getElementById('temp-expiry').value = '';
+            document.getElementById('temp-reason').value = '';
+            
+            document.getElementById('temp-access-modal').classList.remove('hidden');
+        }
+
+        function grantTempAccess() {
+            const module = document.getElementById('temp-module').value;
+            const expiry = document.getElementById('temp-expiry').value;
+            const reason = document.getElementById('temp-reason').value;
+
+            if (!module || !expiry) {
+                showAlert('Por favor complete todos los campos obligatorios');
+                return;
+            }
+
+            const expiryDate = new Date(expiry);
+            if (expiryDate <= new Date()) {
+                showAlert('La fecha de expiración debe ser futura');
+                return;
+            }
+
+            const tempAccess = {
+                module: module,
+                expiry: expiryDate,
+                reason: reason || 'Sin motivo especificado',
+                grantedBy: CURRENT_USER_ID,
+                grantedAt: new Date()
+            };
+
+            currentEditingUser.tempAccess.push(tempAccess);
+            
+            addActivityLog(
+                currentEditingUser.id, 
+                'temp_access_granted', 
+                `Acceso temporal otorgado al módulo ${MODULES[module]?.name || module}`
+            );
+
+            closeTempAccessModal();
+            loadUsers();
+            updateStatistics();
+            showAlert('Acceso temporal otorgado exitosamente', 'success');
+        }
+
+        function toggleUserStatus(userId) {
+            const user = usersDB.find(u => u.id === userId);
+            if (!user) return;
+
+            const newStatus = user.status === 'active' ? 'suspended' : 'active';
+            const action = newStatus === 'suspended' ? 'suspender' : 'activar';
+            
+            showConfirmModal(
+                `¿${action.charAt(0).toUpperCase() + action.slice(1)} usuario?`,
+                `¿Está seguro que desea ${action} a ${user.name}?`,
+                () => {
+                    user.status = newStatus;
+                    addActivityLog(userId, `user_${newStatus}`, `Usuario ${user.name} ${newStatus === 'suspended' ? 'suspendido' : 'activado'}`);
+                    loadUsers();
+                    updateStatistics();
+                    showAlert(`Usuario ${newStatus === 'suspended' ? 'suspendido' : 'activado'} exitosamente`, 'success');
+                }
+            );
+        }
+
+        function deleteUser(userId) {
+            const user = usersDB.find(u => u.id === userId);
+            if (!user) return;
+
+            showConfirmModal(
+                '¿Eliminar usuario?',
+                `¿Está seguro que desea eliminar a ${user.name}? Esta acción no se puede deshacer.`,
+                () => {
+                    pendingAction = () => {
+                        const index = usersDB.findIndex(u => u.id === userId);
+                        if (index > -1) {
+                            usersDB.splice(index, 1);
+                            addActivityLog(userId, 'user_deleted', `Usuario ${user.name} eliminado`);
+                            loadUsers();
+                            updateStatistics();
+                            showAlert('Usuario eliminado exitosamente', 'success');
+                        }
+                    };
+                    showMasterKeyModal();
+                }
+            );
+        }
+
+        function filterUsers() {
+            const searchTerm = document.getElementById('search-users').value.toLowerCase();
+            const roleFilter = document.getElementById('filter-role').value;
+            
+            const rows = document.querySelectorAll('#users-table-body tr');
+            
+            rows.forEach(row => {
+                const userId = parseInt(row.dataset.userId);
+                const user = usersDB.find(u => u.id === userId);
+                
+                if (!user) return;
+                
+                const matchesSearch = user.name.toLowerCase().includes(searchTerm) || 
+                                    user.email.toLowerCase().includes(searchTerm);
+                const matchesRole = !roleFilter || user.role === roleFilter;
+                
+                row.style.display = matchesSearch && matchesRole ? '' : 'none';
+            });
+        }
+
+        function addActivityLog(userId, action, description) {
+            const log = {
+                id: Math.max(...activityLogsDB.map(l => l.id), 0) + 1,
+                userId: userId,
+                action: action,
+                description: description,
+                timestamp: new Date(),
+                performedBy: CURRENT_USER_ID
+            };
+            
+            activityLogsDB.push(log);
+        }
+
+        // Funciones de modales
+        function closeUserModal() {
+            document.getElementById('user-modal').classList.add('hidden');
+            currentEditingUser = null;
+        }
+
+        function closePermissionsModal() {
+            document.getElementById('permissions-modal').classList.add('hidden');
+            currentEditingUser = null;
+        }
+
+        function closeTempAccessModal() {
+            document.getElementById('temp-access-modal').classList.add('hidden');
+            currentEditingUser = null;
+        }
+
+        function showMasterKeyModal() {
+            document.getElementById('master-key-input').value = '';
+            document.getElementById('master-key-error').classList.add('hidden');
+            document.getElementById('master-key-modal').classList.remove('hidden');
+            document.getElementById('master-key-input').focus();
+        }
+
+        function closeMasterKeyModal() {
+            document.getElementById('master-key-modal').classList.add('hidden');
+            pendingAction = null;
+        }
+
+        function confirmMasterKey() {
+            const enteredKey = document.getElementById('master-key-input').value;
+            
+            if (enteredKey === MASTER_KEY) {
+                closeMasterKeyModal();
+                if (pendingAction) {
+                    pendingAction();
+                    pendingAction = null;
+                }
+            } else {
+                document.getElementById('master-key-error').classList.remove('hidden');
+                document.getElementById('master-key-input').value = '';
+                document.getElementById('master-key-input').focus();
+            }
+        }
+
+        function showConfirmModal(title, message, callback) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+            
+            const acceptBtn = document.getElementById('accept-confirm');
+            const newAcceptBtn = acceptBtn.cloneNode(true);
+            acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
+            
+            newAcceptBtn.addEventListener('click', () => {
+                closeConfirmModal();
+                callback();
+            });
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+        }
+
+        function acceptConfirm() {
+            closeConfirmModal();
+        }
+
+        function showAlert(message, type = 'info') {
+            // Crear elemento de alerta
+            const alert = document.createElement('div');
+            alert.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm fade-in`;
+            
+            const colors = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                warning: 'bg-yellow-500 text-white',
+                info: 'bg-blue-500 text-white'
+            };
+            
+            alert.className += ` ${colors[type] || colors.info}`;
+            alert.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(alert);
+            
+            // Auto-remover después de 5 segundos
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'992a6b2a875e7104',t:'MTc2MTE1MTAzOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

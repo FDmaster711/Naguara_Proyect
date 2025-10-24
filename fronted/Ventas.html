@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Na'Guara - Módulo de Ventas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="ventas.css">
+    </head>
+</head>
+<body class="min-h-full bg-gray-50">
+    <main class="container mx-auto p-6 max-w-7xl">
+        <!-- Header -->
+        <div class="card p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">Módulo de Ventas</h1>
+                    <p class="text-gray-600 mt-1">Sistema de Punto de Venta - Na'Guara</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-600">Venta #: <span class="font-bold text-purple-600" id="sale-number">VEN-000001</span></p>
+                    <p class="text-sm text-gray-600">Fecha: <span class="font-semibold" id="current-date"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="card p-4 mb-6">
+            <div class="step-indicator">
+                <div class="step active" id="step-1">1</div>
+                <span class="text-sm font-medium mr-4">Identificar Cliente</span>
+                <div class="step pending" id="step-2">2</div>
+                <span class="text-sm font-medium mr-4">Agregar Productos</span>
+                <div class="step pending" id="step-3">3</div>
+                <span class="text-sm font-medium mr-4">Revisar Presupuesto</span>
+                <div class="step pending" id="step-4">4</div>
+                <span class="text-sm font-medium mr-4">Método de Pago</span>
+                <div class="step pending" id="step-5">5</div>
+                <span class="text-sm font-medium mr-4">Procesar Pago</span>
+                <div class="step pending" id="step-6">6</div>
+                <span class="text-sm font-medium">Facturar</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column - Main Process -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- PASO 1: Identificación del Cliente -->
+                <div class="card p-6" id="step-1-content">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-user-check text-purple-600 mr-2"></i>
+                        Paso 1: Identificación del Cliente
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Cédula / RIF del Cliente</label>
+                            <input 
+                                type="text" 
+                                id="customer-id" 
+                                placeholder="Ej: V-12345678 o J-12345678-9"
+                                class="input-field w-full text-lg"
+                                maxlength="15"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Ingrese la cédula y presione Tab o haga clic fuera del campo</p>
+                        </div>
+                        
+                        <div id="customer-form" class="hidden space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Nombre Completo / Razón Social *</label>
+                                    <input type="text" id="customer-name" class="input-field w-full" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Teléfono *</label>
+                                    <input type="tel" id="customer-phone" class="input-field w-full" required>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Dirección *</label>
+                                <input type="text" id="customer-address" class="input-field w-full" required>
+                            </div>
+                            <button id="save-customer" class="btn-primary">
+                                <i class="fas fa-save mr-2"></i>
+                                Guardar Cliente
+                            </button>
+                        </div>
+                        
+                        <div id="customer-info" class="hidden bg-green-50 border border-green-200 rounded-lg p-4">
+                            <h3 class="font-semibold text-green-800 mb-2">Cliente Encontrado:</h3>
+                            <div id="customer-details"></div>
+                            <div class="mt-4">
+                                <button id="continue-to-products" class="btn-primary">
+                                    <i class="fas fa-arrow-right mr-2"></i>
+                                    Continuar a Productos
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASO 2: Agregar Productos -->
+                <div class="card p-6 hidden" id="step-2-content">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-shopping-cart text-purple-600 mr-2"></i>
+                        Paso 2: Agregar Productos
+                    </h2>
+                    
+                    <div class="autocomplete-container mb-4">
+                        <input 
+                            type="text" 
+                            id="product-search" 
+                            placeholder="Buscar producto por código o nombre..."
+                            class="input-field w-full text-lg"
+                            autocomplete="off"
+                        >
+                        <div id="product-suggestions" class="autocomplete-suggestions hidden"></div>
+                    </div>
+                    
+                    <!-- Carrito de Compras -->
+                    <div class="bg-white rounded-lg overflow-hidden border border-gray-200">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio Unit.</th>
+                                    <th>Subtotal</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cart-items">
+                                <tr id="empty-cart">
+                                    <td colspan="6" class="text-center text-gray-500 py-8">
+                                        <i class="fas fa-shopping-cart text-4xl mb-2"></i>
+                                        <p>No hay productos en el carrito</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Botones de navegación -->
+                    <div class="mt-6 flex justify-between">
+                        <button id="back-to-customer" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all">
+                            <i class="fas fa-arrow-left mr-2"></i>
+                            Volver a Cliente
+                        </button>
+                        <button id="continue-to-review" class="btn-primary hidden">
+                            <i class="fas fa-arrow-right mr-2"></i>
+                            Continuar a Revisar Presupuesto
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PASO 4: Método de Pago -->
+                <div class="card p-6 hidden" id="step-4-content">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-credit-card text-purple-600 mr-2"></i>
+                        Paso 4: Seleccionar Método de Pago
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div class="payment-btn" data-method="efectivo_bs">
+                                <i class="fas fa-money-bill-wave text-2xl text-green-600 mb-2"></i>
+                                <p class="font-semibold">Efectivo (Bs)</p>
+                            </div>
+                            <div class="payment-btn" data-method="efectivo_usd">
+                                <i class="fas fa-dollar-sign text-2xl text-blue-600 mb-2"></i>
+                                <p class="font-semibold">Efectivo (USD)</p>
+                            </div>
+                            <div class="payment-btn" data-method="punto_venta">
+                                <i class="fas fa-credit-card text-2xl text-purple-600 mb-2"></i>
+                                <p class="font-semibold">Punto de Venta</p>
+                            </div>
+                            <div class="payment-btn" data-method="transferencia">
+                                <i class="fas fa-university text-2xl text-indigo-600 mb-2"></i>
+                                <p class="font-semibold">Transferencia</p>
+                            </div>
+                            <div class="payment-btn" data-method="pago_movil">
+                                <i class="fas fa-mobile-alt text-2xl text-orange-600 mb-2"></i>
+                                <p class="font-semibold">Pago Móvil</p>
+                            </div>
+                            <div class="payment-btn" data-method="mixto">
+                                <i class="fas fa-coins text-2xl text-yellow-600 mb-2"></i>
+                                <p class="font-semibold">Pago Mixto</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between mt-6">
+                            <button id="back-to-review" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all">
+                                <i class="fas fa-arrow-left mr-2"></i>
+                                Volver a Revisar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASO 5: Procesar Pago -->
+                <div class="card p-6 hidden" id="step-5-content">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-calculator text-purple-600 mr-2"></i>
+                        Paso 5: Procesar Pago
+                    </h2>
+                    
+                    <div id="payment-details" class="space-y-4">
+                        <!-- Contenido dinámico según método de pago -->
+                    </div>
+                    
+                    <div class="flex justify-between mt-6">
+                        <button id="back-to-payment-method" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all">
+                            <i class="fas fa-arrow-left mr-2"></i>
+                            Cambiar Método
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column - Summary -->
+            <div class="space-y-6">
+                
+                <!-- PASO 3: Resumen del Presupuesto -->
+                <div class="card p-6" id="step-3-content">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-receipt text-purple-600 mr-2"></i>
+                        Resumen de Venta
+                    </h2>
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Subtotal:</span>
+                            <span class="font-semibold" id="subtotal-amount">Bs. 0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">IVA (16%):</span>
+                            <span class="font-semibold" id="tax-amount">Bs. 0.00</span>
+                        </div>
+                        <hr class="border-gray-300">
+                        <div class="flex justify-between items-center text-lg">
+                            <span class="font-bold text-gray-800">Total (Bs):</span>
+                            <span class="font-bold text-purple-600" id="total-bs">Bs. 0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Total (USD):</span>
+                            <span class="font-semibold text-green-600" id="total-usd">$ 0.00</span>
+                        </div>
+                        <div class="mt-4 p-3 bg-purple-50 rounded-lg">
+                            <div class="text-xs text-gray-600 mb-1">Tasa de Cambio:</div>
+                            <div class="font-semibold text-purple-600">1 USD = 207.89 Bs</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 space-y-3">
+                        <button id="continue-to-payment" class="btn-primary w-full hidden">
+                            <i class="fas fa-arrow-right mr-2"></i>
+                            Continuar al Pago
+                        </button>
+                        <button id="back-to-products" class="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all hidden">
+                            <i class="fas fa-arrow-left mr-2"></i>
+                            Volver a Productos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Información del Cliente Actual -->
+                <div class="card p-6" id="current-customer-info" style="display: none;">
+                    <h3 class="text-lg font-bold text-gray-800 mb-3">Cliente Actual</h3>
+                    <div id="current-customer-details" class="text-sm space-y-1">
+                        <!-- Información del cliente se llenará dinámicamente -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="card p-4 mt-6">
+            <div class="flex justify-between items-center">
+                <button id="new-sale" class="btn-primary">
+                    <i class="fas fa-plus mr-2"></i>
+                    Nueva Venta
+                </button>
+                <div class="space-x-3">
+                    <button id="cancel-sale" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancelar
+                    </button>
+                    <button id="process-sale" class="btn-success hidden">
+                        <i class="fas fa-check mr-2"></i>
+                        Procesar Venta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal para Factura -->
+    <div id="invoice-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Factura de Venta</h2>
+                <button id="close-invoice" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="invoice-content">
+                <!-- Contenido de la factura se generará dinámicamente -->
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button id="print-invoice" class="btn-primary">
+                    <i class="fas fa-print mr-2"></i>
+                    Imprimir
+                </button>
+                <button id="new-sale-after-invoice" class="btn-success">
+                    <i class="fas fa-plus mr-2"></i>
+                    Nueva Venta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Peso -->
+    <div id="weight-modal" class="modal hidden">
+        <div class="modal-content max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">Cantidad por Peso</h2>
+                <button id="close-weight-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <p id="weight-product-name" class="text-gray-700"></p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Peso en kilogramos:</label>
+                    <input type="number" id="weight-input" class="input-field w-full text-lg" 
+                           placeholder="0.00" step="0.01" min="0.01">
+                    <p class="text-xs text-gray-500 mt-1">Ejemplo: 0.8 para 800 gramos</p>
+                </div>
+                <div id="weight-calculation" class="bg-purple-50 border border-purple-200 rounded-lg p-3 hidden">
+                    <p class="text-sm text-purple-800">
+                        <strong>Cálculo:</strong> <span id="calc-weight"></span> kg × Bs. <span id="calc-price"></span>/kg = <strong>Bs. <span id="calc-total"></span></strong>
+                    </p>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button id="cancel-weight" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all">
+                    Cancelar
+                </button>
+                <button id="confirm-weight" class="btn-primary">
+                    <i class="fas fa-check mr-2"></i>
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Alertas -->
+    <div id="alert-modal" class="modal hidden">
+        <div class="modal-content max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-red-600">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Atención
+                </h2>
+                <button id="close-alert-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="mb-6">
+                <p id="alert-message" class="text-gray-700"></p>
+            </div>
+            <div class="flex justify-end">
+                <button id="confirm-alert" class="btn-primary">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Confirmación -->
+    <div id="confirm-modal" class="modal hidden">
+        <div class="modal-content max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-orange-600">
+                    <i class="fas fa-question-circle mr-2"></i>
+                    Confirmar Acción
+                </h2>
+                <button id="close-confirm-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="mb-6">
+                <p id="confirm-title" class="text-gray-800 font-semibold mb-2"></p>
+                <p id="confirm-message" class="text-gray-600 text-sm"></p>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="cancel-confirm" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all">
+                    Cancelar
+                </button>
+                <button id="accept-confirm" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all">
+                    <i class="fas fa-trash mr-2"></i>
+                    Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="ventas.js"></script>
+</body>
+</html>

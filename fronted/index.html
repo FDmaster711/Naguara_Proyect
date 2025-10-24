@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pollera Na'Guara</title>
+    <link rel="stylesheet" href="estilos.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Sidebar fijo -->
+    <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-menu" times new roman-label="Menú principal">
+            <div class="sidebar-header">
+                <button id="sidebarToggle" class="menu-toggle" aria-label="Alternar menú">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            <ul>
+                <li>
+                    <a href="#" class="menu-item active" onclick="loadContent('dashboard'); setActive(this);">
+                        <span class="menu-icon"><i class="fas fa-home"></i></span>
+                        <span class="menu-text">Dashboard</span>
+                    </a>
+                </li>
+<li>
+    <a href="Ventas/Ventas.html" class="menu-item" onclick="loadContent('ventas'); setActive(this);">
+        <span class="menu-icon"><i class="fas fa-shopping-cart"></i></span>
+        <span class="menu-text">Ventas</span>
+    </a>
+</li>
+                <!-- Inventario con submenú -->
+                <li>
+                    <button class="menu-item submenu-toggle" aria-label="Inventario" onclick="toggleSubmenu('inventario-submenu', this);">
+                        <span class="menu-icon"><i class="fas fa-warehouse"></i></span>
+                        <span class="menu-text">Inventario</span>
+                        <span class="menu-arrow"><i class="fas fa-chevron-down"></i></span>
+                    </button>
+                    <ul id="inventario-submenu" class="submenu">
+                        <li><a href="#" class="submenu-item" onclick="loadContent('inventario-general'); setActive(this, true);">Inventario General</a></li>
+                        <li><a href="#" class="submenu-item" onclick="loadContent('productos'); setActive(this, true);">Productos</a></li>
+                        <li><a href="#" class="submenu-item" onclick="loadContent('categorias'); setActive(this, true);">Categorías</a></li>
+                    </ul>
+                </li>
+                <!-- Compras con submenú -->
+                <li>
+                    <button class="menu-item submenu-toggle" aria-label="Compras" onclick="toggleSubmenu('compras-submenu', this);">
+                        <span class="menu-icon"><i class="fas fa-shopping-bag"></i></span>
+                        <span class="menu-text">Compras</span>
+                        <span class="menu-arrow"><i class="fas fa-chevron-down"></i></span>
+                    </button>
+                    <ul id="compras-submenu" class="submenu">
+                        <li><a href="#" class="submenu-item" onclick="loadContent('pedidos'); setActive(this, true);">Pedidos / Reposición</a></li>
+                        <li><a href="#" class="submenu-item" onclick="loadContent('proveedores'); setActive(this, true);">Proveedores</a></li>
+                        <li><a href="#" class="submenu-item" onclick="loadContent('facturas-compra'); setActive(this, true);">Facturas de Compra</a></li>
+                    </ul>
+                </li>
+                
+
+                <li>
+                    <a href="Reportes/Reportes.html" class="menu-item" onclick="loadContent('reportes'); setActive(this);">
+                        <span class="menu-icon"><i class="fas fa-chart-line"></i></span>
+                        <span class="menu-text">Reportes</span>
+                    </a>
+                </li>                    
+                
+
+                <li>
+                    <a href="Configuracion/Configuracion.html" class="menu-item" onclick="loadContent('Configuracion'); setActive(this);">
+                        <span class="menu-icon"><i class="fas fa-cog"></i></span>
+                        <span class="menu-text">Configuración</span>
+                    </a>
+                </li>
+
+
+                <li>
+                    <a href="GestionUsuarios/GestionU.html" class="menu-item" onclick="loadContent('Configuracion'); setActive(this);">
+                        <span class="menu-icon"><i class="fas fa-users"></i></span>
+                        <span class="menu-text">Gestión de Usuarios</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Top-bar blanca y compacta -->
+    <header class="top-bar">
+        <span class="page-title">Inicio</span>
+        <form class="search-bar" onsubmit="event.preventDefault();">
+            <input type="text" class="search-input" placeholder="Buscar...">
+            <button type="submit" class="search-icon"><i class="fas fa-search"></i></button>
+        </form>
+        <div class="notification-badge" onclick="toggleNotifications()">
+            <i class="fas fa-bell"></i>
+            <span class="badge-count">3</span>
+        </div>
+        <!-- Perfil de usuario -->
+        <div class="user-profile" tabindex="0" onclick="toggleUserMenu()" onblur="closeUserMenu()">
+            <span class="user-avatar">JC</span>
+            <span class="user-info">
+                <span class="user-name">Jesús Camacho</span>
+                <span class="user-role">Super Administrador</span>
+            </span>
+            <div class="user-dropdown" id="userDropdown">
+                <a href="#" class="dropdown-item"><i class="fas fa-user"></i> Ver perfil</a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Área principal de contenido SPA -->
+    <main id="contenidoPrincipal" class="main-content">
+        <!-- Aquí se cargará dinámicamente el contenido de cada módulo -->
+    </main>
+
+    <!-- Configuración de la API -->
+    <script>
+        // Configuración global de la API - CORREGIDO: puerto 3000
+        const API_CONFIG = {
+            BASE_URL: 'http://localhost:3000/api',
+            ENDPOINTS: {
+                DASHBOARD: '/dashboard/stats',
+                PRODUCTOS: '/productos',
+                CLIENTES: '/clientes',
+                VENTAS: '/ventas'
+            }
+        };
+
+        // Función helper para hacer fetch requests
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('Error en API call:', error);
+                throw error;
+            }
+        }
+    </script>
+
+    <script>
+    // Alterna submenús y rota la flecha
+    function toggleSubmenu(id, btn) {
+        const submenu = document.getElementById(id);
+        submenu.classList.toggle('open');
+        btn.classList.toggle('open');
+    }
+
+    // Marca el ítem activo (y submenu si aplica)
+    function setActive(element, isSubmenu = false) {
+        document.querySelectorAll('.menu-item, .submenu-item').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+        if (isSubmenu) {
+            let parentBtn = element.closest('ul').previousElementSibling;
+            if (parentBtn) parentBtn.classList.add('active');
+        }
+    }
+
+    // Marca el ítem activo desde las tarjetas
+    function setActiveSidebar(moduleId) {
+        document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+        const item = Array.from(document.querySelectorAll('.menu-item')).find(el => el.textContent.trim().toLowerCase().includes(moduleId));
+        if (item) item.classList.add('active');
+    }
+
+    // Menú de usuario
+    function toggleUserMenu() {
+        document.getElementById('userDropdown').classList.toggle('active');
+    }
+    function closeUserMenu() {
+        setTimeout(() => document.getElementById('userDropdown').classList.remove('active'), 150);
+    }
+    function toggleNotifications() {
+        alert('No hay notificaciones nuevas.');
+    }
+
+    // Carga contenido dinámico (SPA)
+    async function loadContent(moduleId) {
+        if (moduleId === 'dashboard') {
+            try {
+                // Obtener datos reales del backend
+                const stats = await apiCall(API_CONFIG.ENDPOINTS.DASHBOARD);
+
+                document.getElementById('contenidoPrincipal').innerHTML = `
+                    <section class="dashboard-cards-custom">
+                        <div class="card_wrap">
+                            <div class="card_header uno">
+                                <p>${stats.totalProductos || 0}</p>
+                            </div>
+                            <div class="card_content">
+                                <h1 class="card_title"><b>Productos</b></h1>
+                                <p class="card_text">Cantidad de productos registrados.</p>
+                                <button class="card_btn uno" onclick="loadContent('productos'); setActiveSidebar('productos');">Ver productos</button>
+                            </div>
+                        </div>
+                        <div class="card_wrap">
+                            <div class="card_header dos">
+                                <p>${stats.ventasHoy || 0}</p>
+                            </div>
+                            <div class="card_content">
+                                <h1 class="card_title"><b>Ventas de hoy</b></h1>
+                                <p class="card_text">Cantidad de ventas registradas hoy.</p>
+                                <button class="card_btn dos" onclick="loadContent('ventas'); setActiveSidebar('ventas');">Ver ventas</button>
+                            </div>
+                        </div>
+                        <div class="card_wrap">
+                            <div class="card_header tres">
+                                <p>${stats.totalClientes || 0}</p>
+                            </div>
+                            <div class="card_content">
+                                <h1 class="card_title"><b>Clientes</b></h1>
+                                <p class="card_text">Cantidad de clientes registrados.</p>
+                                <button class="card_btn tres" onclick="loadContent('clientes'); setActiveSidebar('clientes');">Ver clientes</button>
+                            </div>
+                        </div>
+                        <div class="card_wrap">
+                            <div class="card_header cuatro">
+                                <p>${stats.productosStockMinimo || 0}</p>
+                            </div>
+                            <div class="card_content">
+                                <h1 class="card_title"><b>Stock mínimo!</b></h1>
+                                <p class="card_text">Productos con stock bajo.</p>
+                                <button class="card_btn cuatro" onclick="loadContent('inventario'); setActiveSidebar('inventario');">Ver stock mínimo</button>
+                            </div>
+                        </div>
+                    </section>
+                    <h2>Producto más vendido</h2>
+                    <canvas id="graficoTorta" width="400" height="200"></canvas>
+                `;
+
+                // Gráfica temporal (luego la haremos con datos reales)
+                setTimeout(() => {
+                    const ctx = document.getElementById('graficoTorta').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Producto A', 'Producto B', 'Producto C'],
+                            datasets: [{
+                                data: [12, 19, 7],
+                                backgroundColor: [
+                                    '#5a00b3',
+                                    '#3498db',
+                                    '#2ecc71'
+                                ]
+                            }]
+                        }
+                    });
+                }, 100);
+
+            } catch (error) {
+                console.error('Error cargando dashboard:', error);
+                // Fallback a datos estáticos si hay error
+                document.getElementById('contenidoPrincipal').innerHTML = `
+                    <section class="dashboard-cards-custom">
+                        <div class="card_wrap">
+                            <div class="card_header uno">
+                                <p>1</p>
+                            </div>
+                            <div class="card_content">
+                                <h1 class="card_title"><b>Proveedores</b></h1>
+                                <p class="card_text">Cantidad de proveedores registrados.</p>
+                                <button class="card_btn uno" onclick="loadContent('proveedores'); setActiveSidebar('proveedores');">Ver proveedores</button>
+                            </div>
+                        </div>
+                        <div class="card_wrap">
+                            <div class="card_header dos">
+                                <p>2</p>
+                            </div>
+                            <div class="card_content">
+                                <h1 class="card_title"><b>Productos</b></h1>
+                                <p class="card_text">Cantidad de productos registrados.</p>
+                                <button class="card_btn dos" onclick="loadContent('productos'); setActiveSidebar('productos');">Ver productos</button>
+                            </div>
+                        </div>
+                        <div class="card_wrap">
+                            <div class="card_header tres">
+                                <p>3</p>
+                            </div>
+                            <div class="card_content">
+                                <h1 class="card_title"><b>Ventas de hoy</b></h1>
+                                <p class="card_text">Cantidad de ventas registrados en el día de hoy.</p>
+                                <button class="card_btn tres" onclick="loadContent('ventas'); setActiveSidebar('ventas');">Ver ventas</button>
+                            </div>
+                        </div>
+                        <div class="card_wrap">
+                            <div class="card_header cuatro">
+                                <p>4</p>
+                            </div>
+                            <div class="card_content">
+                                <h1 class="card_title"><b>Stock mínimo!</b></h1>
+                                <p class="card_text">Cantidad de stock mínimo(s).</p>
+                                <button class="card_btn cuatro" onclick="loadContent('inventario'); setActiveSidebar('inventario');">Ver stock mínimo</button>
+                            </div>
+                        </div>
+                    </section>
+                    <h2>Producto más vendido</h2>
+                    <canvas id="graficoTorta" width="400" height="200"></canvas>
+                `;
+                
+                // Gráfica de fallback
+                setTimeout(() => {
+                    const ctx = document.getElementById('graficoTorta').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Producto A', 'Producto B', 'Producto C'],
+                            datasets: [{
+                                data: [12, 19, 7],
+                                backgroundColor: [
+                                    '#5a00b3',
+                                    '#3498db',
+                                    '#2ecc71'
+                                ]
+                            }]
+                        }
+                    });
+                }, 100);
+            }
+        } else if (moduleId === 'productos') {
+            // Cargar vista de productos
+            document.getElementById('contenidoPrincipal').innerHTML = `
+                <div class="module-header">
+                    <h1>Gestión de Productos</h1>
+                    <p>Administra los productos del inventario</p>
+                </div>
+                <div class="module-content">
+                    <p>Módulo de productos - En desarrollo</p>
+                    <button onclick="loadContent('dashboard')" class="btn-primary">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Volver al Dashboard
+                    </button>
+                </div>
+            `;
+        } else if (moduleId === 'clientes') {
+            // Cargar vista de clientes
+            document.getElementById('contenidoPrincipal').innerHTML = `
+                <div class="module-header">
+                    <h1>Gestión de Clientes</h1>
+                    <p>Administra la información de los clientes</p>
+                </div>
+                <div class="module-content">
+                    <p>Módulo de clientes - En desarrollo</p>
+                    <button onclick="loadContent('dashboard')" class="btn-primary">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Volver al Dashboard
+                    </button>
+                </div>
+            `;
+        } else {
+            // Vista por defecto para otros módulos
+            document.getElementById('contenidoPrincipal').innerHTML = `
+                <div class="module-header">
+                    <h1>${moduleId.charAt(0).toUpperCase() + moduleId.slice(1)}</h1>
+                    <p>Módulo en desarrollo</p>
+                </div>
+                <div class="module-content">
+                    <p>Esta funcionalidad estará disponible pronto.</p>
+                    <button onclick="loadContent('dashboard')" class="btn-primary">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Volver al Dashboard
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    // Cargar dashboard por defecto al iniciar
+    window.onload = function() {
+        loadContent('dashboard');
+        document.querySelector('.menu-item').classList.add('active');
+    };
+
+     document.getElementById('sidebarToggle').addEventListener('click', function() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('collapsed');
+        // Ajusta top-bar y main-content
+        document.querySelector('.top-bar').style.left = sidebar.classList.contains('collapsed') ? '60px' : '250px';
+        document.querySelector('.main-content').style.marginLeft = sidebar.classList.contains('collapsed') ? '60px' : '250px'; 
+    });
+
+    // Función para mostrar notificaciones (puedes integrar con tu componentes_notificacion.js)
+    function showAlert(message, type = 'info') {
+        // Usar el sistema de notificaciones existente o mostrar un alert simple
+        if (type === 'error') {
+            alert('Error: ' + message);
+        } else {
+            alert(message);
+        }
+    }
+    </script> 
+</body>
+</html>
