@@ -12,7 +12,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());  
+app.use(cors({
+  origin: true,  // Permite cualquier origen en desarrollo
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -23,7 +27,6 @@ app.use(session({
   cookie: { secure: false }
 }));
 
-// Ruta raíz para verificar
 app.get('/', (req, res) => {
   res.json({
     message: '✅ API Pollera NaGuara funcionando',
@@ -37,22 +40,17 @@ app.get('/', (req, res) => {
   });
 });
 
-// Dashboard stats - CORREGIDO
 app.get('/api/dashboard/stats', async (req, res) => {
   try {
-    // Total productos
     const productosCount = await pool.query('SELECT COUNT(*) FROM productos');
     
-    // Ventas de hoy
     const ventasHoy = await pool.query(`
       SELECT COUNT(*) FROM ventas 
       WHERE DATE(fecha_venta) = CURRENT_DATE
     `);
     
-    // Total clientes
     const clientesCount = await pool.query('SELECT COUNT(*) FROM clientes');
     
-    // Productos con stock bajo
     const stockMinimo = await pool.query(`
       SELECT COUNT(*) FROM productos 
       WHERE stock < 10 OR stock IS NULL
@@ -70,7 +68,6 @@ app.get('/api/dashboard/stats', async (req, res) => {
   }
 });
 
-// Productos
 app.get('/api/productos', async (req, res) => {
   try {
     const { q } = req.query; 
@@ -106,7 +103,6 @@ app.get('/api/productos', async (req, res) => {
   }
 });
 
-// Clientes - AHORA CON TABLA REAL
 app.get('/api/clientes', async (req, res) => {
   try {
     const { cedula } = req.query;
@@ -131,7 +127,6 @@ app.post('/api/clientes', async (req, res) => {
   try {
     const { cedula_rif, nombre, telefono, direccion } = req.body;
     
-    // Verificar si ya existe
     const existe = await pool.query(
       'SELECT id FROM clientes WHERE cedula_rif = $1',
       [cedula_rif]
@@ -154,7 +149,6 @@ app.post('/api/clientes', async (req, res) => {
   }
 });
 
-// Ventas - ADAPTADO a tu esquema
 app.post('/api/ventas', async (req, res) => {
   try {
     const { cliente_id, productos, total, metodo_pago } = req.body;
@@ -164,16 +158,14 @@ app.post('/api/ventas', async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // 1. Crear la venta
       const ventaResult = await client.query(
         `INSERT INTO ventas (id_usuario, metodo_pago, estado) 
          VALUES ($1, $2, $3) RETURNING *`,
-        [1, metodo_pago, 'completada'] // usuario_id temporal (puedes cambiarlo)
+        [1, metodo_pago, 'completada'] 
       );
       
       const ventaId = ventaResult.rows[0].id;
       
-      // 2. Insertar productos de la venta
       for (const item of productos) {
         await client.query(
           `INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario) 
@@ -181,7 +173,6 @@ app.post('/api/ventas', async (req, res) => {
           [ventaId, item.productoId, item.cantidad, item.precio]
         );
         
-        // 3. Actualizar stock
         await client.query(
           'UPDATE productos SET stock = stock - $1 WHERE id = $2',
           [item.cantidad, item.productoId]
@@ -207,7 +198,6 @@ app.post('/api/ventas', async (req, res) => {
   }
 });
 
-// Proveedores
 app.get('/api/proveedores', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM proveedores ORDER BY id');
@@ -217,7 +207,6 @@ app.get('/api/proveedores', async (req, res) => {
   }
 });
 
-// Usuarios (para login)
 app.post('/login', async (req, res) => {
   try {
     const { nombre_usuario, password } = req.body;
@@ -233,7 +222,6 @@ app.post('/login', async (req, res) => {
     
     const user = result.rows[0];
     
-    // Comparar contraseña (sin bcrypt por ahora)
     if (password !== user.password) {
       return res.status(401).json({ error: 'Contraseña incorrecta' });
     }
