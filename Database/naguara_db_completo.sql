@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Q1GLsgDunNqdhfCmwcN0qRv6eWN3SCecaK36HBLVYd6slSN3jrfp8SKrgu7ttLK
+\restrict A4FaSq5LSNVa0rYaAZGqdvyJxITCSjvrJ5ogVh3DsQpOgjSCYhq6sdX4mBr8ZQr
 
 -- Dumped from database version 18.0
 -- Dumped by pg_dump version 18.0
@@ -22,6 +22,43 @@ SET row_security = off;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: categorias; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.categorias (
+    id integer NOT NULL,
+    nombre character varying(50) NOT NULL,
+    descripcion text,
+    estado character varying(10) DEFAULT 'Activa'::character varying NOT NULL,
+    fecha_creacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.categorias OWNER TO postgres;
+
+--
+-- Name: categorias_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.categorias_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.categorias_id_seq OWNER TO postgres;
+
+--
+-- Name: categorias_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.categorias_id_seq OWNED BY public.categorias.id;
+
 
 --
 -- Name: clientes; Type: TABLE; Schema: public; Owner: postgres
@@ -180,14 +217,14 @@ ALTER SEQUENCE public.detalle_venta_id_seq OWNED BY public.detalle_venta.id;
 
 CREATE TABLE public.productos (
     id integer NOT NULL,
-    categoria character varying(15) NOT NULL,
     precio_venta numeric(10,2),
     costo_compra numeric(10,2),
     stock integer,
     unidad_medida character varying(20),
     id_provedores integer,
     fecha_actualizacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT productos_categoria_check CHECK (((categoria)::text = ANY ((ARRAY['Pollo'::character varying, 'Milanesa'::character varying, 'Aliño'::character varying])::text[])))
+    categoria_id integer NOT NULL,
+    nombre character varying(100)
 );
 
 
@@ -331,6 +368,13 @@ ALTER SEQUENCE public.ventas_id_seq OWNED BY public.ventas.id;
 
 
 --
+-- Name: categorias id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.categorias ALTER COLUMN id SET DEFAULT nextval('public.categorias_id_seq'::regclass);
+
+
+--
 -- Name: clientes id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -387,6 +431,18 @@ ALTER TABLE ONLY public.ventas ALTER COLUMN id SET DEFAULT nextval('public.venta
 
 
 --
+-- Data for Name: categorias; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.categorias (id, nombre, descripcion, estado, fecha_creacion) FROM stdin;
+1	Pollo	Productos derivados del pollo	Activa	2025-10-24 18:51:18.983894
+2	Milanesa	Milanesas de pollo y res	Activa	2025-10-24 18:51:18.983894
+3	Aliño	Condimentos y aderezos	Activa	2025-10-24 18:51:18.983894
+4	Embutidos	Salchichas, chorizos y otros embutidos	Activa	2025-10-24 18:51:18.983894
+\.
+
+
+--
 -- Data for Name: clientes; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -425,7 +481,16 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 -- Data for Name: productos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.productos (id, categoria, precio_venta, costo_compra, stock, unidad_medida, id_provedores, fecha_actualizacion) FROM stdin;
+COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, id_provedores, fecha_actualizacion, categoria_id, nombre) FROM stdin;
+10	25.00	18.50	50	kg	1	2025-10-24 18:53:42.73315	1	Pollo Entero Premium
+11	45.00	32.00	30	kg	1	2025-10-24 18:53:42.73315	1	Pecho de Pollo
+12	15.00	10.00	40	kg	1	2025-10-24 18:53:42.73315	1	Muslos de Pollo
+13	5.50	3.50	200	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica
+14	6.80	4.20	150	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial
+15	8.20	5.00	100	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Res
+16	3.50	1.80	300	unidad	3	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara
+17	4.20	2.10	250	unidad	3	2025-10-24 18:53:42.73315	3	Sazonador con Especias
+18	5.80	2.90	180	unidad	3	2025-10-24 18:53:42.73315	3	Adobo Tradicional
 \.
 
 
@@ -434,6 +499,9 @@ COPY public.productos (id, categoria, precio_venta, costo_compra, stock, unidad_
 --
 
 COPY public.proveedores (id, nombre, contacto, direccion) FROM stdin;
+1	Avícola La Esperanza	0412-1112233	Caracas
+2	Carnicería El Rodeo	0414-4445566	Maracay
+3	Especias Don Pepe	0416-7778899	Valencia
 \.
 
 
@@ -452,6 +520,13 @@ COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado) FROM st
 
 COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado) FROM stdin;
 \.
+
+
+--
+-- Name: categorias_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.categorias_id_seq', 4, true);
 
 
 --
@@ -486,7 +561,7 @@ SELECT pg_catalog.setval('public.detalle_venta_id_seq', 1, false);
 -- Name: productos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.productos_id_seq', 1, false);
+SELECT pg_catalog.setval('public.productos_id_seq', 18, true);
 
 
 --
@@ -508,6 +583,22 @@ SELECT pg_catalog.setval('public.usuarios_id_seq', 1, true);
 --
 
 SELECT pg_catalog.setval('public.ventas_id_seq', 1, false);
+
+
+--
+-- Name: categorias categorias_nombre_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.categorias
+    ADD CONSTRAINT categorias_nombre_key UNIQUE (nombre);
+
+
+--
+-- Name: categorias categorias_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.categorias
+    ADD CONSTRAINT categorias_pkey PRIMARY KEY (id);
 
 
 --
@@ -646,6 +737,14 @@ ALTER TABLE ONLY public.detalle_venta
 
 
 --
+-- Name: productos fk_producto_categoria; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.productos
+    ADD CONSTRAINT fk_producto_categoria FOREIGN KEY (categoria_id) REFERENCES public.categorias(id);
+
+
+--
 -- Name: productos productos_id_provedores_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -665,5 +764,5 @@ ALTER TABLE ONLY public.ventas
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Q1GLsgDunNqdhfCmwcN0qRv6eWN3SCecaK36HBLVYd6slSN3jrfp8SKrgu7ttLK
+\unrestrict A4FaSq5LSNVa0rYaAZGqdvyJxITCSjvrJ5ogVh3DsQpOgjSCYhq6sdX4mBr8ZQr
 

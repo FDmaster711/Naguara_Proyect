@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Pollera Na'Guara</title>
+  <link rel="stylesheet" href="estilos.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebarToggle" class="menu-toggle" aria-label="Alternar menú">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+    <nav class="sidebar-menu" aria-label="Menú principal">
+      <ul>
+        <li>
+          <a href="#" class="menu-item active" onclick="loadDashboard(); setActive(this);">
+            <i class="fas fa-home"></i> <span>Dashboard</span>
+          </a>
+        </li>
+
+        <!-- Ventas -->
+        <li>
+          <a href="Ventas/Ventas.html" class="menu-item">
+            <i class="fas fa-shopping-cart"></i> <span>Ventas</span>
+          </a>
+        </li>
+
+        <!-- Inventario -->
+        <li>
+          <button class="menu-item submenu-toggle" onclick="toggleSubmenu('inventario-submenu', this);">
+            <i class="fas fa-warehouse"></i> <span>Inventario</span> <i class="fas fa-chevron-down submenu-arrow"></i>
+          </button>
+          <ul id="inventario-submenu" class="submenu">
+            <li><a href="Inventario/InventarioGeneral.html" class="submenu-item">Inventario General</a></li>
+            <li><a href="Productos/Productos.html" class="submenu-item">Productos</a></li>
+            <li><a href="Categorias/Categorias.html" class="submenu-item">Categorías</a></li>
+          </ul>
+        </li>
+
+        <!-- Compras -->
+        <li>
+          <button class="menu-item submenu-toggle" onclick="toggleSubmenu('compras-submenu', this);">
+            <i class="fas fa-shopping-bag"></i> <span>Compras</span> <i class="fas fa-chevron-down submenu-arrow"></i>
+          </button>
+          <ul id="compras-submenu" class="submenu">
+            <li><a href="Proveedores/Proveedores.html" class="submenu-item">Proveedores</a></li>
+            <li><a href="Pedidos/Pedidos.html" class="submenu-item">Pedidos / Reposición</a></li>
+            <li><a href="Facturas/FacturasCompra.html" class="submenu-item">Facturas de Compra</a></li>
+          </ul>
+        </li>
+
+        <!-- Reportes -->
+        <li>
+          <a href="Reportes/Reportes.html" class="menu-item">
+            <i class="fas fa-chart-line"></i> <span>Reportes</span>
+          </a>
+        </li>
+
+        <!-- Configuración -->
+        <li>
+          <a href="Configuracion/Configuracion.html" class="menu-item">
+            <i class="fas fa-cog"></i> <span>Configuración</span>
+          </a>
+        </li>
+
+        <!-- Usuarios -->
+        <li>
+          <a href="Usuarios/GestionU.html" class="menu-item">
+            <i class="fas fa-users"></i> <span>Usuarios</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Top bar -->
+  <header class="top-bar">
+    <span class="page-title">Dashboard</span>
+    <div class="user-profile" tabindex="0" onclick="toggleUserMenu()" onblur="closeUserMenu()">
+      <span class="user-avatar">JC</span>
+      <span class="user-info">
+        <span class="user-name">Jesús Camacho</span>
+        <span class="user-role">Administrador</span>
+      </span>
+    <div class="user-dropdown" id="userDropdown">
+  <a href="#" class="dropdown-item"><i class="fas fa-user"></i> Ver perfil</a>
+  <div class="dropdown-divider"></div>
+  <a href="#" class="dropdown-item" id="logoutBtn" onclick="logout()">
+    <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+  </a>
+</div>
+
+    </div>
+  </header>
+
+  <!-- Contenido principal -->
+  <main id="contenidoPrincipal" class="main-content">
+    <p>Cargando Dashboard...</p>
+  </main>
+
+  <script>
+  // ---- CONFIGURACIÓN API ----
+  const API_BASE = 'http://localhost:3000/api';
+
+  async function fetchData(endpoint) {
+    const res = await fetch(`${API_BASE}${endpoint}`);
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return res.json();
+  }
+
+  // ---- DASHBOARD ----
+  async function loadDashboard() {
+    const main = document.getElementById('contenidoPrincipal');
+    main.innerHTML = `<p style="text-align:center;">Cargando datos...</p>`;
+    try {
+      const stats = await fetchData('/dashboard/stats');
+
+      main.innerHTML = `
+        <section class="dashboard-cards-custom">
+          <div class="card_wrap">
+            <div class="card_header uno"><p>${stats.totalProductos}</p></div>
+            <div class="card_content">
+              <h1 class="card_title"><b>Productos</b></h1>
+              <p class="card_text">Total registrados.</p>
+              <a href="Productos/Productos.html" class="card_btn uno">Ver</a>
+            </div>
+          </div>
+
+          <div class="card_wrap">
+            <div class="card_header dos"><p>${stats.ventasHoy}</p></div>
+            <div class="card_content">
+              <h1 class="card_title"><b>Ventas Hoy</b></h1>
+              <p class="card_text">Realizadas hoy.</p>
+              <a href="Ventas/Ventas.html" class="card_btn dos">Ver</a>
+            </div>
+          </div>
+
+          <div class="card_wrap">
+            <div class="card_header tres"><p>${stats.totalProveedores}</p></div>
+            <div class="card_content">
+              <h1 class="card_title"><b>Proveedores</b></h1>
+              <p class="card_text">Activos registrados.</p>
+              <a href="Proveedores/Proveedores.html" class="card_btn tres">Ver</a>
+            </div>
+          </div>
+
+          <div class="card_wrap">
+            <div class="card_header cuatro"><p>${stats.productosStockMinimo}</p></div>
+            <div class="card_content">
+              <h1 class="card_title"><b>Stock mínimo</b></h1>
+              <p class="card_text">Productos con bajo inventario.</p>
+              <a href="Productos/Productos.html" class="card_btn cuatro">Ver</a>
+            </div>
+          </div>
+        </section>
+        <h2>Productos más vendidos</h2>
+        <canvas id="graficoTorta" width="400" height="200"></canvas>
+      `;
+
+      const ctx = document.getElementById('graficoTorta').getContext('2d');
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Producto A', 'Producto B', 'Producto C'],
+          datasets: [{ data: [12, 19, 7], backgroundColor: ['#5a00b3', '#3498db', '#2ecc71'] }]
+        }
+      });
+
+    } catch (err) {
+      console.error(err);
+      main.innerHTML = `<p style="color:red; text-align:center;">No se pudieron cargar los datos del dashboard.</p>`;
+    }
+  }
+
+  // ---- INTERFAZ ----
+  function toggleSubmenu(id, btn) {
+    const submenu = document.getElementById(id);
+    submenu.classList.toggle('open');
+    btn.classList.toggle('open');
+  }
+
+  function setActive(el) {
+    document.querySelectorAll('.menu-item').forEach(e => e.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function toggleUserMenu() {
+    document.getElementById('userDropdown').classList.toggle('active');
+  }
+  function closeUserMenu() {
+    setTimeout(() => document.getElementById('userDropdown').classList.remove('active'), 150);
+  }
+
+
+
+async function logout() {
+  try {
+    const response = await fetch('http://localhost:3000/logout', {
+      method: 'POST',
+      credentials: 'include' 
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      localStorage.removeItem('usuario');
+
+      // Redirigir al login
+      window.location.href = 'login.html';
+    } else {
+      alert(data.error || 'Error al cerrar sesión');
+    }
+  } catch (err) {
+    console.error('Error cerrando sesión:', err);
+    alert('Error de conexión con el servidor');
+  }
+}
+
+
+  document.getElementById('sidebarToggle').addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+    document.querySelector('.top-bar').style.left = sidebar.classList.contains('collapsed') ? '60px' : '250px';
+    document.querySelector('.main-content').style.marginLeft = sidebar.classList.contains('collapsed') ? '60px' : '250px';
+  });
+
+async function checkSession() {
+  try {
+    const res = await fetch('http://localhost:3000/api/sesion', {
+      credentials: 'include'
+    });
+    const data = await res.json();
+
+    if (!data.autenticado) {
+      window.location.href = 'login.html';
+    } else {
+      console.log('✅ Sesión activa:', data.usuario);
+    }
+  } catch (err) {
+    console.error('Error verificando sesión:', err);
+    window.location.href = 'login.html';
+  }
+}
+checkSession();
+
+  window.onload = loadDashboard;
+  </script>
+</body>
+</html>
+
