@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict uughrmwfRvcabK7x3ShHEdo83Z0vaAezXYBdI20kCqR0JL5oWZjIaOAkSrf7az7
+\restrict JNspaSHM0vJc6F4drOmUnUU3jwc0K1MtWiLFpsFVxS1nbb6pQcH8fh7zChboHWA
 
 -- Dumped from database version 18.0
 -- Dumped by pg_dump version 18.0
@@ -262,7 +262,8 @@ CREATE TABLE public.productos (
     id_provedores integer,
     fecha_actualizacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     categoria_id integer NOT NULL,
-    nombre character varying(100)
+    nombre character varying(100),
+    precio_dolares numeric(10,2)
 );
 
 
@@ -324,6 +325,43 @@ ALTER SEQUENCE public.proovedores_id_seq OWNER TO postgres;
 --
 
 ALTER SEQUENCE public.proovedores_id_seq OWNED BY public.proveedores.id;
+
+
+--
+-- Name: tasa_cambio; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tasa_cambio (
+    id integer NOT NULL,
+    tasa_bs numeric(10,2) NOT NULL,
+    fecha_actualizacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    fuente character varying(50) DEFAULT 'api'::character varying,
+    activo boolean DEFAULT true
+);
+
+
+ALTER TABLE public.tasa_cambio OWNER TO postgres;
+
+--
+-- Name: tasa_cambio_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tasa_cambio_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tasa_cambio_id_seq OWNER TO postgres;
+
+--
+-- Name: tasa_cambio_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tasa_cambio_id_seq OWNED BY public.tasa_cambio.id;
 
 
 --
@@ -463,6 +501,13 @@ ALTER TABLE ONLY public.proveedores ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
+-- Name: tasa_cambio id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tasa_cambio ALTER COLUMN id SET DEFAULT nextval('public.tasa_cambio_id_seq'::regclass);
+
+
+--
 -- Name: usuarios id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -541,6 +586,8 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 12	8	16	1.00	3.50
 13	8	17	1.00	4.20
 14	9	16	1.00	3.50
+15	10	13	40.00	5.50
+16	11	11	29.00	45.00
 \.
 
 
@@ -548,16 +595,16 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 -- Data for Name: productos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, id_provedores, fecha_actualizacion, categoria_id, nombre) FROM stdin;
-15	8.20	5.00	100	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Res
-13	5.50	3.50	198	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica
-14	6.80	4.20	149	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial
-12	15.00	10.00	39	kg	1	2025-10-24 18:53:42.73315	1	Muslos de Pollo
-11	45.00	32.00	29	kg	1	2025-10-24 18:53:42.73315	1	Pecho de Pollo
-10	25.00	18.50	49	kg	1	2025-10-24 18:53:42.73315	1	Pollo Entero Premium
-18	5.80	2.90	178	unidad	3	2025-10-24 18:53:42.73315	3	Adobo Tradicional
-17	4.20	2.10	249	unidad	3	2025-10-24 18:53:42.73315	3	Sazonador con Especias
-16	3.50	1.80	298	unidad	3	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara
+COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, id_provedores, fecha_actualizacion, categoria_id, nombre, precio_dolares) FROM stdin;
+15	8.20	5.00	100	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04
+14	6.80	4.20	149	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial	0.03
+12	15.00	10.00	39	kg	1	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07
+10	25.00	18.50	49	kg	1	2025-10-24 18:53:42.73315	1	Pollo Entero Premium	0.12
+18	5.80	2.90	178	unidad	3	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03
+17	4.20	2.10	249	unidad	3	2025-10-24 18:53:42.73315	3	Sazonador con Especias	0.02
+16	3.50	1.80	298	unidad	3	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02
+13	5.50	3.50	158	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03
+11	45.00	32.00	0	kg	1	2025-10-24 18:53:42.73315	1	Pecho de Pollo	0.22
 \.
 
 
@@ -569,6 +616,16 @@ COPY public.proveedores (id, nombre, contacto, direccion) FROM stdin;
 1	Avícola La Esperanza	0412-1112233	Caracas
 2	Carnicería El Rodeo	0414-4445566	Maracay
 3	Especias Don Pepe	0416-7778899	Valencia
+\.
+
+
+--
+-- Data for Name: tasa_cambio; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tasa_cambio (id, tasa_bs, fecha_actualizacion, fuente, activo) FROM stdin;
+1	215.89	2025-10-26 17:29:56.958182	manual	t
+2	216.37	2025-10-26 17:40:13.446462	api	t
 \.
 
 
@@ -590,6 +647,8 @@ COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente
 7	2025-10-26 10:13:43.783921	1	efectivo	completada	4
 8	2025-10-26 11:04:31.861996	1	efectivo	completada	3
 9	2025-10-26 11:25:58.424656	1	efectivo	completada	1
+10	2025-10-26 17:56:14.19122	1	efectivo	completada	1
+11	2025-10-26 17:57:19.494139	1	efectivo	completada	4
 \.
 
 
@@ -632,7 +691,7 @@ SELECT pg_catalog.setval('public.detalle_compra_id_seq', 1, false);
 -- Name: detalle_venta_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.detalle_venta_id_seq', 14, true);
+SELECT pg_catalog.setval('public.detalle_venta_id_seq', 16, true);
 
 
 --
@@ -650,6 +709,13 @@ SELECT pg_catalog.setval('public.proovedores_id_seq', 1, false);
 
 
 --
+-- Name: tasa_cambio_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 2, true);
+
+
+--
 -- Name: usuarios_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -660,7 +726,7 @@ SELECT pg_catalog.setval('public.usuarios_id_seq', 1, true);
 -- Name: ventas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ventas_id_seq', 9, true);
+SELECT pg_catalog.setval('public.ventas_id_seq', 11, true);
 
 
 --
@@ -741,6 +807,14 @@ ALTER TABLE ONLY public.productos
 
 ALTER TABLE ONLY public.proveedores
     ADD CONSTRAINT proovedores_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tasa_cambio tasa_cambio_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tasa_cambio
+    ADD CONSTRAINT tasa_cambio_pkey PRIMARY KEY (id);
 
 
 --
@@ -858,5 +932,5 @@ ALTER TABLE ONLY public.ventas
 -- PostgreSQL database dump complete
 --
 
-\unrestrict uughrmwfRvcabK7x3ShHEdo83Z0vaAezXYBdI20kCqR0JL5oWZjIaOAkSrf7az7
+\unrestrict JNspaSHM0vJc6F4drOmUnUU3jwc0K1MtWiLFpsFVxS1nbb6pQcH8fh7zChboHWA
 
