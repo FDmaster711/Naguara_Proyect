@@ -1,1461 +1,1006 @@
- // Simulación de Base de Datos
-        let clientesDB = [
-            { id: 'V-12345678', nombre: 'Fabián Da Cal', telefono: '0412-550-0956', direccion: 'Calle 15 entre carreras 4 y 5, Pueblo Nuevo. #123, Barquisimeto' },
-            { id: 'V-31544532', nombre: 'Jesús Camacho', telefono: '0412-266-5517', direccion: 'Calle 17 entre carrera 5 y 6, Pueblo Nuevo #456, Barquisimeto' },
-            { id: 'V-98765432', nombre: 'Carlos Mendoza', telefono: '0424-555-0123', direccion: 'Urb. Los Rosales, Casa 789' }
-        ];
+// ventas.js - Punto de Venta Completo con Factura
+class VentasManager {
+    constructor() {
+        this.currentCustomer = null;
+        this.cart = [];
+        this.products = [];
+        this.exchangeRate = 207.89;
+        this.selectedPaymentMethod = 'efectivo';
+        this.lastSaleId = null;
+        this.empresaData = null;
+        
+        this.init();
+    }
 
-        let productosDB = [
-            { codigo: 'P001', nombre: 'Pollo Entero Fresco', precio: 893.93, stock: 25, tipo: 'peso' },
-            { codigo: 'P002', nombre: 'Pechuga de Pollo', precio: 1143.39, stock: 50, tipo: 'peso' },
-            { codigo: 'P003', nombre: 'Muslos de Pollo', precio: 1309.71, stock: 30, tipo: 'peso' },
-            { codigo: 'M001', nombre: 'Milanesa de Pechuga', precio: 1868.93, stock: 20, tipo: 'peso' },
-            { codigo: 'M002', nombre: 'Milanesa de Muslo', precio: 1400.50, stock: 18, tipo: 'peso' },
-            { codigo: 'A001', nombre: 'Aliño Completo', precio: 207.89, stock: 50, tipo: 'unidad' }
-        ];
+    init() {
+        console.log('🚀 Inicializando punto de venta...');
+        this.setCurrentDate();
+        this.setupEventListeners();
+        this.checkAuthentication();
+        this.loadProducts();
+        this.setupPaymentMethods();
+        this.hideInvoiceButtons();
+        this.loadEmpresaData();
+    }
 
- let ventasDB = [];
-        let currentSale = {
-            numero: 'VEN-000001',
-            cliente: null,
-            productos: [],
-            metodoPago: null,
-            subtotal: 0,
-            impuesto: 0,
-            total: 0,
-            fecha: new Date()
-        };
+    checkAuthentication() {
+        fetch('/api/me')
+            .then(response => {
+                if (!response.ok) {
+                    window.location.href = '/login.html';
+                }
+            })
+            .catch(error => {
+                console.error('Error de autenticación:', error);
+                window.location.href = '/login.html';
+            });
+    }
 
-        // Constantes
-        const EXCHANGE_RATE = 207.89;
-        const IVA_RATE = 0.16;
-        let saleCounter = 1;
+    async loadEmpresaData() {
+        try {
+            const response = await fetch('/api/empresa', {
+                credentials: 'include'
+            });
+            if (response.ok) {
+                this.empresaData = await response.json();
+                console.log('🏢 Datos de empresa cargados:', this.empresaData);
+            }
+        } catch (error) {
+            console.error('Error cargando datos empresa:', error);
+            // Usar datos por defecto
+            this.empresaData = {
+                nombre_empresa: "Na'Guara",
+                rif: "J-123456789",
+                telefono: "(0412) 123-4567",
+                direccion: "Barquisimeto, Venezuela",
+                mensaje_factura: "¡Gracias por su compra!"
+            };
+        }
+    }
 
-        // Inicialización
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeApp();
-            setupEventListeners();
+    setCurrentDate() {
+        const now = new Date();
+        const formattedDate = now.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        document.getElementById('current-date').textContent = formattedDate;
+        
+        const saleNumber = 'VEN-' + now.getTime().toString().slice(-6);
+        document.getElementById('sale-number').textContent = saleNumber;
+    }
+
+    setupEventListeners() {
+        console.log('🔧 Configurando event listeners...');
+        
+        // Búsqueda de productos
+        const productSearch = document.getElementById('product-search');
+        if (productSearch) {
+            productSearch.addEventListener('input', (e) => {
+                console.log('Búsqueda:', e.target.value);
+                this.searchProducts(e.target.value);
+            });
+            
+            productSearch.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && e.target.value.trim()) {
+                    console.log('Enter presionado:', e.target.value);
+                    this.handleProductSearch(e.target.value);
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.autocomplete-container')) {
+                    document.getElementById('product-suggestions').classList.add('hidden');
+                }
+            });
+        }
+
+        // Cliente
+        document.getElementById('customer-id').addEventListener('blur', (e) => this.searchCustomer(e.target.value));
+        document.getElementById('customer-id').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.searchCustomer(e.target.value);
+        });
+        document.getElementById('customer-id').addEventListener('input', (e) => this.validateCedulaFormat(e.target.value));
+        
+        document.getElementById('save-customer').addEventListener('click', () => this.saveCustomer());
+
+        // Acciones
+        document.getElementById('process-sale').addEventListener('click', () => this.processSale());
+        document.getElementById('new-sale').addEventListener('click', () => this.newSale());
+        document.getElementById('cancel-sale').addEventListener('click', () => this.cancelSale());
+        
+        // Factura
+        document.getElementById('view-invoice').addEventListener('click', () => this.viewInvoice());
+        document.getElementById('quick-invoice-btn').addEventListener('click', () => this.viewInvoice());
+        document.getElementById('print-invoice').addEventListener('click', () => this.printInvoice());
+        document.getElementById('close-invoice').addEventListener('click', () => this.hideModal('invoice-modal'));
+
+        // Modales
+        this.setupModalEvents();
+    }
+
+    setupModalEvents() {
+        document.getElementById('close-alert-modal').addEventListener('click', () => {
+            this.hideModal('alert-modal');
         });
 
-        function initializeApp() {
-            // Actualizar fecha actual en formato DD/MM/AAAA
-            const today = new Date();
-            const day = String(today.getDate()).padStart(2, '0');
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const year = today.getFullYear();
-            document.getElementById('current-date').textContent = `${day}/${month}/${year}`;
-            focusCustomerInput();
-        }
+        document.getElementById('confirm-alert').addEventListener('click', () => {
+            this.hideModal('alert-modal');
+        });
 
-        function setupEventListeners() {
-            // Paso 1: Cliente
-            document.getElementById('customer-id').addEventListener('blur', searchCustomer);
-            document.getElementById('save-customer').addEventListener('click', saveNewCustomer);
-            document.getElementById('continue-to-products').addEventListener('click', () => showStep(2));
+        document.getElementById('close-confirm-modal').addEventListener('click', () => {
+            this.hideModal('confirm-modal');
+        });
 
-            // Paso 2: Productos
-            document.getElementById('product-search').addEventListener('input', searchProducts);
-            document.getElementById('product-search').addEventListener('keydown', handleProductKeydown);
-            document.getElementById('continue-to-review').addEventListener('click', () => showStep(3));
-            document.getElementById('back-to-customer').addEventListener('click', () => showStep(1));
+        document.getElementById('cancel-confirm').addEventListener('click', () => {
+            this.hideModal('confirm-modal');
+        });
 
-            // Paso 4: Método de Pago
-            document.querySelectorAll('.payment-btn').forEach(btn => {
-                btn.addEventListener('click', selectPaymentMethod);
+        document.getElementById('accept-confirm').addEventListener('click', () => {
+            this.executeConfirmedAction();
+        });
+
+        // Cerrar modal al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                this.hideModal(e.target.id);
+            }
+        });
+
+        // Cerrar modal con ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.hideModal('alert-modal');
+                this.hideModal('confirm-modal');
+                this.hideModal('invoice-modal');
+            }
+        });
+    }
+
+    setupPaymentMethods() {
+        document.querySelectorAll('.payment-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.payment-btn').forEach(b => b.classList.remove('active', 'bg-purple-100', 'border-purple-300'));
+                e.currentTarget.classList.add('active', 'bg-purple-100', 'border-purple-300');
+                this.selectedPaymentMethod = e.currentTarget.dataset.method;
+                console.log('Método de pago seleccionado:', this.selectedPaymentMethod);
             });
+        });
+    }
 
-            // Navegación entre pasos
-            document.getElementById('continue-to-payment').addEventListener('click', showPaymentMethods);
-            document.getElementById('back-to-products').addEventListener('click', () => showStep(2));
-            document.getElementById('back-to-review').addEventListener('click', () => showStep(3));
-            document.getElementById('back-to-payment-method').addEventListener('click', () => showStep(4));
-
-        // Botones principales
-            document.getElementById('process-sale').addEventListener('click', processSale);
-            document.getElementById('new-sale').addEventListener('click', startNewSale);
-            document.getElementById('cancel-sale').addEventListener('click', cancelSale);
-            document.getElementById('close-cash-register').addEventListener('click', showCashRegisterClosure);
-
-            // Modal
-            document.getElementById('close-invoice').addEventListener('click', closeInvoiceModal);
-            document.getElementById('print-invoice').addEventListener('click', printInvoice);
-            document.getElementById('new-sale-after-invoice').addEventListener('click', startNewSaleFromInvoice);
-        }
-
-        // PASO 1: Búsqueda de Cliente
-        function searchCustomer() {
-            const customerId = document.getElementById('customer-id').value.trim().toUpperCase();
-            
-            if (!customerId) return;
-
-            // Simular consulta SQL: SELECT * FROM clientes WHERE id = ?
-            const customer = clientesDB.find(c => c.id === customerId);
-
-            if (customer) {
-                showExistingCustomer(customer);
-            } else {
-                showNewCustomerForm();
-            }
-        }
-
-        function showExistingCustomer(customer) {
-            currentSale.cliente = customer;
-            
-            document.getElementById('customer-form').classList.add('hidden');
-            document.getElementById('customer-info').classList.remove('hidden');
-            document.getElementById('customer-details').innerHTML = `
-                <p><strong>ID:</strong> ${customer.id}</p>
-                <p><strong>Nombre:</strong> ${customer.nombre}</p>
-                <p><strong>Teléfono:</strong> ${customer.telefono}</p>
-                <p><strong>Dirección:</strong> ${customer.direccion}</p>
-            `;
-
-            updateCurrentCustomerInfo(customer);
-            completeStep(1);
-        }
-
-        function showNewCustomerForm() {
-            document.getElementById('customer-info').classList.add('hidden');
-            document.getElementById('customer-form').classList.remove('hidden');
-            document.getElementById('customer-name').focus();
-        }
-
-        function saveNewCustomer() {
-            const customerId = document.getElementById('customer-id').value.trim().toUpperCase();
-            const customerName = document.getElementById('customer-name').value.trim();
-            const customerPhone = document.getElementById('customer-phone').value.trim();
-            const customerAddress = document.getElementById('customer-address').value.trim();
-
-            if (!customerName || !customerPhone || !customerAddress) {
-                alert('Por favor complete todos los campos obligatorios');
-                return;
-            }
-
-            const newCustomer = {
-                id: customerId,
-                nombre: customerName,
-                telefono: customerPhone,
-                direccion: customerAddress
-            };
-
-            // Simular INSERT INTO clientes
-            clientesDB.push(newCustomer);
-            currentSale.cliente = newCustomer;
-
-            showExistingCustomer(newCustomer);
-        }
-
-        // PASO 2: Búsqueda de Productos
-        function searchProducts() {
-            const query = document.getElementById('product-search').value.toLowerCase().trim();
-            const suggestionsDiv = document.getElementById('product-suggestions');
-
-            if (query.length < 1) {
-                suggestionsDiv.classList.add('hidden');
-                return;
-            }
-
-            // Simular consulta SQL: SELECT * FROM productos WHERE codigo LIKE ? OR nombre LIKE ?
-            const filteredProducts = productosDB.filter(product => 
-                product.codigo.toLowerCase().includes(query) || 
-                product.nombre.toLowerCase().includes(query)
-            );
-
-            if (filteredProducts.length > 0) {
-                suggestionsDiv.innerHTML = filteredProducts.map(product => `
-                    <div class="autocomplete-item" data-codigo="${product.codigo}">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <span class="font-mono text-sm text-purple-600">${product.codigo}</span>
-                                <span class="ml-2 font-medium">${product.nombre}</span>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-sm font-semibold">Bs. ${product.precio.toFixed(2)}${product.tipo === 'peso' ? '/kg' : ''}</div>
-                                <div class="text-xs text-gray-500">Stock: ${product.stock}${product.tipo === 'peso' ? ' kg' : ' unid'}</div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-
-                suggestionsDiv.classList.remove('hidden');
-
-                // Agregar event listeners
-                suggestionsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
-                    item.addEventListener('click', function() {
-                        addProductToCart(this.dataset.codigo);
-                    });
-                });
-            } else {
-                suggestionsDiv.classList.add('hidden');
-            }
-        }
-
-        function handleProductKeydown(e) {
-            const suggestions = document.querySelectorAll('.autocomplete-item');
-            const selected = document.querySelector('.autocomplete-item.selected');
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (selected) {
-                    selected.classList.remove('selected');
-                    const next = selected.nextElementSibling || suggestions[0];
-                    next.classList.add('selected');
-                } else if (suggestions.length > 0) {
-                    suggestions[0].classList.add('selected');
-                }
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (selected) {
-                    selected.classList.remove('selected');
-                    const prev = selected.previousElementSibling || suggestions[suggestions.length - 1];
-                    prev.classList.add('selected');
-                }
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                if (selected) {
-                    addProductToCart(selected.dataset.codigo);
-                } else if (suggestions.length > 0) {
-                    addProductToCart(suggestions[0].dataset.codigo);
-                }
-            } else if (e.key === 'Escape') {
-                document.getElementById('product-suggestions').classList.add('hidden');
-            }
-        }
-
-        function addProductToCart(codigo) {
-            // Simular consulta SQL: SELECT * FROM productos WHERE codigo = ?
-            const product = productosDB.find(p => p.codigo === codigo);
-            if (!product) return;
-
-            if (product.stock <= 0) {
-                showAlert('Producto sin stock disponible');
-                return;
-            }
-
-            // Verificar si ya existe en el carrito
-            const existingItem = currentSale.productos.find(p => p.codigo === codigo);
-            
-            if (existingItem) {
-                // Para productos por peso, preguntar cantidad
-                if (product.tipo === 'peso') {
-                    showWeightModal(product.nombre, existingItem.cantidad.toString(), (peso) => {
-                        if (peso && !isNaN(peso) && parseFloat(peso) > 0) {
-                            const nuevoPeso = parseFloat(peso);
-                            if (nuevoPeso <= product.stock) {
-                                existingItem.cantidad = nuevoPeso;
-                                updateCartDisplay();
-                                updateTotals();
-                                clearProductSearch();
-                            } else {
-                                showAlert('No hay suficiente stock disponible');
-                            }
-                        }
-                    });
-                    return;
-                } else {
-                    if (existingItem.cantidad < product.stock) {
-                        existingItem.cantidad++;
-                        updateCartDisplay();
-                        updateTotals();
-                        clearProductSearch();
-                    } else {
-                        showAlert('No hay suficiente stock disponible');
-                        return;
-                    }
-                }
-            } else {
-                // Para productos por peso, preguntar cantidad
-                if (product.tipo === 'peso') {
-                    showWeightModal(product.nombre, '1.0', (peso) => {
-                        if (peso && !isNaN(peso) && parseFloat(peso) > 0) {
-                            const cantidad = parseFloat(peso);
-                            if (cantidad > product.stock) {
-                                showAlert('No hay suficiente stock disponible');
-                                return;
-                            }
-                            
-                            currentSale.productos.push({
-                                codigo: product.codigo,
-                                nombre: product.nombre,
-                                precio: product.precio,
-                                cantidad: cantidad,
-                                tipo: product.tipo
-                            });
-
-                            updateCartDisplay();
-                            updateTotals();
-                            clearProductSearch();
-                            showContinueButton();
-                        }
-                    });
-                    return;
-                } else {
-                    currentSale.productos.push({
-                        codigo: product.codigo,
-                        nombre: product.nombre,
-                        precio: product.precio,
-                        cantidad: 1,
-                        tipo: product.tipo
-                    });
-                    
-                    updateCartDisplay();
-                    updateTotals();
-                    clearProductSearch();
-                }
-            }
-
-            showContinueButton();
-        }
-
-        function showContinueButton() {
-            if (currentSale.productos.length > 0) {
-                document.getElementById('continue-to-review').classList.remove('hidden');
-            }
-        }
-
-        function updateCartDisplay() {
-            const tbody = document.getElementById('cart-items');
-            const emptyRow = document.getElementById('empty-cart');
-
-            if (currentSale.productos.length === 0) {
-                emptyRow.style.display = 'table-row';
-                return;
-            }
-
-            emptyRow.style.display = 'none';
-            
-            tbody.innerHTML = currentSale.productos.map((item, index) => `
-                <tr>
-                    <td class="font-mono text-sm">${item.codigo}</td>
-                    <td class="font-medium">${item.nombre}</td>
-                    <td class="text-center">
-                        <div class="flex items-center justify-center space-x-2">
-                            ${item.tipo === 'peso' ? 
-                                `<button onclick="editWeight(${index})" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 flex items-center">
-                                    <i class="fas fa-edit mr-1"></i>
-                                    ${item.cantidad} kg
-                                </button>` :
-                                `<button onclick="decreaseQuantity(${index})" class="w-7 h-7 bg-red-500 text-white rounded text-xs hover:bg-red-600 flex items-center justify-center">-</button>
-                                <span class="w-10 text-center font-semibold">${item.cantidad}</span>
-                                <button onclick="increaseQuantity(${index})" class="w-7 h-7 bg-green-500 text-white rounded text-xs hover:bg-green-600 flex items-center justify-center">+</button>`
-                            }
-                        </div>
-                    </td>
-                    <td class="text-right">Bs. ${item.precio.toFixed(2)}${item.tipo === 'peso' ? '/kg' : ''}</td>
-                    <td class="text-right font-semibold">Bs. ${(item.cantidad * item.precio).toFixed(2)}</td>
-                    <td class="text-center">
-                        <button onclick="removeFromCart(${index})" class="w-8 h-8 bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center transition-all">
-                            <i class="fas fa-trash text-xs"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function increaseQuantity(index) {
-            const item = currentSale.productos[index];
-            const product = productosDB.find(p => p.codigo === item.codigo);
-            
-            if (item.cantidad < product.stock) {
-                item.cantidad++;
-                updateCartDisplay();
-                updateTotals();
-            } else {
-                alert('No hay suficiente stock disponible');
-            }
-        }
-
-        function decreaseQuantity(index) {
-            const item = currentSale.productos[index];
-            
-            if (item.cantidad > 1) {
-                item.cantidad--;
-                updateCartDisplay();
-                updateTotals();
-            }
-        }
-
-        function editWeight(index) {
-            const item = currentSale.productos[index];
-            const product = productosDB.find(p => p.codigo === item.codigo);
-            
-            showWeightModal(item.nombre, item.cantidad.toString(), (peso) => {
-                if (peso && !isNaN(peso) && parseFloat(peso) > 0) {
-                    const nuevoPeso = parseFloat(peso);
-                    if (nuevoPeso <= product.stock) {
-                        item.cantidad = nuevoPeso;
-                        updateCartDisplay();
-                        updateTotals();
-                    } else {
-                        showAlert('No hay suficiente stock disponible');
-                    }
+    // === GESTIÓN DE PRODUCTOS ===
+    async loadProducts() {
+        try {
+            console.log('📦 Cargando productos...');
+            const response = await fetch('/api/productos', { 
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
             });
+            
+            if (response.ok) {
+                const rawProducts = await response.json();
+                console.log('📊 Productos recibidos (primeros 3):', rawProducts.slice(0, 3));
+                
+                this.products = rawProducts.map(product => ({
+                    id: product.id,
+                    nombre: product.nombre,
+                    precio_venta: parseFloat(product.precio_venta) || 0,
+                    stock: parseInt(product.stock) || 0,
+                    unidad_medida: product.unidad_medida || 'unidad',
+                    categoria: product.categoria || 'Sin categoría'
+                }));
+                
+                console.log(`✅ ${this.products.length} productos formateados`);
+            } else {
+                console.error('❌ Error cargando productos:', response.status, response.statusText);
+                this.showAlert('Error al cargar productos del servidor');
+            }
+        } catch (error) {
+            console.error('❌ Error cargando productos:', error);
+            this.showAlert('Error de conexión al cargar productos');
         }
+    }
 
-        function removeFromCart(index) {
-            const product = currentSale.productos[index];
-            showConfirmModal(
-                `¿Eliminar ${product.nombre} del carrito?`,
-                'Esta acción no se puede deshacer.',
-                () => {
-                    currentSale.productos.splice(index, 1);
-                    updateCartDisplay();
-                    updateTotals();
-                    
-                    if (currentSale.productos.length === 0) {
-                        document.getElementById('continue-to-review').classList.add('hidden');
-                    }
-                }
-            );
-        }
-
-        function updateTotals() {
-            currentSale.subtotal = currentSale.productos.reduce((sum, item) => 
-                sum + (item.cantidad * item.precio), 0);
-            currentSale.impuesto = currentSale.subtotal * IVA_RATE;
-            currentSale.total = currentSale.subtotal + currentSale.impuesto;
-
-            document.getElementById('subtotal-amount').textContent = `Bs. ${currentSale.subtotal.toFixed(2)}`;
-            document.getElementById('tax-amount').textContent = `Bs. ${currentSale.impuesto.toFixed(2)}`;
-            document.getElementById('total-bs').textContent = `Bs. ${currentSale.total.toFixed(2)}`;
-            document.getElementById('total-usd').textContent = `$ ${(currentSale.total / EXCHANGE_RATE).toFixed(2)}`;
-        }
-
-        function clearProductSearch() {
-            document.getElementById('product-search').value = '';
+    searchProducts(query) {
+        console.log('🔍 Buscando productos con:', query);
+        
+        if (!query || query.trim() === '') {
             document.getElementById('product-suggestions').classList.add('hidden');
-            document.getElementById('product-search').focus();
+            return;
         }
 
-        // PASO 4: Método de Pago
-        function showPaymentMethods() {
-            completeStep(3);
-            showStep(4);
+        if (!this.products || this.products.length === 0) {
+            console.log('No hay productos cargados');
+            return;
         }
+        
+        const suggestions = document.getElementById('product-suggestions');
+        suggestions.innerHTML = '';
+        
+        const searchTerm = query.toLowerCase().trim();
+        
+        // Filtrar productos
+        const filteredProducts = this.products.filter(product => {
+            const nombreMatch = product.nombre && product.nombre.toLowerCase().includes(searchTerm);
+            const idMatch = product.id && product.id.toString().includes(searchTerm);
+            const categoriaMatch = product.categoria && product.categoria.toLowerCase().includes(searchTerm);
+            
+            return nombreMatch || idMatch || categoriaMatch;
+        }).slice(0, 5);
 
-        function selectPaymentMethod() {
-            if (currentSale.productos.length === 0) {
-                showAlert('Debe agregar al menos un producto antes de seleccionar el método de pago');
-                return;
-            }
+        console.log('Productos encontrados:', filteredProducts.length);
 
-            // Remover selección anterior
-            document.querySelectorAll('.payment-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-
-            // Seleccionar método actual
-            this.classList.add('selected');
-            const method = this.dataset.method;
-
-            // Manejar métodos especiales que requieren información adicional
-            if (method === 'transferencia' || method === 'pago_movil') {
-                showTransferDetailsModal(method);
-            } else if (method === 'mixto') {
-                showMixedPaymentModal();
-            } else {
-                currentSale.metodoPago = method;
-                currentSale.paymentDetails = null;
-                completeStep(4);
-                showPaymentProcessing();
-                // Mostrar botón de procesar venta para todos los métodos
-                document.getElementById('process-sale').classList.remove('hidden');
-            }
-        }
-
-        // PASO 5: Procesar Pago
-        function showPaymentProcessing() {
-            showStep(5);
-            const paymentDetails = document.getElementById('payment-details');
-            const method = currentSale.metodoPago;
-
-            let content = '';
-
-            switch(method) {
-                case 'efectivo_bs':
-                    content = `
-                        <div class="space-y-4">
-                            <h3 class="font-semibold text-lg">Pago en Efectivo (Bolívares)</h3>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Total a Pagar:</label>
-                                <div class="text-2xl font-bold text-purple-600">Bs. ${currentSale.total.toFixed(2)}</div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Monto Recibido (Bs):</label>
-                                <input type="number" id="amount-received" class="input-field w-full text-lg" 
-                                       placeholder="0.00" step="0.01" min="0">
-                            </div>
-                            <div id="change-display" class="hidden">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Cambio a Devolver:</label>
-                                <div id="change-amount" class="text-xl font-bold text-green-600"></div>
-                            </div>
-                        </div>
-                    `;
-                    break;
-
-                case 'efectivo_usd':
-                    content = `
-                        <div class="space-y-4">
-                            <h3 class="font-semibold text-lg">Pago en Efectivo (Dólares)</h3>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Total (Bs):</label>
-                                    <div class="text-lg font-bold text-purple-600">Bs. ${currentSale.total.toFixed(2)}</div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Total (USD):</label>
-                                    <div class="text-lg font-bold text-green-600">$ ${(currentSale.total / EXCHANGE_RATE).toFixed(2)}</div>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Monto Recibido (USD):</label>
-                                <input type="number" id="amount-received-usd" class="input-field w-full text-lg" 
-                                       placeholder="0.00" step="0.01" min="0">
-                            </div>
-                            <div id="change-display-usd" class="hidden">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Cambio a Devolver:</label>
-                                <div id="change-amount-usd" class="text-xl font-bold text-green-600"></div>
-                            </div>
-                            <div class="text-xs text-gray-500">
-                                Tasa de cambio: 1 USD = ${EXCHANGE_RATE} Bs
-                            </div>
-                        </div>
-                    `;
-                    break;
-
-                default:
-                    content = `
-                        <div class="space-y-4">
-                            <h3 class="font-semibold text-lg">Pago por ${getPaymentMethodName(method)}</h3>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Total a Pagar:</label>
-                                <div class="text-2xl font-bold text-purple-600">Bs. ${currentSale.total.toFixed(2)}</div>
-                            </div>
-                            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                                <p class="text-green-800">
-                                    <i class="fas fa-check-circle mr-2"></i>
-                                    Confirme el pago en el dispositivo/aplicación correspondiente
-                                </p>
-                            </div>
-                        </div>
-                    `;
-            }
-
-            paymentDetails.innerHTML = content;
-
-            // Agregar event listeners para cálculo de cambio
-            if (method === 'efectivo_bs') {
-                document.getElementById('amount-received').addEventListener('input', calculateChange);
-            } else if (method === 'efectivo_usd') {
-                document.getElementById('amount-received-usd').addEventListener('input', calculateChangeUSD);
-            }
-
-            document.getElementById('process-sale').classList.remove('hidden');
-        }
-
-        function calculateChange() {
-            const received = parseFloat(document.getElementById('amount-received').value) || 0;
-            const total = currentSale.total;
-            const change = received - total;
-
-            const changeDisplay = document.getElementById('change-display');
-            const changeAmount = document.getElementById('change-amount');
-
-            if (received >= total) {
-                changeDisplay.classList.remove('hidden');
-                changeAmount.textContent = `Bs. ${change.toFixed(2)}`;
-                changeAmount.className = change > 0 ? 'text-xl font-bold text-green-600' : 'text-xl font-bold text-gray-600';
-            } else {
-                changeDisplay.classList.add('hidden');
-            }
-        }
-
-        function calculateChangeUSD() {
-            const receivedUSD = parseFloat(document.getElementById('amount-received-usd').value) || 0;
-            const totalUSD = currentSale.total / EXCHANGE_RATE;
-            const changeUSD = receivedUSD - totalUSD;
-
-            const changeDisplay = document.getElementById('change-display-usd');
-            const changeAmount = document.getElementById('change-amount-usd');
-
-            if (receivedUSD >= totalUSD) {
-                changeDisplay.classList.remove('hidden');
-                changeAmount.textContent = `$ ${changeUSD.toFixed(2)} (Bs. ${(changeUSD * EXCHANGE_RATE).toFixed(2)})`;
-                changeAmount.className = changeUSD > 0 ? 'text-xl font-bold text-green-600' : 'text-xl font-bold text-gray-600';
-            } else {
-                changeDisplay.classList.add('hidden');
-            }
-        }
-
-        function getPaymentMethodName(method) {
-            const names = {
-                'punto_venta': 'Punto de Venta',
-                'transferencia': 'Transferencia Bancaria',
-                'pago_movil': 'Pago Móvil',
-                'mixto': 'Pago Mixto'
-            };
-            return names[method] || method;
-        }
-
-        // PASO 6: Procesar Venta
-        function processSale() {
-            // Validar pago
-            if (currentSale.metodoPago === 'efectivo_bs') {
-                const received = parseFloat(document.getElementById('amount-received').value) || 0;
-                if (received < currentSale.total) {
-                    showAlert('El monto recibido es insuficiente para completar la venta');
-                    return;
-                }
-            } else if (currentSale.metodoPago === 'efectivo_usd') {
-                const receivedUSD = parseFloat(document.getElementById('amount-received-usd').value) || 0;
-                const totalUSD = currentSale.total / EXCHANGE_RATE;
-                if (receivedUSD < totalUSD) {
-                    showAlert('El monto recibido en USD es insuficiente para completar la venta');
-                    return;
-                }
-            }
-
-            // Simular transacciones de base de datos
-            try {
-                // 1. INSERT INTO ventas
-                const saleRecord = {
-                    id: currentSale.numero,
-                    cliente_id: currentSale.cliente.id,
-                    fecha: currentSale.fecha,
-                    subtotal: currentSale.subtotal,
-                    impuesto: currentSale.impuesto,
-                    total: currentSale.total,
-                    metodo_pago: currentSale.metodoPago,
-                    productos: [...currentSale.productos]
-                };
-                ventasDB.push(saleRecord);
-
-                // 2. UPDATE productos SET stock = stock - cantidad
-                currentSale.productos.forEach(item => {
-                    const product = productosDB.find(p => p.codigo === item.codigo);
-                    if (product) {
-                        product.stock -= item.cantidad;
-                    }
+        if (filteredProducts.length > 0) {
+            filteredProducts.forEach(product => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+                div.innerHTML = `
+                    <div class="font-semibold text-gray-800">${product.nombre}</div>
+                    <div class="text-sm text-gray-600">
+                        Código: ${product.id} | Precio: Bs. ${product.precio_venta} | Stock: ${product.stock}
+                    </div>
+                `;
+                div.addEventListener('click', () => {
+                    console.log('Producto seleccionado:', product.nombre);
+                    this.addProductToCart(product);
                 });
-
-                // 3. Generar factura
-                completeStep(5);
-                completeStep(6);
-                generateInvoice();
-
-            } catch (error) {
-                alert('Error al procesar la venta: ' + error.message);
-            }
-        }
-
-        function generateInvoice() {
-            const invoiceContent = document.getElementById('invoice-content');
-            
-            // Formatear fecha y hora
-            const fechaFactura = currentSale.fecha.toLocaleDateString('es-VE', {
-                day: '2-digit',
-                month: '2-digit', 
-                year: 'numeric'
+                suggestions.appendChild(div);
             });
-            const horaFactura = currentSale.fecha.toLocaleTimeString('es-VE', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
+            suggestions.classList.remove('hidden');
+        } else {
+            suggestions.classList.add('hidden');
+            console.log('No se encontraron productos');
+        }
+    }
+
+    handleProductSearch(query) {
+        if (!query.trim()) return;
+        
+        const suggestions = document.getElementById('product-suggestions');
+        const firstSuggestion = suggestions.querySelector('.autocomplete-item');
+        
+        if (firstSuggestion && !suggestions.classList.contains('hidden')) {
+            console.log('Seleccionando primera sugerencia');
+            firstSuggestion.click();
+        } else {
+            console.log('Buscando producto exacto:', query);
+            const product = this.products.find(p => {
+                const exactIdMatch = p.id && p.id.toString() === query;
+                const exactNameMatch = p.nombre && p.nombre.toLowerCase() === query.toLowerCase();
+                return exactIdMatch || exactNameMatch;
             });
-
-            invoiceContent.innerHTML = `
-                <div class="bg-white text-sm">
-                    <!-- Header SENIAT -->
-                    <div class="text-center mb-4">
-                        <p class="font-bold text-lg">SENIAT</p>
-                        <p class="text-xs">RIF J-085030140</p>
-                    </div>
-
-                    <!-- Información de la Empresa -->
-                    <div class="text-center border-b-2 border-black pb-3 mb-4">
-                        <h1 class="font-bold text-base">ORGANISMO DE INTEGRACIÓN COOPERATIVA CECOSESOLA, R.L</h1>
-                        <h2 class="font-bold text-sm">(CECOSESOLA)</h2>
-                        <p class="text-xs mt-2">AV. LOS HORCONES - AL FINAL CASA NRO S/N</p>
-                        <p class="text-xs">SECTOR RUIZ PINEDA I BARQUISIMETO</p>
-                        <p class="text-xs">ESTADO LARA, ZONA POSTAL 3001</p>
-                    </div>
-
-                    <!-- Información del Cliente -->
-                    <div class="mb-4 text-xs">
-                        <p><strong>RIF/C.I.:</strong> ${currentSale.cliente.id}</p>
-                        <p><strong>Razón Social:</strong> ${currentSale.cliente.nombre}</p>
-                        <p><strong>Dirección:</strong> ${currentSale.cliente.direccion}</p>
-                        <p><strong>Teléfono:</strong> ${currentSale.cliente.telefono}</p>
-                        <p><strong>Cajero:</strong> Sistema Na'Guara</p>
-                    </div>
-
-                    <!-- Información de la Factura -->
-                    <div class="text-center mb-4">
-                        <h2 class="font-bold text-lg">FACTURA</h2>
-                        <div class="flex justify-between text-xs mt-2">
-                            <span><strong>Factura:</strong> ${currentSale.numero}</span>
-                            <span><strong>Fecha:</strong> ${fechaFactura}</span>
-                            <span><strong>Hora:</strong> ${horaFactura}</span>
-                        </div>
-                    </div>
-
-                    <!-- Productos Comprados -->
-                    <div class="mb-4">
-                        <h3 class="font-bold text-center mb-2">PRODUCTOS COMPRADOS</h3>
-                        <table class="w-full text-xs">
-                            <thead>
-                                <tr class="border-b border-black">
-                                    <th class="text-left py-1">Producto</th>
-                                    <th class="text-center py-1">Cant.</th>
-                                    <th class="text-right py-1">Precio</th>
-                                    <th class="text-right py-1">Monto</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${currentSale.productos.map(item => `
-                                    <tr class="border-b border-gray-300">
-                                        <td class="py-1">${item.nombre}</td>
-                                        <td class="text-center py-1">${item.cantidad}${item.tipo === 'peso' ? ' kg' : ''}</td>
-                                        <td class="text-right py-1">Bs. ${item.precio.toFixed(2)}</td>
-                                        <td class="text-right py-1">Bs. ${(item.cantidad * item.precio).toFixed(2)}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Totales -->
-                    <div class="border-t-2 border-black pt-2 mb-4">
-                        <div class="text-xs space-y-1">
-                            <div class="flex justify-between">
-                                <span>Subtotal:</span>
-                                <span>Bs. ${currentSale.subtotal.toFixed(2)}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>IVA (16%):</span>
-                                <span>Bs. ${currentSale.impuesto.toFixed(2)}</span>
-                            </div>
-                            ${currentSale.metodoPago !== 'efectivo_bs' && currentSale.metodoPago !== 'efectivo_usd' ? `
-                            <div class="flex justify-between">
-                                <span>${getPaymentMethodName(currentSale.metodoPago)}:</span>
-                                <span>Bs. ${currentSale.total.toFixed(2)}</span>
-                            </div>
-                            ` : ''}
-                            <div class="flex justify-between font-bold text-base border-t border-black pt-1">
-                                <span>TOTAL:</span>
-                                <span>Bs. ${currentSale.total.toFixed(2)}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Footer -->
-                    <div class="text-center mt-6 pt-3 border-t border-gray-400">
-                        <p class="text-xs font-bold">¡GRACIAS POR SU COMPRA!</p>
-                        <p class="text-xs mt-1">Tasa de cambio: 1 USD = ${EXCHANGE_RATE} Bs</p>
-                        <p class="text-xs mt-1">Sistema Na'Guara - CECOSESOLA</p>
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('invoice-modal').classList.remove('hidden');
-        }
-
-        // Funciones de utilidad
-        function showStep(stepNumber) {
-            // Ocultar todos los contenidos de pasos
-            for (let i = 1; i <= 6; i++) {
-                const stepContent = document.getElementById(`step-${i}-content`);
-                if (stepContent) {
-                    stepContent.classList.add('hidden');
-                }
-            }
-
-            // Mostrar el paso actual
-            const currentStepContent = document.getElementById(`step-${stepNumber}-content`);
-            if (currentStepContent) {
-                currentStepContent.classList.remove('hidden');
-                currentStepContent.classList.add('fade-in');
-            }
-
-            // Mostrar/ocultar botones de navegación según el paso
-            updateNavigationButtons(stepNumber);
-
-            // Actualizar indicador de paso activo
-            updateStepIndicator(stepNumber);
-        }
-
-        function updateNavigationButtons(stepNumber) {
-            // Paso 3: Mostrar botón de volver a productos cuando hay productos
-            if (stepNumber === 3 && currentSale.productos.length > 0) {
-                document.getElementById('back-to-products').classList.remove('hidden');
-                document.getElementById('continue-to-payment').classList.remove('hidden');
-            }
-        }
-
-        function completeStep(stepNumber) {
-            const step = document.getElementById(`step-${stepNumber}`);
-            if (step) {
-                step.classList.remove('pending', 'active');
-                step.classList.add('completed');
-            }
-        }
-
-        function updateStepIndicator(activeStep) {
-            for (let i = 1; i <= 6; i++) {
-                const step = document.getElementById(`step-${i}`);
-                if (step) {
-                    step.classList.remove('active');
-                    if (i === activeStep && !step.classList.contains('completed')) {
-                        step.classList.add('active');
-                    }
-                }
-            }
-        }
-
-        function updateCurrentCustomerInfo(customer) {
-            const customerInfo = document.getElementById('current-customer-info');
-            const customerDetails = document.getElementById('current-customer-details');
             
-            customerDetails.innerHTML = `
-                <p class="text-gray-600"><strong>ID:</strong> ${customer.id}</p>
-                <p class="text-gray-800"><strong>Nombre:</strong> ${customer.nombre}</p>
-                <p class="text-gray-600"><strong>Teléfono:</strong> ${customer.telefono}</p>
-            `;
-            
-            customerInfo.style.display = 'block';
-        }
-
-        function focusCustomerInput() {
-            document.getElementById('customer-id').focus();
-        }
-
-        function startNewSale() {
-            // Reiniciar venta actual
-            saleCounter++;
-            currentSale = {
-                numero: `VEN-${String(saleCounter).padStart(6, '0')}`,
-                cliente: null,
-                productos: [],
-                metodoPago: null,
-                subtotal: 0,
-                impuesto: 0,
-                total: 0,
-                fecha: new Date()
-            };
-
-            // Actualizar número de venta
-            document.getElementById('sale-number').textContent = currentSale.numero;
-
-            // Reiniciar interfaz
-            resetInterface();
-            showStep(1);
-            focusCustomerInput();
-        }
-
-        function cancelSale() {
-            showConfirmModal(
-                '¿Cancelar la venta actual?',
-                'Se perderán todos los datos ingresados. Esta acción no se puede deshacer.',
-                () => {
-                    startNewSale();
-                }
-            );
-        }
-
-        function resetInterface() {
-            // Limpiar formularios
-            document.getElementById('customer-id').value = '';
-            document.getElementById('customer-name').value = '';
-            document.getElementById('customer-phone').value = '';
-            document.getElementById('customer-address').value = '';
-            document.getElementById('product-search').value = '';
-
-            // Ocultar elementos
-            document.getElementById('customer-form').classList.add('hidden');
-            document.getElementById('customer-info').classList.add('hidden');
-            document.getElementById('current-customer-info').style.display = 'none';
-            document.getElementById('continue-to-review').classList.add('hidden');
-            document.getElementById('continue-to-payment').classList.add('hidden');
-            document.getElementById('back-to-products').classList.add('hidden');
-            document.getElementById('process-sale').classList.add('hidden');
-            document.getElementById('product-suggestions').classList.add('hidden');
-
-            // Reiniciar pasos
-            for (let i = 1; i <= 6; i++) {
-                const step = document.getElementById(`step-${i}`);
-                if (step) {
-                    step.classList.remove('active', 'completed');
-                    step.classList.add('pending');
-                }
-            }
-            document.getElementById('step-1').classList.remove('pending');
-            document.getElementById('step-1').classList.add('active');
-
-            // Reiniciar carrito
-            updateCartDisplay();
-            updateTotals();
-
-            // Remover selección de métodos de pago
-            document.querySelectorAll('.payment-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-        }
-
-        function closeInvoiceModal() {
-            document.getElementById('invoice-modal').classList.add('hidden');
-        }
-
-        function printInvoice() {
-            const invoiceContent = document.getElementById('invoice-content').innerHTML;
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Factura ${currentSale.numero}</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 20px; }
-                            table { width: 100%; border-collapse: collapse; }
-                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                            th { background-color: #f2f2f2; }
-                            .text-center { text-align: center; }
-                            .text-right { text-align: right; }
-                            .font-bold { font-weight: bold; }
-                            .text-purple-600 { color: #7c3aed; }
-                        </style>
-                    </head>
-                    <body>
-                        ${invoiceContent}
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-        }
-
-        function startNewSaleFromInvoice() {
-            closeInvoiceModal();
-            startNewSale();
-        }
-
-        // Funciones para modales personalizados
-        function showConfirmModal(title, message, callback) {
-            const modal = document.getElementById('confirm-modal');
-            const titleEl = document.getElementById('confirm-title');
-            const messageEl = document.getElementById('confirm-message');
-            
-            titleEl.textContent = title;
-            messageEl.textContent = message;
-            modal.classList.remove('hidden');
-            
-            const acceptBtn = document.getElementById('accept-confirm');
-            const cancelBtn = document.getElementById('cancel-confirm');
-            const closeBtn = document.getElementById('close-confirm-modal');
-            
-            const handleAccept = () => {
-                modal.classList.add('hidden');
-                callback();
-                cleanup();
-            };
-            
-            const handleCancel = () => {
-                modal.classList.add('hidden');
-                cleanup();
-            };
-            
-            const cleanup = () => {
-                acceptBtn.removeEventListener('click', handleAccept);
-                cancelBtn.removeEventListener('click', handleCancel);
-                closeBtn.removeEventListener('click', handleCancel);
-            };
-            
-            acceptBtn.addEventListener('click', handleAccept);
-            cancelBtn.addEventListener('click', handleCancel);
-            closeBtn.addEventListener('click', handleCancel);
-        }
-
-        function showWeightModal(productName, defaultWeight, callback) {
-            const modal = document.getElementById('weight-modal');
-            const productNameEl = document.getElementById('weight-product-name');
-            const weightInput = document.getElementById('weight-input');
-            const calcDiv = document.getElementById('weight-calculation');
-            
-            productNameEl.textContent = `¿Cuántos kilogramos de ${productName}?`;
-            weightInput.value = defaultWeight;
-            calcDiv.classList.add('hidden');
-            
-            // Encontrar el producto para mostrar el precio
-            const product = productosDB.find(p => p.nombre === productName);
             if (product) {
-                weightInput.addEventListener('input', function() {
-                    const weight = parseFloat(this.value) || 0;
-                    if (weight > 0) {
-                        const total = weight * product.precio;
-                        document.getElementById('calc-weight').textContent = weight.toFixed(2);
-                        document.getElementById('calc-price').textContent = product.precio.toFixed(2);
-                        document.getElementById('calc-total').textContent = total.toFixed(2);
-                        calcDiv.classList.remove('hidden');
-                    } else {
-                        calcDiv.classList.add('hidden');
-                    }
-                });
+                console.log('Producto encontrado:', product.nombre);
+                this.addProductToCart(product);
+            } else {
+                console.log('Producto no encontrado');
+                this.showAlert('Producto no encontrado');
             }
-            
-            modal.classList.remove('hidden');
-            weightInput.focus();
-            weightInput.select();
-            
-            // Event listeners
-            const confirmBtn = document.getElementById('confirm-weight');
-            const cancelBtn = document.getElementById('cancel-weight');
-            const closeBtn = document.getElementById('close-weight-modal');
-            
-            const handleConfirm = () => {
-                const weight = weightInput.value;
-                modal.classList.add('hidden');
-                callback(weight);
-                cleanup();
-            };
-            
-            const handleCancel = () => {
-                modal.classList.add('hidden');
-                cleanup();
-            };
-            
-            const cleanup = () => {
-                confirmBtn.removeEventListener('click', handleConfirm);
-                cancelBtn.removeEventListener('click', handleCancel);
-                closeBtn.removeEventListener('click', handleCancel);
-                weightInput.removeEventListener('keydown', handleKeydown);
-            };
-            
-            const handleKeydown = (e) => {
-                if (e.key === 'Enter') {
-                    handleConfirm();
-                } else if (e.key === 'Escape') {
-                    handleCancel();
-                }
-            };
-            
-            confirmBtn.addEventListener('click', handleConfirm);
-            cancelBtn.addEventListener('click', handleCancel);
-            closeBtn.addEventListener('click', handleCancel);
-            weightInput.addEventListener('keydown', handleKeydown);
+        }
+    }
+
+    addProductToCart(product) {
+        console.log('🛒 Agregando producto al carrito:', product);
+        
+        document.getElementById('product-suggestions').classList.add('hidden');
+        document.getElementById('product-search').value = '';
+
+        if (!product || !product.id) {
+            this.showAlert('Error: Producto no válido');
+            return;
         }
 
-        function showAlert(message) {
-            const modal = document.getElementById('alert-modal');
-            const messageEl = document.getElementById('alert-message');
-
-            messageEl.textContent = message;
-            modal.classList.remove('hidden');
-
-            const confirmBtn = document.getElementById('confirm-alert');
-            const closeBtn = document.getElementById('close-alert-modal');
-
-            const handleClose = () => {
-                modal.classList.add('hidden');
-                confirmBtn.removeEventListener('click', handleClose);
-                closeBtn.removeEventListener('click', handleClose);
-            };
-
-            confirmBtn.addEventListener('click', handleClose);
-            closeBtn.addEventListener('click', handleClose);
+        if (!product.stock || product.stock <= 0) {
+            this.showAlert('Producto sin stock disponible');
+            return;
         }
 
-        // Funciones para métodos de pago avanzados
-        function showTransferDetailsModal(method) {
-            const modal = document.getElementById('transfer-details-modal');
-            const titleEl = document.getElementById('transfer-title');
-            const detailsEl = document.getElementById('transfer-details');
-
-            if (method === 'transferencia') {
-                titleEl.textContent = 'Detalles de Transferencia Bancaria';
-                detailsEl.innerHTML = `
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Banco Destino:</label>
-                            <select id="transfer-bank" class="input-field w-full">
-                                <option value="">Seleccionar banco...</option>
-                                <option value="banco_venezuela">Banco de Venezuela</option>
-                                <option value="banco_nacional">Banco Nacional de Crédito</option>
-                                <option value="banco_mercantil">Banco Mercantil</option>
-                                <option value="banco_banesco">Banesco</option>
-                                <option value="banco_provincial">Banco Provincial</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Número de Cuenta:</label>
-                            <input type="text" id="transfer-account" class="input-field w-full" placeholder="Ej: 0102-1234-5678-9012">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Titular de la Cuenta:</label>
-                            <input type="text" id="transfer-holder" class="input-field w-full" placeholder="Nombre del titular">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Referencia de Pago:</label>
-                            <input type="text" id="transfer-reference" class="input-field w-full" placeholder="Número de referencia">
-                        </div>
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <p class="text-blue-800 text-sm">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                El cliente debe realizar la transferencia bancaria por el monto total de Bs. ${currentSale.total.toFixed(2)}
-                            </p>
-                        </div>
-                    </div>
-                `;
-            } else if (method === 'pago_movil') {
-                titleEl.textContent = 'Detalles de Pago Móvil';
-                detailsEl.innerHTML = `
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Banco:</label>
-                            <select id="pago-movil-bank" class="input-field w-full">
-                                <option value="">Seleccionar banco...</option>
-                                <option value="banco_venezuela">Banco de Venezuela</option>
-                                <option value="banco_nacional">Banco Nacional de Crédito</option>
-                                <option value="banco_mercantil">Banco Mercantil</option>
-                                <option value="banco_banesco">Banesco</option>
-                                <option value="banco_provincial">Banco Provincial</option>
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Teléfono:</label>
-                                <input type="tel" id="pago-movil-phone" class="input-field w-full" placeholder="0412-123-4567">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Cédula:</label>
-                                <input type="text" id="pago-movil-id" class="input-field w-full" placeholder="V-12345678">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Referencia de Pago:</label>
-                            <input type="text" id="pago-movil-reference" class="input-field w-full" placeholder="Número de referencia">
-                        </div>
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <p class="text-blue-800 text-sm">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                El cliente debe realizar el pago móvil por el monto total de Bs. ${currentSale.total.toFixed(2)}
-                            </p>
-                        </div>
-                    </div>
-                `;
-            }
-
-            modal.classList.remove('hidden');
-
-            const confirmBtn = document.getElementById('confirm-transfer');
-            const cancelBtn = document.getElementById('cancel-transfer');
-            const closeBtn = document.getElementById('close-transfer-modal');
-
-            const handleConfirm = () => {
-                // Validar campos requeridos
-                let isValid = true;
-                let paymentDetails = {};
-
-                if (method === 'transferencia') {
-                    const bank = document.getElementById('transfer-bank').value;
-                    const account = document.getElementById('transfer-account').value.trim();
-                    const holder = document.getElementById('transfer-holder').value.trim();
-                    const reference = document.getElementById('transfer-reference').value.trim();
-
-                    if (!bank || !account || !holder || !reference) {
-                        showAlert('Por favor complete todos los campos requeridos para la transferencia');
-                        return;
-                    }
-
-                    paymentDetails = {
-                        tipo: 'transferencia',
-                        banco: bank,
-                        cuenta: account,
-                        titular: holder,
-                        referencia: reference
-                    };
-                } else if (method === 'pago_movil') {
-                    const bank = document.getElementById('pago-movil-bank').value;
-                    const phone = document.getElementById('pago-movil-phone').value.trim();
-                    const id = document.getElementById('pago-movil-id').value.trim();
-                    const reference = document.getElementById('pago-movil-reference').value.trim();
-
-                    if (!bank || !phone || !id || !reference) {
-                        showAlert('Por favor complete todos los campos requeridos para el pago móvil');
-                        return;
-                    }
-
-                    paymentDetails = {
-                        tipo: 'pago_movil',
-                        banco: bank,
-                        telefono: phone,
-                        cedula: id,
-                        referencia: reference
-                    };
-                }
-
-                modal.classList.add('hidden');
-                currentSale.metodoPago = method;
-                currentSale.paymentDetails = paymentDetails;
-                completeStep(4);
-                showPaymentProcessing();
-                document.getElementById('process-sale').classList.remove('hidden');
-                cleanup();
-            };
-
-            const handleCancel = () => {
-                modal.classList.add('hidden');
-                cleanup();
-            };
-
-            const cleanup = () => {
-                confirmBtn.removeEventListener('click', handleConfirm);
-                cancelBtn.removeEventListener('click', handleCancel);
-                closeBtn.removeEventListener('click', handleCancel);
-            };
-
-            confirmBtn.addEventListener('click', handleConfirm);
-            cancelBtn.addEventListener('click', handleCancel);
-            closeBtn.addEventListener('click', handleCancel);
-        }
-
-        // Función para cerrar caja
-        function showCashRegisterClosure() {
-            if (ventasDB.length === 0) {
-                showAlert('No hay ventas registradas para cerrar la caja');
+        const existingItemIndex = this.cart.findIndex(item => item.id === product.id);
+        
+        if (existingItemIndex !== -1) {
+            const existingItem = this.cart[existingItemIndex];
+            
+            if (existingItem.cantidad >= product.stock) {
+                this.showAlert(`No hay suficiente stock. Stock disponible: ${product.stock}`);
                 return;
             }
-
-            // Calcular totales del día
-            const today = new Date();
-            const todayString = today.toDateString();
-
-            const todaySales = ventasDB.filter(sale => {
-                const saleDate = new Date(sale.fecha).toDateString();
-                return saleDate === todayString;
+            
+            this.cart[existingItemIndex].cantidad += 1;
+            this.cart[existingItemIndex].subtotal = (this.cart[existingItemIndex].cantidad * this.cart[existingItemIndex].precio_venta).toFixed(2);
+        } else {
+            this.cart.push({
+                id: product.id,
+                nombre: product.nombre,
+                precio_venta: parseFloat(product.precio_venta) || 0,
+                categoria: product.categoria || 'Sin categoría',
+                unidad_medida: product.unidad_medida || 'unidad',
+                stock: product.stock || 0,
+                cantidad: 1,
+                subtotal: (parseFloat(product.precio_venta) || 0).toFixed(2)
             });
+        }
 
-            if (todaySales.length === 0) {
-                showAlert('No hay ventas registradas para hoy');
+        this.updateCart();
+        this.showAlert(`"${product.nombre}" agregado al carrito`, 'success');
+    }
+
+    updateCart() {
+        const cartItems = document.getElementById('cart-items');
+        let emptyCart = document.getElementById('empty-cart');
+
+        if (!cartItems) {
+            console.error('❌ No se encontró #cart-items en el DOM.');
+            return;
+        }
+
+        if (!emptyCart) {
+            emptyCart = document.createElement('tr');
+            emptyCart.id = 'empty-cart';
+            emptyCart.innerHTML = `
+                <td colspan="5" class="text-center text-gray-500 py-8">
+                    <i class="fas fa-shopping-cart text-4xl mb-2"></i>
+                    <p>No hay productos en el carrito</p>
+                </td>
+            `;
+            cartItems.appendChild(emptyCart);
+        }
+
+        if (this.cart.length === 0) {
+            cartItems.innerHTML = '';
+            cartItems.appendChild(emptyCart);
+            this.updateTotals();
+            return;
+        }
+
+        emptyCart.style.display = 'none';
+        cartItems.innerHTML = '';
+
+        this.cart.forEach((item, index) => {
+            const step = (item.unidad_medida === 'kg' || item.unidad_medida === 'litro') ? '0.1' : '1';
+            
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="px-4 py-3">
+                    <div class="font-semibold">${item.nombre}</div>
+                    <div class="text-sm text-gray-600">${item.categoria}</div>
+                </td>
+                <td class="px-4 py-3">
+                    <div class="flex items-center space-x-3">
+                        <button class="decrease-btn w-8 h-8 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300 transition-all" data-index="${index}">-</button>
+                        <input 
+                            type="number"
+                            step="${step}"
+                            min="0.1"
+                            value="${item.cantidad}"
+                            class="quantity-input w-16 text-center border rounded-md px-2 py-1 font-semibold"
+                            data-index="${index}"
+                        >
+                        <span class="text-gray-500 text-sm ml-1">${item.unidad_medida}</span>
+                        <button class="increase-btn w-8 h-8 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300 transition-all" data-index="${index}">+</button>
+                    </div>
+                </td>
+                <td class="px-4 py-3 font-semibold">Bs. ${item.precio_venta.toFixed(2)}</td>
+                <td class="px-4 py-3 font-semibold text-purple-600">Bs. ${item.subtotal}</td>
+                <td class="px-4 py-3">
+                    <button class="remove-btn text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50 transition-all" data-index="${index}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            cartItems.appendChild(row);
+        });
+
+        this.setupCartEventListeners();
+        this.updateTotals();
+    }
+
+    setupCartEventListeners() {
+        document.querySelectorAll('.increase-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.closest('button').dataset.index);
+                const item = this.cart[index];
+                const step = (item.unidad_medida === 'kg' || item.unidad_medida === 'litro') ? 0.1 : 1;
+                this.updateQuantity(index, 'increase', step);
+            });
+        });
+
+        document.querySelectorAll('.decrease-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.closest('button').dataset.index);
+                const item = this.cart[index];
+                const step = (item.unidad_medida === 'kg' || item.unidad_medida === 'litro') ? 0.1 : 1;
+                this.updateQuantity(index, 'decrease', step);
+            });
+        });
+
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.closest('button').dataset.index);
+                this.removeFromCart(index);
+            });
+        });
+
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                let nuevaCantidad = parseFloat(e.target.value);
+
+                if (isNaN(nuevaCantidad) || nuevaCantidad <= 0) {
+                    this.showAlert('Ingrese una cantidad válida');
+                    e.target.value = this.cart[index].cantidad;
+                    return;
+                }
+
+                const producto = this.products.find(p => p.id === this.cart[index].id);
+                if (nuevaCantidad > producto.stock) {
+                    this.showAlert(`Stock insuficiente. Disponible: ${producto.stock}`);
+                    e.target.value = this.cart[index].cantidad;
+                    return;
+                }
+
+                this.cart[index].cantidad = parseFloat(nuevaCantidad.toFixed(2));
+                this.cart[index].subtotal = (this.cart[index].cantidad * this.cart[index].precio_venta).toFixed(2);
+                this.updateCart();
+            });
+        });
+    }
+
+    updateQuantity(index, action) {
+        console.log('Actualizando cantidad:', index, action);
+        const item = this.cart[index];
+        const originalProduct = this.products.find(p => p.id === item.id);
+        
+        if (!originalProduct) {
+            this.showAlert('Error: Producto no encontrado');
+            return;
+        }
+
+        const step = (item.unidad_medida === 'kg' || item.unidad_medida === 'litro') ? 0.1 : 1;
+
+        if (action === 'increase') {
+            if (item.cantidad + step > originalProduct.stock) {
+                this.showAlert(`No hay suficiente stock. Stock disponible: ${originalProduct.stock}`);
                 return;
             }
+            item.cantidad = parseFloat((item.cantidad + step).toFixed(2));
+        } else if (action === 'decrease') {
+            if (item.cantidad > step) {
+                item.cantidad = parseFloat((item.cantidad - step).toFixed(2));
+            } else {
+                this.removeFromCart(index);
+                return;
+            }
+        }
 
-            const totalVentas = todaySales.reduce((sum, sale) => sum + sale.total, 0);
-            const totalIVA = todaySales.reduce((sum, sale) => sum + sale.impuesto, 0);
-            const totalSubtotal = todaySales.reduce((sum, sale) => sum + sale.subtotal, 0);
+        item.subtotal = (item.cantidad * item.precio_venta).toFixed(2);
+        this.updateCart();
+    }
 
-            // Contar métodos de pago
-            const paymentMethods = {};
-            todaySales.forEach(sale => {
-                const method = sale.metodo_pago;
-                if (!paymentMethods[method]) {
-                    paymentMethods[method] = { count: 0, total: 0 };
-                }
-                paymentMethods[method].count++;
-                paymentMethods[method].total += sale.total;
+    removeFromCart(index) {
+        console.log('Eliminando producto del carrito:', index);
+        if (index >= 0 && index < this.cart.length) {
+            const productName = this.cart[index].nombre;
+            this.cart.splice(index, 1);
+            this.updateCart();
+            this.showAlert(`"${productName}" eliminado del carrito`, 'success');
+        }
+    }
+
+    updateTotals() {
+        const subtotal = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+        const tax = subtotal * 0.16;
+        const totalBs = subtotal + tax;
+
+        document.getElementById('subtotal-amount').textContent = `Bs. ${subtotal.toFixed(2)}`;
+        document.getElementById('tax-amount').textContent = `Bs. ${tax.toFixed(2)}`;
+        document.getElementById('total-bs').textContent = `Bs. ${totalBs.toFixed(2)}`;
+    }
+
+    // === GESTIÓN DE CLIENTES ===
+    validateCedulaFormat(cedula) {
+        if (!cedula || cedula.trim() === '') {
+            this.clearValidationStyles();
+            return false;
+        }
+
+        const cedulaPattern = /^[VEJGPvejgp]-?\d{7,9}$/;
+        const input = document.getElementById('customer-id');
+        const isValid = cedulaPattern.test(cedula);
+        
+        if (isValid) {
+            input.classList.remove('border-red-500', 'bg-red-50');
+            input.classList.add('border-green-500', 'bg-green-50');
+        } else {
+            input.classList.remove('border-green-500', 'bg-green-50');
+            input.classList.add('border-red-500', 'bg-red-50');
+        }
+        
+        return isValid;
+    }
+
+    clearValidationStyles() {
+        const input = document.getElementById('customer-id');
+        input.classList.remove('border-red-500', 'bg-red-50', 'border-green-500', 'bg-green-50');
+    }
+
+    formatCedula(cedula) {
+        let cleaned = cedula.toUpperCase().replace(/\s/g, '');
+        if (!cleaned.includes('-') && cleaned.length > 1) {
+            cleaned = cleaned.charAt(0) + '-' + cleaned.slice(1);
+        }
+        return cleaned;
+    }
+
+    async searchCustomer(cedula) {
+        if (!cedula || cedula.trim() === '') {
+            this.clearValidationStyles();
+            return;
+        }
+
+        if (!this.validateCedulaFormat(cedula)) {
+            this.showAlert('Formato de cédula/RIF inválido. Formatos aceptados:\n\n• V-12345678 (Cédula venezolana)\n• E-12345678 (Extranjero)\n• J-123456789 (RIF jurídico)\n• G-123456789 (RIF gubernamental)');
+            return;
+        }
+
+        const formattedCedula = this.formatCedula(cedula);
+        document.getElementById('customer-id').value = formattedCedula;
+
+        console.log('🔍 Buscando cliente:', formattedCedula);
+
+        try {
+            const response = await fetch(`/api/clientes/cedula/${encodeURIComponent(formattedCedula)}`, {
+                credentials: 'include'
             });
 
-            // Crear contenido del modal de cierre de caja
-            const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-            modal.id = 'cash-closure-modal';
+            if (response.ok) {
+                const customer = await response.json();
+                this.showCustomerInfo(customer);
+            } else if (response.status === 404) {
+                this.showCustomerForm();
+            } else {
+                this.showAlert('Error al buscar cliente');
+            }
+        } catch (error) {
+            console.error('Error buscando cliente:', error);
+            this.showAlert('Error de conexión al buscar cliente');
+        }
+    }
 
-            modal.innerHTML = `
-                <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-                    <div class="p-6">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-2xl font-bold text-gray-800">Cierre de Caja</h2>
-                            <button id="close-cash-closure-modal" class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-times text-xl"></i>
-                            </button>
+    showCustomerInfo(customer) {
+        this.currentCustomer = customer;
+        document.getElementById('customer-info').classList.remove('hidden');
+        document.getElementById('customer-form').classList.add('hidden');
+        
+        const details = document.getElementById('customer-details');
+        details.innerHTML = `
+            <p><strong>${customer.nombre}</strong></p>
+            <p class="text-gray-600">${customer.cedula_rif}</p>
+            <p class="text-gray-600">${customer.telefono || 'Sin teléfono'}</p>
+        `;
+    }
+
+    showCustomerForm() {
+        document.getElementById('customer-info').classList.add('hidden');
+        document.getElementById('customer-form').classList.remove('hidden');
+        document.getElementById('customer-name').value = '';
+        document.getElementById('customer-phone').value = '';
+        document.getElementById('customer-address').value = '';
+        document.getElementById('customer-name').focus();
+    }
+
+    async saveCustomer() {
+        const cedula = document.getElementById('customer-id').value;
+        const nombre = document.getElementById('customer-name').value;
+        const telefono = document.getElementById('customer-phone').value;
+        const direccion = document.getElementById('customer-address').value;
+
+        if (!nombre.trim()) {
+            this.showAlert('Por favor ingrese el nombre del cliente');
+            return;
+        }
+
+        if (!this.validateCedulaFormat(cedula)) {
+            this.showAlert('Formato de cédula/RIF inválido. No se puede guardar el cliente.');
+            return;
+        }
+
+        console.log('💾 Guardando cliente:', { cedula, nombre, telefono, direccion });
+
+        try {
+            const saveBtn = document.getElementById('save-customer');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Guardando...';
+            saveBtn.disabled = true;
+
+            const response = await fetch('/api/clientes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ cedula_rif: cedula, nombre, telefono, direccion })
+            });
+
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+
+            if (response.ok) {
+                const customer = await response.json();
+                this.showCustomerInfo(customer);
+                this.showAlert('Cliente guardado exitosamente', 'success');
+            } else {
+                let errorMessage = 'Error al guardar cliente';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    errorMessage = `Error ${response.status}: ${response.statusText}`;
+                }
+                this.showAlert(errorMessage);
+            }
+        } catch (error) {
+            const saveBtn = document.getElementById('save-customer');
+            saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Guardar Cliente';
+            saveBtn.disabled = false;
+            this.showAlert('Error de conexión: ' + error.message);
+        }
+    }
+
+    // === PROCESAMIENTO DE VENTAS ===
+    async processSale() {
+        if (this.cart.length === 0) {
+            this.showAlert('El carrito está vacío');
+            return;
+        }
+
+        if (!this.currentCustomer) {
+            this.showAlert('Debe seleccionar un cliente');
+            return;
+        }
+
+        console.log('💳 Procesando venta...', {
+            customer: this.currentCustomer,
+            cart: this.cart,
+            payment: this.selectedPaymentMethod
+        });
+
+        try {
+            const saleData = {
+                id_cliente: this.currentCustomer.id,
+                detalles: this.cart.map(item => ({
+                    id_producto: item.id,
+                    cantidad: parseFloat(item.cantidad),
+                    precio_unitario: parseFloat(item.precio_venta)
+                })),
+                metodo_pago: this.selectedPaymentMethod
+            };
+
+            const response = await fetch('/api/ventas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(saleData)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                this.lastSaleId = result.venta.id;
+                
+                this.showAlert(`Venta #${result.venta.id} procesada exitosamente! Total: Bs. ${this.getTotalBs()}`, 'success');
+                this.showInvoiceButtons();
+            } else {
+                const error = await response.json();
+                this.showAlert(error.error || 'Error al procesar la venta');
+            }
+        } catch (error) {
+            console.error('Error procesando venta:', error);
+            this.showAlert('Error de conexión al procesar la venta');
+        }
+    }
+
+    getTotalBs() {
+        const subtotal = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+        const tax = subtotal * 0.16;
+        return (subtotal + tax).toFixed(2);
+    }
+
+    // === FUNCIONALIDAD DE FACTURA ===
+    showInvoiceButtons() {
+        document.getElementById('view-invoice').classList.remove('hidden');
+        document.getElementById('quick-invoice-btn').classList.remove('hidden');
+        document.getElementById('process-sale').classList.add('hidden');
+    }
+
+    hideInvoiceButtons() {
+        document.getElementById('view-invoice').classList.add('hidden');
+        document.getElementById('quick-invoice-btn').classList.add('hidden');
+        document.getElementById('process-sale').classList.remove('hidden');
+    }
+
+    async viewInvoice() {
+        if (!this.lastSaleId) {
+            this.showAlert('No hay una venta reciente para mostrar');
+            return;
+        }
+
+        try {
+            console.log('📋 Cargando factura para venta:', this.lastSaleId);
+            const response = await fetch(`/api/ventas/${this.lastSaleId}`, {
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const ventaData = await response.json();
+                this.generateInvoiceHTML(ventaData);
+                this.showModal('invoice-modal');
+            } else {
+                this.showAlert('Error al cargar los datos de la factura');
+            }
+        } catch (error) {
+            console.error('Error cargando factura:', error);
+            this.showAlert('Error de conexión al cargar la factura');
+        }
+    }
+
+    generateInvoiceHTML(ventaData) {
+        const invoiceContent = document.getElementById('invoice-content');
+        const subtotal = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+        const tax = subtotal * 0.16;
+        const total = subtotal + tax;
+
+        // Usar datos de empresa cargados o por defecto
+        const empresa = this.empresaData || {
+            nombre_empresa: "Na'Guara",
+            rif: "J-123456789",
+            telefono: "(0412) 123-4567",
+            direccion: "Barquisimeto, Venezuela",
+            mensaje_factura: "¡Gracias por su compra!"
+        };
+
+        const invoiceHTML = `
+            <div class="invoice-container">
+                <!-- Encabezado -->
+                <div class="grid grid-cols-2 gap-6 mb-8">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">${empresa.nombre_empresa}</h3>
+                        <p class="text-gray-600">Sistema de Venta Rápida</p>
+                        <p class="text-gray-600">RIF: ${empresa.rif}</p>
+                        <p class="text-gray-600">Teléfono: ${empresa.telefono}</p>
+                        <p class="text-gray-600">${empresa.direccion}</p>
+                    </div>
+                    <div class="text-right">
+                        <h3 class="text-xl font-bold text-purple-600">FACTURA #${ventaData.id}</h3>
+                        <p class="text-gray-600">Fecha: ${new Date(ventaData.fecha_venta).toLocaleDateString('es-ES')}</p>
+                        <p class="text-gray-600">Hora: ${new Date(ventaData.fecha_venta).toLocaleTimeString('es-ES')}</p>
+                    </div>
+                </div>
+
+                <!-- Información del Cliente -->
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h4 class="font-bold text-gray-800 mb-2">INFORMACIÓN DEL CLIENTE</h4>
+                    <p><strong>Nombre:</strong> ${this.currentCustomer.nombre}</p>
+                    <p><strong>Cédula/RIF:</strong> ${this.currentCustomer.cedula_rif}</p>
+                    <p><strong>Teléfono:</strong> ${this.currentCustomer.telefono || 'No especificado'}</p>
+                    <p><strong>Dirección:</strong> ${this.currentCustomer.direccion || 'No especificada'}</p>
+                </div>
+
+                <!-- Detalles de la Venta -->
+                <div class="mb-6">
+                    <h4 class="font-bold text-gray-800 mb-3">DETALLES DE LA VENTA</h4>
+                    <table class="w-full border-collapse border border-gray-300">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="border border-gray-300 p-3 text-left">Producto</th>
+                                <th class="border border-gray-300 p-3 text-center">Cantidad</th>
+                                <th class="border border-gray-300 p-3 text-right">Precio Unit.</th>
+                                <th class="border border-gray-300 p-3 text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${this.cart.map(item => `
+                                <tr>
+                                    <td class="border border-gray-300 p-3">${item.nombre}</td>
+                                    <td class="border border-gray-300 p-3 text-center">${item.cantidad} ${item.unidad_medida}</td>
+                                    <td class="border border-gray-300 p-3 text-right">Bs. ${item.precio_venta.toFixed(2)}</td>
+                                    <td class="border border-gray-300 p-3 text-right">Bs. ${item.subtotal}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Resumen -->
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="p-4 bg-purple-50 rounded-lg">
+                        <h4 class="font-bold text-purple-800 mb-2">MÉTODO DE PAGO</h4>
+                        <p class="text-purple-700 font-semibold">${this.selectedPaymentMethod.toUpperCase()}</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <h4 class="font-bold text-gray-800 mb-2">RESUMEN</h4>
+                        <div class="flex justify-between mb-1">
+                            <span>Subtotal:</span>
+                            <span>Bs. ${subtotal.toFixed(2)}</span>
                         </div>
-
-                        <div class="space-y-6">
-                            <!-- Información del día -->
-                            <div class="bg-gray-50 rounded-lg p-4">
-                                <h3 class="font-semibold text-lg mb-3">Resumen del Día</h3>
-                                <div class="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <span class="font-medium">Fecha:</span>
-                                        <span>${today.toLocaleDateString('es-VE')}</span>
-                                    </div>
-                                    <div>
-                                        <span class="font-medium">Total Ventas:</span>
-                                        <span>${todaySales.length}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Resumen financiero -->
-                            <div class="bg-blue-50 rounded-lg p-4">
-                                <h3 class="font-semibold text-lg mb-3">Resumen Financiero</h3>
-                                <div class="space-y-2">
-                                    <div class="flex justify-between">
-                                        <span>Subtotal:</span>
-                                        <span class="font-semibold">Bs. ${totalSubtotal.toFixed(2)}</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span>IVA (16%):</span>
-                                        <span class="font-semibold">Bs. ${totalIVA.toFixed(2)}</span>
-                                    </div>
-                                    <div class="flex justify-between text-lg font-bold border-t pt-2">
-                                        <span>Total:</span>
-                                        <span>Bs. ${totalVentas.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Métodos de pago -->
-                            <div class="bg-green-50 rounded-lg p-4">
-                                <h3 class="font-semibold text-lg mb-3">Métodos de Pago</h3>
-                                <div class="space-y-2">
-                                    ${Object.entries(paymentMethods).map(([method, data]) => `
-                                        <div class="flex justify-between">
-                                            <span>${getPaymentMethodName(method)} (${data.count} ventas):</span>
-                                            <span class="font-semibold">Bs. ${data.total.toFixed(2)}</span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-
-                            <!-- Lista de ventas -->
-                            <div class="bg-white border rounded-lg p-4">
-                                <h3 class="font-semibold text-lg mb-3">Detalle de Ventas</h3>
-                                <div class="max-h-60 overflow-y-auto">
-                                    <table class="w-full text-sm">
-                                        <thead>
-                                            <tr class="border-b">
-                                                <th class="text-left py-2">Factura</th>
-                                                <th class="text-left py-2">Cliente</th>
-                                                <th class="text-right py-2">Total</th>
-                                                <th class="text-center py-2">Método</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${todaySales.map(sale => `
-                                                <tr class="border-b">
-                                                    <td class="py-2">${sale.id}</td>
-                                                    <td class="py-2">${sale.cliente_id}</td>
-                                                    <td class="text-right py-2 font-semibold">Bs. ${sale.total.toFixed(2)}</td>
-                                                    <td class="text-center py-2">${getPaymentMethodName(sale.metodo_pago)}</td>
-                                                </tr>
-                                            `).join('')}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                        <div class="flex justify-between mb-1">
+                            <span>IVA (16%):</span>
+                            <span>Bs. ${tax.toFixed(2)}</span>
                         </div>
-
-                        <div class="flex justify-end space-x-3 mt-6">
-                            <button id="print-cash-closure" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                                <i class="fas fa-print mr-2"></i>Imprimir Reporte
-                            </button>
-                            <button id="confirm-cash-closure" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
-                                <i class="fas fa-check mr-2"></i>Confirmar Cierre
-                            </button>
+                        <div class="flex justify-between font-bold text-lg border-t border-gray-300 pt-2 mt-2">
+                            <span>TOTAL:</span>
+                            <span class="text-purple-600">Bs. ${total.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
-            `;
 
-            document.body.appendChild(modal);
+                <!-- Pie de página -->
+                <div class="mt-8 text-center text-gray-500 text-sm">
+                    <p>${empresa.mensaje_factura}</p>
+                    <p>${empresa.nombre_empresa} - Sistema de Venta Rápida</p>
+                    <p>Factura generada el ${new Date().toLocaleString('es-ES')}</p>
+                </div>
+            </div>
+        `;
 
-            // Event listeners
-            document.getElementById('close-cash-closure-modal').addEventListener('click', () => {
-                modal.remove();
-            });
+        invoiceContent.innerHTML = invoiceHTML;
+    }
 
-            document.getElementById('print-cash-closure').addEventListener('click', () => {
-                printCashClosureReport(todaySales, totalSubtotal, totalIVA, totalVentas, paymentMethods);
-            });
-
-            document.getElementById('confirm-cash-closure').addEventListener('click', () => {
-                showConfirmModal(
-                    '¿Confirmar cierre de caja?',
-                    'Esta acción registrará el cierre de caja del día. ¿Desea continuar?',
-                    () => {
-                        // Aquí se podría guardar el cierre de caja en una base de datos
-                        showAlert('Caja cerrada exitosamente');
-                        modal.remove();
-                        // Reiniciar ventas del día (opcional)
-                        // ventasDB = ventasDB.filter(sale => new Date(sale.fecha).toDateString() !== todayString);
+    printInvoice() {
+        const invoiceContent = document.getElementById('invoice-content').innerHTML;
+        const printWindow = window.open('', '_blank');
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Factura - Na'Guara</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
+                    .invoice-container { max-width: 800px; margin: 0 auto; }
+                    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f5f5f5; font-weight: bold; }
+                    .text-right { text-align: right; }
+                    .text-center { text-align: center; }
+                    .bg-gray-100 { background-color: #f7fafc; }
+                    .bg-purple-50 { background-color: #faf5ff; }
+                    .bg-gray-50 { background-color: #f9fafb; }
+                    .border { border: 1px solid #e5e7eb; }
+                    .border-gray-300 { border-color: #d1d5db; }
+                    .rounded-lg { border-radius: 8px; }
+                    .p-3 { padding: 12px; }
+                    .p-4 { padding: 16px; }
+                    .p-6 { padding: 24px; }
+                    .mb-2 { margin-bottom: 8px; }
+                    .mb-3 { margin-bottom: 12px; }
+                    .mb-6 { margin-bottom: 24px; }
+                    .mb-8 { margin-bottom: 32px; }
+                    .mt-2 { margin-top: 8px; }
+                    .mt-8 { margin-top: 32px; }
+                    .grid { display: grid; }
+                    .grid-cols-2 { grid-template-columns: 1fr 1fr; }
+                    .gap-6 { gap: 24px; }
+                    .font-bold { font-weight: bold; }
+                    .font-semibold { font-weight: 600; }
+                    .text-xl { font-size: 1.25rem; }
+                    .text-lg { font-size: 1.125rem; }
+                    .text-sm { font-size: 0.875rem; }
+                    .text-gray-800 { color: #1f2937; }
+                    .text-gray-600 { color: #4b5563; }
+                    .text-gray-500 { color: #6b7280; }
+                    .text-purple-600 { color: #8b5cf6; }
+                    .text-purple-700 { color: #7c3aed; }
+                    .text-purple-800 { color: #6d28d9; }
+                    @media print {
+                        body { margin: 0; }
+                        .invoice-container { max-width: 100%; }
                     }
-                );
-            });
+                </style>
+            </head>
+            <body>
+                ${invoiceContent}
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() {
+                            window.close();
+                        }, 1000);
+                    }
+                <\/script>
+            </body>
+            </html>
+        `);
+        
+        printWindow.document.close();
+    }
+
+    newSale() {
+        console.log('🔄 Iniciando nueva venta...');
+        this.currentCustomer = null;
+        this.cart = [];
+        this.lastSaleId = null;
+        
+        document.getElementById('customer-id').value = '';
+        document.getElementById('customer-info').classList.add('hidden');
+        document.getElementById('customer-form').classList.add('hidden');
+        document.getElementById('product-search').value = '';
+        document.getElementById('product-suggestions').classList.add('hidden');
+        this.clearValidationStyles();
+        
+        this.hideInvoiceButtons();
+        this.updateCart();
+        document.getElementById('customer-id').focus();
+    }
+
+    cancelSale() {
+        this.showConfirm(
+            'Cancelar Venta',
+            '¿Está seguro de que desea cancelar esta venta? Se perderán todos los datos ingresados.',
+            () => {
+                this.newSale();
+                this.showAlert('Venta cancelada', 'success');
+            }
+        );
+    }
+
+    // === MÉTODOS DE UTILIDAD ===
+    showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    hideModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.add('hidden');
+    }
+
+    showAlert(message, type = 'error') {
+        const alertModal = document.getElementById('alert-modal');
+        const alertMessage = document.getElementById('alert-message');
+        
+        if (alertModal && alertMessage) {
+            alertMessage.textContent = message;
+            const title = alertModal.querySelector('h2');
+            if (title) {
+                if (type === 'success') {
+                    title.className = 'text-xl font-bold text-green-600';
+                    title.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Éxito';
+                } else {
+                    title.className = 'text-xl font-bold text-red-600';
+                    title.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i>Atención';
+                }
+            }
+            this.showModal('alert-modal');
         }
+    }
 
-        function printCashClosureReport(sales, subtotal, iva, total, paymentMethods) {
-            const printWindow = window.open('', '_blank');
-            const today = new Date();
-
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Reporte de Cierre de Caja</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 20px; }
-                            .header { text-align: center; margin-bottom: 30px; }
-                            .section { margin-bottom: 20px; }
-                            .total { font-weight: bold; font-size: 18px; }
-                            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                            th { background-color: #f2f2f2; }
-                            .text-right { text-align: right; }
-                            .text-center { text-align: center; }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="header">
-                            <h1>REPORTE DE CIERRE DE CAJA</h1>
-                            <h2>CECOSESOLA</h2>
-                            <p>Fecha: ${today.toLocaleDateString('es-VE')}</p>
-                        </div>
-
-                        <div class="section">
-                            <h3>Resumen Financiero</h3>
-                            <p>Subtotal: Bs. ${subtotal.toFixed(2)}</p>
-                            <p>IVA (16%): Bs. ${iva.toFixed(2)}</p>
-                            <p class="total">Total: Bs. ${total.toFixed(2)}</p>
-                        </div>
-
-                        <div class="section">
-                            <h3>Métodos de Pago</h3>
-                            ${Object.entries(paymentMethods).map(([method, data]) => `
-                                <p>${getPaymentMethodName(method)}: ${data.count} ventas - Bs. ${data.total.toFixed(2)}</p>
-                            `).join('')}
-                        </div>
-
-                        <div class="section">
-                            <h3>Detalle de Ventas</h3>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Factura</th>
-                                        <th>Cliente</th>
-                                        <th class="text-right">Total</th>
-                                        <th class="text-center">Método</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${sales.map(sale => `
-                                        <tr>
-                                            <td>${sale.id}</td>
-                                            <td>${sale.cliente_id}</td>
-                                            <td class="text-right">Bs. ${sale.total.toFixed(2)}</td>
-                                            <td class="text-center">${getPaymentMethodName(sale.metodo_pago)}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="section" style="text-align: center; margin-top: 50px;">
-                            <p>______________________________</p>
-                            <p>Firma del Cajero</p>
-                        </div>
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
+    showConfirm(title, message, callback) {
+        const confirmTitle = document.getElementById('confirm-title');
+        const confirmMessage = document.getElementById('confirm-message');
+        
+        if (confirmTitle && confirmMessage) {
+            confirmTitle.textContent = title;
+            confirmMessage.textContent = message;
+            this.confirmCallback = callback;
+            this.showModal('confirm-modal');
         }
+    }
 
+    executeConfirmedAction() {
+        if (this.confirmCallback) this.confirmCallback();
+        this.hideModal('confirm-modal');
+    }
+}
 
+// Inicializar el sistema
+console.log('🚀 INICIANDO PUNTO DE VENTA...');
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        window.ventasManager = new VentasManager();
+        console.log('✅ Punto de venta inicializado correctamente');
+    } catch (error) {
+        console.error('❌ Error inicializando punto de venta:', error);
+    }
+});
