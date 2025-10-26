@@ -11,7 +11,7 @@
 </head>
 <body class="min-h-screen bg-gray-50">
     <main class="container mx-auto p-6 max-w-7xl">
-        <!-- Header -->
+        <!-- Header con información de tasa -->
         <div class="card p-6 mb-6">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
@@ -23,7 +23,10 @@
                 <div class="text-right">
                     <p class="text-sm text-gray-600">Venta #: <span class="font-bold text-purple-600" id="sale-number">VEN-000001</span></p>
                     <p class="text-sm text-gray-600">Fecha: <span class="font-semibold" id="current-date"></span></p>
-                    <!-- Botón rápido para factura -->
+                    <p class="text-xs text-green-600 font-semibold mt-1">
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        Tasa: <span id="tasa-actual">Cargando...</span> Bs/$
+                    </p>
                     <button id="quick-invoice-btn" class="text-xs text-purple-600 hover:text-purple-800 mt-1 hidden">
                         <i class="fas fa-receipt mr-1"></i>Ver Factura
                     </button>
@@ -64,7 +67,7 @@
                                 <tr>
                                     <th>Producto</th>
                                     <th>Cantidad</th>
-                                    <th>Precio</th>
+                                    <th>Precio Unitario</th>
                                     <th>Subtotal</th>
                                     <th>Acción</th>
                                 </tr>
@@ -125,16 +128,25 @@
                     <div class="space-y-3">
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600">Subtotal:</span>
-                            <span class="font-semibold" id="subtotal-amount">Bs. 0.00</span>
+                            <div class="text-right">
+                                <div class="font-semibold" id="subtotal-bs">Bs. 0.00</div>
+                                <div class="text-xs text-gray-500" id="subtotal-usd">$ 0.00</div>
+                            </div>
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600">IVA (16%):</span>
-                            <span class="font-semibold" id="tax-amount">Bs. 0.00</span>
+                            <div class="text-right">
+                                <div class="font-semibold" id="tax-bs">Bs. 0.00</div>
+                                <div class="text-xs text-gray-500" id="tax-usd">$ 0.00</div>
+                            </div>
                         </div>
                         <hr class="border-gray-300">
                         <div class="flex justify-between items-center text-lg">
                             <span class="font-bold text-gray-800">Total:</span>
-                            <span class="font-bold text-purple-600" id="total-bs">Bs. 0.00</span>
+                            <div class="text-right">
+                                <div class="font-bold text-purple-600" id="total-bs">Bs. 0.00</div>
+                                <div class="text-sm font-semibold text-green-600" id="total-usd">$ 0.00</div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -239,6 +239,35 @@
         .fade-in {
             animation: fadeIn 0.3s ease-in;
         }
+
+        /* Estilos para precios duales */
+.price-dual {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.price-bs {
+    color: #8b5cf6; /* purple-600 */
+    font-weight: 600;
+}
+
+.price-usd {
+    color: #059669; /* green-600 */
+    font-size: 0.875rem;
+}
+
+/* Colores para las monedas */
+.text-bs { color: #8b5cf6; }
+.text-usd { color: #059669; }
+
+/* Mejora para autocomplete con precios duales */
+.autocomplete-item .price-info {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
         
         
         @keyframes fadeIn {

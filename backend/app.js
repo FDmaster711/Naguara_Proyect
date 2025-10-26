@@ -15,6 +15,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const API_DOLAR_URL = 'https://ve.dolarapi.com/v1/dolares/oficial';
+
 
 
 app.use(cors({
@@ -167,11 +169,20 @@ app.get('/api/dashboard/stats', async (req, res) => {
 
 app.get('/api/productos', requireAuth, async (req, res) => {
   try {
+    // Obtener tasa actual primero
+    const tasaResult = await pool.query(
+      'SELECT tasa_bs FROM tasa_cambio ORDER BY fecha_actualizacion DESC LIMIT 1'
+    );
+    const tasaActual = tasaResult.rows.length > 0 ? parseFloat(tasaResult.rows[0].tasa_bs) : 207.89;
+
+    console.log('📊 Tasa actual para productos:', tasaActual);
+
     const result = await pool.query(`
       SELECT 
         p.id,
         p.nombre,
         p.precio_venta,
+        p.precio_dolares,
         p.costo_compra,
         p.stock,
         p.unidad_medida,
@@ -180,28 +191,35 @@ app.get('/api/productos', requireAuth, async (req, res) => {
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id
       LEFT JOIN proveedores prov ON p.id_provedores = prov.id
-      WHERE p.stock > 0  -- Solo productos con stock disponible
+      WHERE p.stock > 0
       ORDER BY p.nombre
     `);
     
-    // Formatear la respuesta como espera el frontend
-    const productosFormateados = result.rows.map(producto => ({
-      id: producto.id,
-      nombre: producto.nombre,
-      precio_venta: parseFloat(producto.precio_venta),
-      stock: parseInt(producto.stock),
-      unidad_medida: producto.unidad_medida,
-      categoria: producto.categoria,
-      proveedor: producto.proveedor
-    }));
+    const productosFormateados = result.rows.map(producto => {
+      const precioDolares = producto.precio_dolares 
+        ? parseFloat(producto.precio_dolares)
+        : (parseFloat(producto.precio_venta) / tasaActual);
+      
+      return {
+        id: producto.id,
+        nombre: producto.nombre,
+        precio_venta: parseFloat(producto.precio_venta),
+        precio_dolares: parseFloat(precioDolares.toFixed(2)),
+        stock: parseInt(producto.stock),
+        unidad_medida: producto.unidad_medida,
+        categoria: producto.categoria,
+        proveedor: producto.proveedor,
+        tasa_cambio_actual: tasaActual // Para referencia en frontend
+      };
+    });
     
+    console.log(`✅ ${productosFormateados.length} productos formateados con tasa: ${tasaActual}`);
     res.json(productosFormateados);
   } catch (error) {
     console.error('Error en /api/productos:', error);
     res.status(500).json({ error: error.message });
   }
 });
-
 
 app.post('/api/productos', requireAuth, async (req, res) => {
   try {
@@ -527,6 +545,99 @@ app.get('/api/empresa', requireAuth, async (req, res) => {
       direccion: "Barquisimeto, Venezuela",
       mensaje_factura: "¡Gracias por su compra!"
     });
+  }
+});
+
+app.get('/api/tasa-cambio/actual',  async (req, res) => {
+  try {
+    console.log('🔄 Obteniendo tasa de cambio actual de dolarapi.com...');
+    
+    // Intentar obtener de API externa
+    let tasaAPI = null;
+    let fechaAPI = null;
+    
+    try {
+      const response = await fetch(API_DOLAR_URL);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📊 Respuesta API completa:', data);
+        
+        // Estructura de ve.dolarapi.com (basado en tu respuesta)
+        tasaAPI = parseFloat(data.promedio) || parseFloat(data.compra) || parseFloat(data.venta) || 0;
+        fechaAPI = data.fechaActualizacion || new Date().toISOString();
+        
+        console.log('✅ Tasa promedio de API:', tasaAPI);
+        
+        if (!tasaAPI || tasaAPI <= 0) {
+          console.log('❌ Tasa no válida de API');
+          throw new Error('Tasa no válida');
+        }
+      } else {
+        console.log('❌ API respondió con error:', response.status);
+        throw new Error('API no disponible');
+      }
+    } catch (apiError) {
+      console.log('❌ Error con API dolarapi.com:', apiError.message);
+      // Usar última tasa guardada como fallback
+      const result = await pool.query(
+        'SELECT tasa_bs FROM tasa_cambio WHERE activo = true ORDER BY fecha_actualizacion DESC LIMIT 1'
+      );
+      tasaAPI = result.rows.length > 0 ? parseFloat(result.rows[0].tasa_bs) : 216.37;
+      fechaAPI = new Date().toISOString();
+      console.log('🔄 Usando última tasa guardada:', tasaAPI);
+    }
+
+    // Guardar la nueva tasa si es diferente
+    const ultimaTasa = await pool.query(
+      'SELECT tasa_bs FROM tasa_cambio ORDER BY fecha_actualizacion DESC LIMIT 1'
+    );
+    
+    const ultimaTasaValor = ultimaTasa.rows.length > 0 ? parseFloat(ultimaTasa.rows[0].tasa_bs) : 0;
+    
+    if (Math.abs(tasaAPI - ultimaTasaValor) > 0.1) { // Solo guardar si hay cambio significativo
+      await pool.query(
+        'INSERT INTO tasa_cambio (tasa_bs, fuente) VALUES ($1, $2)',
+        [tasaAPI, 'api']
+      );
+      console.log('💾 Nueva tasa guardada:', tasaAPI);
+    } else {
+      console.log('ℹ️  Tasa sin cambios significativos');
+    }
+
+    res.json({ 
+      tasa_bs: tasaAPI,
+      fecha_actualizacion: fechaAPI,
+      fuente: 'api_oficial',
+      nombre: 'Dólar Oficial'
+    });
+
+  } catch (error) {
+    console.error('❌ Error crítico obteniendo tasa:', error);
+    // Fallback extremo
+    const result = await pool.query(
+      'SELECT tasa_bs FROM tasa_cambio ORDER BY fecha_actualizacion DESC LIMIT 1'
+    );
+    const tasaFallback = result.rows.length > 0 ? parseFloat(result.rows[0].tasa_bs) : 216.37;
+    
+    res.json({ 
+      tasa_bs: tasaFallback,
+      fecha_actualizacion: new Date().toISOString(),
+      fuente: 'fallback',
+      nombre: 'Dólar Oficial (Fallback)'
+    });
+  }
+});
+
+app.get('/api/tasa-cambio/historial', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM tasa_cambio ORDER BY fecha_actualizacion DESC LIMIT 30'
+    );
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error obteniendo historial:', error);
+    res.status(500).json({ error: 'Error al obtener historial' });
   }
 });
 

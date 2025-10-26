@@ -1,13 +1,13 @@
-// ventas.js - Punto de Venta Completo con Factura
+// ventas.js - Punto de Venta Completo con Dólares y Bolívares
 class VentasManager {
     constructor() {
         this.currentCustomer = null;
         this.cart = [];
         this.products = [];
-        this.exchangeRate = 207.89;
         this.selectedPaymentMethod = 'efectivo';
         this.lastSaleId = null;
         this.empresaData = null;
+        this.tasaCambio = 216.37;
         
         this.init();
     }
@@ -17,23 +17,38 @@ class VentasManager {
         this.setCurrentDate();
         this.setupEventListeners();
         this.checkAuthentication();
+        this.loadTasaCambio();
         this.loadProducts();
         this.setupPaymentMethods();
         this.hideInvoiceButtons();
         this.loadEmpresaData();
     }
 
-    checkAuthentication() {
-        fetch('/api/me')
-            .then(response => {
-                if (!response.ok) {
-                    window.location.href = '/login.html';
-                }
-            })
-            .catch(error => {
-                console.error('Error de autenticación:', error);
-                window.location.href = '/login.html';
-            });
+    async loadTasaCambio() {
+        try {
+            console.log('💰 Cargando tasa de cambio...');
+            const response = await fetch('/api/tasa-cambio/actual');
+            if (response.ok) {
+                const data = await response.json();
+                this.tasaCambio = parseFloat(data.tasa_bs);
+                document.getElementById('tasa-actual').textContent = this.tasaCambio.toFixed(2);
+                console.log('✅ Tasa de cambio cargada:', this.tasaCambio);
+            } else {
+                throw new Error('No se pudo cargar la tasa');
+            }
+        } catch (error) {
+            console.error('❌ Error cargando tasa:', error);
+            document.getElementById('tasa-actual').textContent = '216.37';
+            this.tasaCambio = 216.37;
+        }
+    }
+
+    bsToUsd(amountBs) {
+        return parseFloat((amountBs / this.tasaCambio).toFixed(2));
+    }
+
+    usdToBs(amountUsd) {
+        return parseFloat((amountUsd * this.tasaCambio).toFixed(2));
     }
 
     async loadEmpresaData() {
@@ -47,7 +62,6 @@ class VentasManager {
             }
         } catch (error) {
             console.error('Error cargando datos empresa:', error);
-            // Usar datos por defecto
             this.empresaData = {
                 nombre_empresa: "Na'Guara",
                 rif: "J-123456789",
@@ -56,6 +70,19 @@ class VentasManager {
                 mensaje_factura: "¡Gracias por su compra!"
             };
         }
+    }
+
+    checkAuthentication() {
+        fetch('/api/me')
+            .then(response => {
+                if (!response.ok) {
+                    window.location.href = '/login.html';
+                }
+            })
+            .catch(error => {
+                console.error('Error de autenticación:', error);
+                window.location.href = '/login.html';
+            });
     }
 
     setCurrentDate() {
@@ -74,7 +101,6 @@ class VentasManager {
     setupEventListeners() {
         console.log('🔧 Configurando event listeners...');
         
-        // Búsqueda de productos
         const productSearch = document.getElementById('product-search');
         if (productSearch) {
             productSearch.addEventListener('input', (e) => {
@@ -96,7 +122,6 @@ class VentasManager {
             });
         }
 
-        // Cliente
         document.getElementById('customer-id').addEventListener('blur', (e) => this.searchCustomer(e.target.value));
         document.getElementById('customer-id').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.searchCustomer(e.target.value);
@@ -105,18 +130,15 @@ class VentasManager {
         
         document.getElementById('save-customer').addEventListener('click', () => this.saveCustomer());
 
-        // Acciones
         document.getElementById('process-sale').addEventListener('click', () => this.processSale());
         document.getElementById('new-sale').addEventListener('click', () => this.newSale());
         document.getElementById('cancel-sale').addEventListener('click', () => this.cancelSale());
         
-        // Factura
         document.getElementById('view-invoice').addEventListener('click', () => this.viewInvoice());
         document.getElementById('quick-invoice-btn').addEventListener('click', () => this.viewInvoice());
         document.getElementById('print-invoice').addEventListener('click', () => this.printInvoice());
         document.getElementById('close-invoice').addEventListener('click', () => this.hideModal('invoice-modal'));
 
-        // Modales
         this.setupModalEvents();
     }
 
@@ -141,14 +163,12 @@ class VentasManager {
             this.executeConfirmedAction();
         });
 
-        // Cerrar modal al hacer clic fuera
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 this.hideModal(e.target.id);
             }
         });
 
-        // Cerrar modal con ESC
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.hideModal('alert-modal');
@@ -169,7 +189,6 @@ class VentasManager {
         });
     }
 
-    // === GESTIÓN DE PRODUCTOS ===
     async loadProducts() {
         try {
             console.log('📦 Cargando productos...');
@@ -187,7 +206,8 @@ class VentasManager {
                 this.products = rawProducts.map(product => ({
                     id: product.id,
                     nombre: product.nombre,
-                    precio_venta: parseFloat(product.precio_venta) || 0,
+                    precio_bs: parseFloat(product.precio_venta) || 0,
+                    precio_usd: parseFloat(product.precio_dolares) || this.bsToUsd(parseFloat(product.precio_venta) || 0),
                     stock: parseInt(product.stock) || 0,
                     unidad_medida: product.unidad_medida || 'unidad',
                     categoria: product.categoria || 'Sin categoría'
@@ -222,7 +242,6 @@ class VentasManager {
         
         const searchTerm = query.toLowerCase().trim();
         
-        // Filtrar productos
         const filteredProducts = this.products.filter(product => {
             const nombreMatch = product.nombre && product.nombre.toLowerCase().includes(searchTerm);
             const idMatch = product.id && product.id.toString().includes(searchTerm);
@@ -231,8 +250,6 @@ class VentasManager {
             return nombreMatch || idMatch || categoriaMatch;
         }).slice(0, 5);
 
-        console.log('Productos encontrados:', filteredProducts.length);
-
         if (filteredProducts.length > 0) {
             filteredProducts.forEach(product => {
                 const div = document.createElement('div');
@@ -240,7 +257,10 @@ class VentasManager {
                 div.innerHTML = `
                     <div class="font-semibold text-gray-800">${product.nombre}</div>
                     <div class="text-sm text-gray-600">
-                        Código: ${product.id} | Precio: Bs. ${product.precio_venta} | Stock: ${product.stock}
+                        Código: ${product.id} | 
+                        <span class="text-purple-600">Bs. ${product.precio_bs.toFixed(2)}</span> | 
+                        <span class="text-green-600">$ ${product.precio_usd.toFixed(2)}</span> | 
+                        Stock: ${product.stock}
                     </div>
                 `;
                 div.addEventListener('click', () => {
@@ -252,7 +272,6 @@ class VentasManager {
             suggestions.classList.remove('hidden');
         } else {
             suggestions.classList.add('hidden');
-            console.log('No se encontraron productos');
         }
     }
 
@@ -310,17 +329,20 @@ class VentasManager {
             }
             
             this.cart[existingItemIndex].cantidad += 1;
-            this.cart[existingItemIndex].subtotal = (this.cart[existingItemIndex].cantidad * this.cart[existingItemIndex].precio_venta).toFixed(2);
+            this.cart[existingItemIndex].subtotal_bs = (this.cart[existingItemIndex].cantidad * this.cart[existingItemIndex].precio_bs).toFixed(2);
+            this.cart[existingItemIndex].subtotal_usd = this.bsToUsd(parseFloat(this.cart[existingItemIndex].subtotal_bs));
         } else {
             this.cart.push({
                 id: product.id,
                 nombre: product.nombre,
-                precio_venta: parseFloat(product.precio_venta) || 0,
+                precio_bs: parseFloat(product.precio_bs) || 0,
+                precio_usd: parseFloat(product.precio_usd) || 0,
                 categoria: product.categoria || 'Sin categoría',
                 unidad_medida: product.unidad_medida || 'unidad',
                 stock: product.stock || 0,
                 cantidad: 1,
-                subtotal: (parseFloat(product.precio_venta) || 0).toFixed(2)
+                subtotal_bs: (parseFloat(product.precio_bs) || 0).toFixed(2),
+                subtotal_usd: parseFloat(product.precio_usd) || 0
             });
         }
 
@@ -384,8 +406,14 @@ class VentasManager {
                         <button class="increase-btn w-8 h-8 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300 transition-all" data-index="${index}">+</button>
                     </div>
                 </td>
-                <td class="px-4 py-3 font-semibold">Bs. ${item.precio_venta.toFixed(2)}</td>
-                <td class="px-4 py-3 font-semibold text-purple-600">Bs. ${item.subtotal}</td>
+                <td class="px-4 py-3">
+                    <div class="font-semibold text-purple-600">Bs. ${item.precio_bs.toFixed(2)}</div>
+                    <div class="text-sm text-green-600">$ ${item.precio_usd.toFixed(2)}</div>
+                </td>
+                <td class="px-4 py-3">
+                    <div class="font-semibold text-purple-600">Bs. ${item.subtotal_bs}</div>
+                    <div class="text-sm text-green-600">$ ${item.subtotal_usd.toFixed(2)}</div>
+                </td>
                 <td class="px-4 py-3">
                     <button class="remove-btn text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50 transition-all" data-index="${index}">
                         <i class="fas fa-trash"></i>
@@ -444,7 +472,8 @@ class VentasManager {
                 }
 
                 this.cart[index].cantidad = parseFloat(nuevaCantidad.toFixed(2));
-                this.cart[index].subtotal = (this.cart[index].cantidad * this.cart[index].precio_venta).toFixed(2);
+                this.cart[index].subtotal_bs = (this.cart[index].cantidad * this.cart[index].precio_bs).toFixed(2);
+                this.cart[index].subtotal_usd = this.bsToUsd(parseFloat(this.cart[index].subtotal_bs));
                 this.updateCart();
             });
         });
@@ -477,7 +506,8 @@ class VentasManager {
             }
         }
 
-        item.subtotal = (item.cantidad * item.precio_venta).toFixed(2);
+        item.subtotal_bs = (item.cantidad * item.precio_bs).toFixed(2);
+        item.subtotal_usd = this.bsToUsd(parseFloat(item.subtotal_bs));
         this.updateCart();
     }
 
@@ -492,16 +522,24 @@ class VentasManager {
     }
 
     updateTotals() {
-        const subtotal = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
-        const tax = subtotal * 0.16;
-        const totalBs = subtotal + tax;
+        const subtotal_bs = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal_bs), 0);
+        const tax_bs = subtotal_bs * 0.16;
+        const total_bs = subtotal_bs + tax_bs;
 
-        document.getElementById('subtotal-amount').textContent = `Bs. ${subtotal.toFixed(2)}`;
-        document.getElementById('tax-amount').textContent = `Bs. ${tax.toFixed(2)}`;
-        document.getElementById('total-bs').textContent = `Bs. ${totalBs.toFixed(2)}`;
+        const subtotal_usd = this.bsToUsd(subtotal_bs);
+        const tax_usd = this.bsToUsd(tax_bs);
+        const total_usd = this.bsToUsd(total_bs);
+
+        document.getElementById('subtotal-bs').textContent = `Bs. ${subtotal_bs.toFixed(2)}`;
+        document.getElementById('subtotal-usd').textContent = `$ ${subtotal_usd.toFixed(2)}`;
+        
+        document.getElementById('tax-bs').textContent = `Bs. ${tax_bs.toFixed(2)}`;
+        document.getElementById('tax-usd').textContent = `$ ${tax_usd.toFixed(2)}`;
+        
+        document.getElementById('total-bs').textContent = `Bs. ${total_bs.toFixed(2)}`;
+        document.getElementById('total-usd').textContent = `$ ${total_usd.toFixed(2)}`;
     }
 
-    // === GESTIÓN DE CLIENTES ===
     validateCedulaFormat(cedula) {
         if (!cedula || cedula.trim() === '') {
             this.clearValidationStyles();
@@ -649,7 +687,6 @@ class VentasManager {
         }
     }
 
-    // === PROCESAMIENTO DE VENTAS ===
     async processSale() {
         if (this.cart.length === 0) {
             this.showAlert('El carrito está vacío');
@@ -673,7 +710,7 @@ class VentasManager {
                 detalles: this.cart.map(item => ({
                     id_producto: item.id,
                     cantidad: parseFloat(item.cantidad),
-                    precio_unitario: parseFloat(item.precio_venta)
+                    precio_unitario: parseFloat(item.precio_bs)
                 })),
                 metodo_pago: this.selectedPaymentMethod
             };
@@ -702,12 +739,11 @@ class VentasManager {
     }
 
     getTotalBs() {
-        const subtotal = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
+        const subtotal = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal_bs), 0);
         const tax = subtotal * 0.16;
         return (subtotal + tax).toFixed(2);
     }
 
-    // === FUNCIONALIDAD DE FACTURA ===
     showInvoiceButtons() {
         document.getElementById('view-invoice').classList.remove('hidden');
         document.getElementById('quick-invoice-btn').classList.remove('hidden');
@@ -747,11 +783,14 @@ class VentasManager {
 
     generateInvoiceHTML(ventaData) {
         const invoiceContent = document.getElementById('invoice-content');
-        const subtotal = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal), 0);
-        const tax = subtotal * 0.16;
-        const total = subtotal + tax;
+        const subtotal_bs = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal_bs), 0);
+        const tax_bs = subtotal_bs * 0.16;
+        const total_bs = subtotal_bs + tax_bs;
 
-        // Usar datos de empresa cargados o por defecto
+        const subtotal_usd = this.bsToUsd(subtotal_bs);
+        const tax_usd = this.bsToUsd(tax_bs);
+        const total_usd = this.bsToUsd(total_bs);
+
         const empresa = this.empresaData || {
             nombre_empresa: "Na'Guara",
             rif: "J-123456789",
@@ -775,6 +814,7 @@ class VentasManager {
                         <h3 class="text-xl font-bold text-purple-600">FACTURA #${ventaData.id}</h3>
                         <p class="text-gray-600">Fecha: ${new Date(ventaData.fecha_venta).toLocaleDateString('es-ES')}</p>
                         <p class="text-gray-600">Hora: ${new Date(ventaData.fecha_venta).toLocaleTimeString('es-ES')}</p>
+                        <p class="text-gray-600 text-sm">Tasa: ${this.tasaCambio.toFixed(2)} Bs/$</p>
                     </div>
                 </div>
 
@@ -795,7 +835,7 @@ class VentasManager {
                             <tr>
                                 <th class="border border-gray-300 p-3 text-left">Producto</th>
                                 <th class="border border-gray-300 p-3 text-center">Cantidad</th>
-                                <th class="border border-gray-300 p-3 text-right">Precio Unit.</th>
+                                <th class="border border-gray-300 p-3 text-right">Precio Unitario</th>
                                 <th class="border border-gray-300 p-3 text-right">Subtotal</th>
                             </tr>
                         </thead>
@@ -804,8 +844,14 @@ class VentasManager {
                                 <tr>
                                     <td class="border border-gray-300 p-3">${item.nombre}</td>
                                     <td class="border border-gray-300 p-3 text-center">${item.cantidad} ${item.unidad_medida}</td>
-                                    <td class="border border-gray-300 p-3 text-right">Bs. ${item.precio_venta.toFixed(2)}</td>
-                                    <td class="border border-gray-300 p-3 text-right">Bs. ${item.subtotal}</td>
+                                    <td class="border border-gray-300 p-3 text-right">
+                                        <div>Bs. ${item.precio_bs.toFixed(2)}</div>
+                                        <div class="text-sm text-green-600">$ ${item.precio_usd.toFixed(2)}</div>
+                                    </td>
+                                    <td class="border border-gray-300 p-3 text-right">
+                                        <div>Bs. ${item.subtotal_bs}</div>
+                                        <div class="text-sm text-green-600">$ ${item.subtotal_usd.toFixed(2)}</div>
+                                    </td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -817,20 +863,30 @@ class VentasManager {
                     <div class="p-4 bg-purple-50 rounded-lg">
                         <h4 class="font-bold text-purple-800 mb-2">MÉTODO DE PAGO</h4>
                         <p class="text-purple-700 font-semibold">${this.selectedPaymentMethod.toUpperCase()}</p>
+                        <p class="text-sm text-purple-600 mt-2">Tasa de cambio: ${this.tasaCambio.toFixed(2)} Bs/$</p>
                     </div>
                     <div class="p-4 bg-gray-50 rounded-lg">
                         <h4 class="font-bold text-gray-800 mb-2">RESUMEN</h4>
                         <div class="flex justify-between mb-1">
                             <span>Subtotal:</span>
-                            <span>Bs. ${subtotal.toFixed(2)}</span>
+                            <div class="text-right">
+                                <div>Bs. ${subtotal_bs.toFixed(2)}</div>
+                                <div class="text-sm text-green-600">$ ${subtotal_usd.toFixed(2)}</div>
+                            </div>
                         </div>
                         <div class="flex justify-between mb-1">
                             <span>IVA (16%):</span>
-                            <span>Bs. ${tax.toFixed(2)}</span>
+                            <div class="text-right">
+                                <div>Bs. ${tax_bs.toFixed(2)}</div>
+                                <div class="text-sm text-green-600">$ ${tax_usd.toFixed(2)}</div>
+                            </div>
                         </div>
                         <div class="flex justify-between font-bold text-lg border-t border-gray-300 pt-2 mt-2">
                             <span>TOTAL:</span>
-                            <span class="text-purple-600">Bs. ${total.toFixed(2)}</span>
+                            <div class="text-right">
+                                <div class="text-purple-600">Bs. ${total_bs.toFixed(2)}</div>
+                                <div class="text-green-600 text-sm">$ ${total_usd.toFixed(2)}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -893,6 +949,7 @@ class VentasManager {
                     .text-purple-600 { color: #8b5cf6; }
                     .text-purple-700 { color: #7c3aed; }
                     .text-purple-800 { color: #6d28d9; }
+                    .text-green-600 { color: #059669; }
                     @media print {
                         body { margin: 0; }
                         .invoice-container { max-width: 100%; }
@@ -945,7 +1002,6 @@ class VentasManager {
         );
     }
 
-    // === MÉTODOS DE UTILIDAD ===
     showModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) modal.classList.remove('hidden');
