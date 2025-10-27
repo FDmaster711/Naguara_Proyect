@@ -1,4 +1,4 @@
-// ventas.js - Punto de Venta Completo con Dólares y Bolívares
+// ventas.js - Punto de Venta Completo con Dólares, Bolívares y Cierre de Caja
 class VentasManager {
     constructor() {
         this.currentCustomer = null;
@@ -8,8 +8,16 @@ class VentasManager {
         this.lastSaleId = null;
         this.empresaData = null;
         this.tasaCambio = 216.37;
+        this.dailySalesSummary = {
+            total: 0,
+            efectivo: 0,
+            tarjeta: 0,
+            transferencia: 0,
+            pago_movil: 0
+        };
         
         this.init();
+        this.setCloseCashDate(); // ← LÍNEA AGREGADA
     }
 
     init() {
@@ -139,6 +147,13 @@ class VentasManager {
         document.getElementById('print-invoice').addEventListener('click', () => this.printInvoice());
         document.getElementById('close-invoice').addEventListener('click', () => this.hideModal('invoice-modal'));
 
+        // Cierre de Caja
+        document.getElementById('close-cash-btn').addEventListener('click', () => this.openCashClose());
+        document.getElementById('close-cash-modal-btn').addEventListener('click', () => this.hideModal('close-cash-modal'));
+        document.getElementById('calculate-close').addEventListener('click', () => this.calculateCashClose());
+        document.getElementById('process-close').addEventListener('click', () => this.processCashClose());
+        document.getElementById('final-cash-counted').addEventListener('input', () => this.calculateDifference());
+
         this.setupModalEvents();
     }
 
@@ -174,6 +189,7 @@ class VentasManager {
                 this.hideModal('alert-modal');
                 this.hideModal('confirm-modal');
                 this.hideModal('invoice-modal');
+                this.hideModal('close-cash-modal');
             }
         });
     }
@@ -1002,6 +1018,206 @@ class VentasManager {
         );
     }
 
+    // ==================== MÉTODOS DE CIERRE DE CAJA ====================
+
+    async openCashClose() {
+        try {
+            console.log('💰 Abriendo cierre de caja...');
+            
+            // Establecer fecha actual
+            this.setCloseCashDate();
+            
+            // Cargar resumen del día
+            await this.loadDailySalesSummary();
+            
+            // Mostrar modal
+            this.showModal('close-cash-modal');
+            
+        } catch (error) {
+            console.error('Error abriendo cierre de caja:', error);
+            this.showAlert('Error al abrir cierre de caja');
+        }
+    }
+
+    setCloseCashDate() {
+        const today = new Date().toISOString().split('T')[0];
+        const closeDateInput = document.getElementById('close-date');
+        if (closeDateInput) {
+            closeDateInput.value = today;
+            console.log('📅 Fecha establecida para cierre:', today);
+        }
+    }
+
+    async loadDailySalesSummary() {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            console.log('📊 Cargando ventas del día:', today);
+            
+            const response = await fetch(`/api/ventas?fecha=${today}`, {
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const ventas = await response.json();
+                
+                // Reiniciar resumen
+                this.dailySalesSummary = {
+                    total: 0,
+                    efectivo: 0,
+                    tarjeta: 0,
+                    transferencia: 0,
+                    pago_movil: 0
+                };
+
+                // Calcular totales por método de pago
+                for (const venta of ventas) {
+                    const detallesResponse = await fetch(`/api/ventas/${venta.id}`, {
+                        credentials: 'include'
+                    });
+                    
+                    if (detallesResponse.ok) {
+                        const ventaDetalles = await detallesResponse.json();
+                        const totalVenta = ventaDetalles.detalles.reduce((sum, detalle) => 
+                            sum + (parseFloat(detalle.cantidad) * parseFloat(detalle.precio_unitario)), 0);
+                        
+                        this.dailySalesSummary.total += totalVenta;
+                        this.dailySalesSummary[venta.metodo_pago] += totalVenta;
+                    }
+                }
+
+                this.updateCloseCashDisplay();
+                console.log('✅ Resumen del día cargado:', this.dailySalesSummary);
+            } else {
+                throw new Error('Error al cargar ventas del día');
+            }
+        } catch (error) {
+            console.error('Error cargando resumen del día:', error);
+            this.showAlert('Error al cargar el resumen de ventas del día');
+        }
+    }
+
+    updateCloseCashDisplay() {
+        // Actualizar resumen de ventas
+        document.getElementById('close-total-sales').textContent = `Bs. ${this.dailySalesSummary.total.toFixed(2)}`;
+        document.getElementById('close-cash-sales').textContent = `Bs. ${this.dailySalesSummary.efectivo.toFixed(2)}`;
+        document.getElementById('close-card-sales').textContent = `Bs. ${this.dailySalesSummary.tarjeta.toFixed(2)}`;
+        document.getElementById('close-transfer-sales').textContent = `Bs. ${this.dailySalesSummary.transferencia.toFixed(2)}`;
+        document.getElementById('close-mobile-sales').textContent = `Bs. ${this.dailySalesSummary.pago_movil.toFixed(2)}`;
+
+        // Calcular efectivo esperado
+        const initialCash = parseFloat(document.getElementById('initial-cash').value) || 0;
+        const expectedCash = initialCash + this.dailySalesSummary.efectivo;
+        document.getElementById('close-expected-cash').textContent = `Bs. ${expectedCash.toFixed(2)}`;
+
+        // Calcular diferencia
+        this.calculateDifference();
+    }
+
+    calculateDifference() {
+        const initialCash = parseFloat(document.getElementById('initial-cash').value) || 0;
+        const finalCashCounted = parseFloat(document.getElementById('final-cash-counted').value) || 0;
+        const expectedCash = initialCash + this.dailySalesSummary.efectivo;
+        const difference = finalCashCounted - expectedCash;
+
+        const differenceElement = document.getElementById('close-difference');
+        const container = document.getElementById('close-difference-container');
+
+        differenceElement.textContent = `Bs. ${difference.toFixed(2)}`;
+
+        // Aplicar estilos según la diferencia
+        container.className = 'flex justify-between font-bold text-lg';
+        if (difference > 0) {
+            differenceElement.className = 'positive-difference';
+            container.classList.add('text-green-600');
+        } else if (difference < 0) {
+            differenceElement.className = 'negative-difference';
+            container.classList.add('text-red-600');
+        } else {
+            differenceElement.className = 'neutral-difference';
+            container.classList.add('text-gray-600');
+        }
+    }
+
+    calculateCashClose() {
+        this.updateCloseCashDisplay();
+        this.showAlert('Cálculo completado', 'success');
+    }
+
+    async processCashClose() {
+        const initialCash = parseFloat(document.getElementById('initial-cash').value) || 0;
+        const finalCashCounted = parseFloat(document.getElementById('final-cash-counted').value) || 0;
+        const fecha = document.getElementById('close-date').value;
+
+        if (!fecha) {
+            this.showAlert('Debe seleccionar una fecha');
+            return;
+        }
+
+        if (finalCashCounted === 0) {
+            this.showAlert('Debe ingresar el efectivo final contado');
+            return;
+        }
+
+        const expectedCash = initialCash + this.dailySalesSummary.efectivo;
+        const diferencia = finalCashCounted - expectedCash;
+
+        console.log('💳 Procesando cierre de caja:', {
+            fecha,
+            initialCash,
+            finalCashCounted,
+            expectedCash,
+            diferencia,
+            salesSummary: this.dailySalesSummary
+        });
+
+        try {
+            const closeData = {
+                fecha: fecha,
+                usuario_id: (await this.getCurrentUser()).id,
+                efectivo_inicial: initialCash,
+                efectivo_final: finalCashCounted,
+                total_ventas: this.dailySalesSummary.total,
+                total_ventas_efectivo: this.dailySalesSummary.efectivo,
+                total_ventas_tarjeta: this.dailySalesSummary.tarjeta,
+                total_ventas_transferencia: this.dailySalesSummary.transferencia,
+                total_ventas_pago_movil: this.dailySalesSummary.pago_movil,
+                diferencia: diferencia
+            };
+
+            const response = await fetch('/api/cierre-caja', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(closeData)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                this.showAlert('Cierre de caja procesado exitosamente!', 'success');
+                this.hideModal('close-cash-modal');
+                
+                // Limpiar formulario
+                document.getElementById('initial-cash').value = '';
+                document.getElementById('final-cash-counted').value = '';
+            } else {
+                const error = await response.json();
+                this.showAlert(error.error || 'Error al procesar el cierre de caja');
+            }
+        } catch (error) {
+            console.error('Error procesando cierre de caja:', error);
+            this.showAlert('Error de conexión al procesar el cierre de caja');
+        }
+    }
+
+    async getCurrentUser() {
+        // Obtener información del usuario actual desde la sesión
+        const response = await fetch('/api/me', { credentials: 'include' });
+        if (response.ok) {
+            return await response.json();
+        }
+        return { id: 1 }; // Fallback
+    }
+
     showModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) modal.classList.remove('hidden');
@@ -1048,6 +1264,19 @@ class VentasManager {
         if (this.confirmCallback) this.confirmCallback();
         this.hideModal('confirm-modal');
     }
+
+
+    async canProcessClose() {
+    const today = new Date().toISOString().split('T')[0];
+    const response = await fetch(`/api/cierre-caja/existe?fecha=${today}`);
+    const exists = await response.json();
+    
+    if (exists) {
+        this.showAlert('Ya se realizó un cierre de caja hoy');
+        return false;
+    }
+    return true;
+}
 }
 
 // Inicializar el sistema

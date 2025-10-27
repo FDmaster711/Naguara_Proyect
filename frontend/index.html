@@ -83,19 +83,18 @@
   <header class="top-bar">
     <span class="page-title">Dashboard</span>
     <div class="user-profile" tabindex="0" onclick="toggleUserMenu()" onblur="closeUserMenu()">
-      <span class="user-avatar">JC</span>
+      <span class="user-avatar" id="userAvatar">U</span>
       <span class="user-info">
-        <span class="user-name">Jesús Camacho</span>
-        <span class="user-role">Administrador</span>
+        <span class="user-name" id="userName">Cargando...</span>
+        <span class="user-role" id="userRole">Usuario</span>
       </span>
-    <div class="user-dropdown" id="userDropdown">
-  <a href="#" class="dropdown-item"><i class="fas fa-user"></i> Ver perfil</a>
-  <div class="dropdown-divider"></div>
-  <a href="#" class="dropdown-item" id="logoutBtn" onclick="logout()">
-    <i class="fas fa-sign-out-alt"></i> Cerrar sesión
-  </a>
-</div>
-
+      <div class="user-dropdown" id="userDropdown">
+        <a href="#" class="dropdown-item"><i class="fas fa-user"></i> Ver perfil</a>
+        <div class="dropdown-divider"></div>
+        <a href="#" class="dropdown-item" id="logoutBtn" onclick="logout()">
+          <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+        </a>
+      </div>
     </div>
   </header>
 
@@ -107,17 +106,45 @@
   <script>
   // ---- CONFIGURACIÓN API ----
   const API_BASE = 'http://localhost:3000/api';
+  let usuarioActual = null;
 
   async function fetchData(endpoint) {
-    const res = await fetch(`${API_BASE}${endpoint}`);
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+      credentials: 'include'
+    });
     if (!res.ok) throw new Error(`Error ${res.status}`);
     return res.json();
+  }
+
+  // ---- FUNCIONES DE USUARIO ----
+  function actualizarInfoUsuario(usuario) {
+    if (usuario) {
+      // Actualizar avatar con iniciales
+      const iniciales = obtenerIniciales(usuario.nombre);
+      document.getElementById('userAvatar').textContent = iniciales;
+      
+      // Actualizar nombre y rol
+      document.getElementById('userName').textContent = usuario.nombre;
+      document.getElementById('userRole').textContent = usuario.rol;
+      
+      usuarioActual = usuario;
+    }
+  }
+
+  function obtenerIniciales(nombre) {
+    return nombre
+      .split(' ')
+      .map(palabra => palabra.charAt(0))
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
   }
 
   // ---- DASHBOARD ----
   async function loadDashboard() {
     const main = document.getElementById('contenidoPrincipal');
     main.innerHTML = `<p style="text-align:center;">Cargando datos...</p>`;
+    
     try {
       const stats = await fetchData('/dashboard/stats');
 
@@ -163,18 +190,39 @@
         <canvas id="graficoTorta" width="400" height="200"></canvas>
       `;
 
+      // Gráfico de productos más vendidos
       const ctx = document.getElementById('graficoTorta').getContext('2d');
       new Chart(ctx, {
         type: 'doughnut',
         data: {
           labels: ['Producto A', 'Producto B', 'Producto C'],
-          datasets: [{ data: [12, 19, 7], backgroundColor: ['#5a00b3', '#3498db', '#2ecc71'] }]
+          datasets: [{ 
+            data: [12, 19, 7], 
+            backgroundColor: ['#5a00b3', '#3498db', '#2ecc71'] 
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          }
         }
       });
 
     } catch (err) {
-      console.error(err);
-      main.innerHTML = `<p style="color:red; text-align:center;">No se pudieron cargar los datos del dashboard.</p>`;
+      console.error('Error cargando dashboard:', err);
+      main.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+          <p style="color: #e74c3c; margin-bottom: 1rem;">
+            No se pudieron cargar los datos del dashboard.
+          </p>
+          <button onclick="loadDashboard()" class="card_btn uno">
+            Reintentar
+          </button>
+        </div>
+      `;
     }
   }
 
@@ -193,36 +241,56 @@
   function toggleUserMenu() {
     document.getElementById('userDropdown').classList.toggle('active');
   }
+
   function closeUserMenu() {
-    setTimeout(() => document.getElementById('userDropdown').classList.remove('active'), 150);
+    setTimeout(() => {
+      document.getElementById('userDropdown').classList.remove('active');
+    }, 150);
   }
 
+  // ---- AUTENTICACIÓN ----
+  async function logout() {
+    try {
+      const response = await fetch('http://localhost:3000/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
 
+      const data = await response.json();
 
-async function logout() {
-  try {
-    const response = await fetch('http://localhost:3000/logout', {
-      method: 'POST',
-      credentials: 'include' 
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      localStorage.removeItem('usuario');
-
-      // Redirigir al login
-      window.location.href = 'login.html';
-    } else {
-      alert(data.error || 'Error al cerrar sesión');
+      if (response.ok) {
+        localStorage.removeItem('usuario');
+        window.location.href = 'login.html';
+      } else {
+        alert(data.error || 'Error al cerrar sesión');
+      }
+    } catch (err) {
+      console.error('Error cerrando sesión:', err);
+      alert('Error de conexión con el servidor');
     }
-  } catch (err) {
-    console.error('Error cerrando sesión:', err);
-    alert('Error de conexión con el servidor');
   }
-}
 
+  async function checkSession() {
+    try {
+      const res = await fetch('http://localhost:3000/api/sesion', {
+        credentials: 'include'
+      });
+      const data = await res.json();
 
+      if (!data.autenticado) {
+        window.location.href = 'login.html';
+      } else {
+        console.log('✅ Sesión activa:', data.usuario);
+        actualizarInfoUsuario(data.usuario);
+        loadDashboard();
+      }
+    } catch (err) {
+      console.error('Error verificando sesión:', err);
+      window.location.href = 'login.html';
+    }
+  }
+
+  // ---- EVENT LISTENERS ----
   document.getElementById('sidebarToggle').addEventListener('click', () => {
     const sidebar = document.getElementById('sidebar');
     sidebar.classList.toggle('collapsed');
@@ -230,27 +298,11 @@ async function logout() {
     document.querySelector('.main-content').style.marginLeft = sidebar.classList.contains('collapsed') ? '60px' : '250px';
   });
 
-async function checkSession() {
-  try {
-    const res = await fetch('http://localhost:3000/api/sesion', {
-      credentials: 'include'
-    });
-    const data = await res.json();
-
-    if (!data.autenticado) {
-      window.location.href = 'login.html';
-    } else {
-      console.log('✅ Sesión activa:', data.usuario);
-    }
-  } catch (err) {
-    console.error('Error verificando sesión:', err);
-    window.location.href = 'login.html';
-  }
-}
-checkSession();
-
-  window.onload = loadDashboard;
+  // Inicializar
+  checkSession();
+  
   </script>
+  
 </body>
 </html>
 

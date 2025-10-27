@@ -8,15 +8,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-       
 </head>
 <body class="min-h-full">
     <main class="container mx-auto p-6 max-w-7xl">
         <!-- Header -->
         <header class="card p-6 mb-6 fade-in">
             <div class="breadcrumb">
-                <a href="#" onclick="loadDashboard()">Dashboard</a>
+                <a href="../index.html">Dashboard</a>
                 <i class="fas fa-chevron-right"></i>
                 <span>Configuración</span>
             </div>
@@ -29,8 +27,8 @@
                     <p class="text-gray-600">Personaliza y configura tu sistema Na'Guara</p>
                 </div>
                 <div class="text-right">
-                    <div class="role-badge role-super-admin mb-2">SUPER ADMINISTRADOR</div>
-                    <p class="text-sm text-gray-500">Acceso completo a configuraciones</p>
+                    <div class="role-badge role-super-admin mb-2" id="user-role">Cargando...</div>
+                    <p class="text-sm text-gray-500" id="user-name">Usuario</p>
                 </div>
             </div>
         </header>
@@ -48,13 +46,9 @@
                             <i class="fas fa-building"></i>
                             <span>Mi Empresa</span>
                         </div>
-                        <div class="nav-item" data-section="database">
-                            <i class="fas fa-database"></i>
-                            <span>Base de Datos</span>
-                        </div>
-                        <div class="nav-item" data-section="personalizacion">
-                            <i class="fas fa-palette"></i>
-                            <span>Personalización</span>
+                        <div class="nav-item" data-section="categorias">
+                            <i class="fas fa-tags"></i>
+                            <span>Categorías</span>
                         </div>
                         <div class="nav-item" data-section="negocio">
                             <i class="fas fa-store"></i>
@@ -62,15 +56,11 @@
                         </div>
                         <div class="nav-item" data-section="usuarios">
                             <i class="fas fa-users"></i>
-                            <span>Usuarios y Permisos</span>
+                            <span>Usuarios</span>
                         </div>
-                        <div class="nav-item" data-section="notificaciones">
-                            <i class="fas fa-bell"></i>
-                            <span>Notificaciones</span>
-                        </div>
-                        <div class="nav-item" data-section="integraciones">
-                            <i class="fas fa-plug"></i>
-                            <span>Integraciones</span>
+                        <div class="nav-item" data-section="backup">
+                            <i class="fas fa-database"></i>
+                            <span>Copias de Seguridad</span>
                         </div>
                     </nav>
                 </div>
@@ -90,45 +80,35 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="form-group">
                                     <label for="empresa-nombre">Nombre de la Empresa *</label>
-                                    <input type="text" id="empresa-nombre" class="input-field" value="Pollos Na'Guara" required>
+                                    <input type="text" id="empresa-nombre" class="input-field" required>
                                     <div class="help-text">Este nombre aparecerá en facturas y reportes</div>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="empresa-rif">RIF *</label>
-                                    <input type="text" id="empresa-rif" class="input-field" value="J-12345678-9" required>
+                                    <input type="text" id="empresa-rif" class="input-field" required>
                                     <div class="help-text">Registro de Información Fiscal</div>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="empresa-direccion">Dirección</label>
-                                    <textarea id="empresa-direccion" class="input-field" rows="3">Calle 1 final de la Av. Los Horcones, Ruiz Pineda, Barquisimeto.</textarea>
+                                    <textarea id="empresa-direccion" class="input-field" rows="3"></textarea>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="empresa-telefono">Teléfono</label>
-                                    <input type="tel" id="empresa-telefono" class="input-field" value="+58 212-555-0123">
+                                    <input type="tel" id="empresa-telefono" class="input-field">
                                 </div>
 
                                 <div class="form-group">
                                     <label for="empresa-email">Email</label>
-                                    <input type="email" id="empresa-email" class="input-field" value="info@naguara.com">
+                                    <input type="email" id="empresa-email" class="input-field">
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="empresa-web">Sitio Web</label>
-                                    <input type="url" id="empresa-web" class="input-field" value="www.naguara.com">
-                                </div>
-                            </div>
-
-                            <!-- Logo Upload -->
-                            <div class="form-group mt-6">
-                                <label>Logo de la Empresa</label>
-                                <div class="file-upload" id="logo-upload">
-                                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
-                                    <p class="text-gray-600 mb-2">Arrastra tu logo aquí o haz clic para seleccionar</p>
-                                    <p class="text-sm text-gray-500">PNG, JPG hasta 2MB</p>
-                                    <input type="file" id="logo-file" accept="image/*" class="hidden">
+                                    <label for="empresa-mensaje">Mensaje en Facturas</label>
+                                    <textarea id="empresa-mensaje" class="input-field" rows="2"></textarea>
+                                    <div class="help-text">Mensaje que aparece al pie de las facturas</div>
                                 </div>
                             </div>
 
@@ -142,12 +122,177 @@
                     </div>
                 </div>
 
-                <!-- Sección Base de Datos -->
-                <div id="section-database" class="config-section hidden">
+                <!-- Sección Categorías -->
+                <div id="section-categorias" class="config-section hidden">
+                    <div class="card p-6 mb-6 fade-in">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-6">
+                            <i class="fas fa-tags mr-3 text-purple-600"></i>
+                            Gestión de Categorías
+                        </h3>
+
+                        <!-- Agregar Categoría -->
+                        <div class="mb-8">
+                            <h4 class="text-lg font-medium text-gray-700 mb-4">Agregar Nueva Categoría</h4>
+                            <div class="flex items-center space-x-4 mb-4">
+                                <input type="text" id="nueva-categoria" class="input-field flex-1" placeholder="Nombre de la categoría">
+                                <textarea id="categoria-descripcion" class="input-field flex-1" placeholder="Descripción (opcional)" rows="1"></textarea>
+                                <button id="add-categoria" class="btn-primary">
+                                    <i class="fas fa-plus mr-2"></i>
+                                    Agregar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Categorías -->
+                        <div>
+                            <h4 class="text-lg font-medium text-gray-700 mb-4">Categorías Existentes</h4>
+                            <div id="categorias-list" class="space-y-3">
+                                <div class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                    <p>Cargando categorías...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección Configuración de Negocio -->
+                <div id="section-negocio" class="config-section hidden">
+                    <div class="card p-6 mb-6 fade-in">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-6">
+                            <i class="fas fa-store mr-3 text-purple-600"></i>
+                            Configuración de Negocio
+                        </h3>
+
+                        <!-- Métodos de Pago -->
+                        <div class="mb-8">
+                            <h4 class="text-lg font-medium text-gray-700 mb-4">Métodos de Pago Habilitados</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <span>Efectivo</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="pago-efectivo" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <span>Tarjeta</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="pago-tarjeta" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <span>Transferencia</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="pago-transferencia" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <span>Pago Móvil</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="pago-movil" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Impuestos -->
+                        <div class="mb-8">
+                            <h4 class="text-lg font-medium text-gray-700 mb-4">Configuración de Impuestos</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="form-group">
+                                    <label for="iva-rate">Tasa de IVA (%)</label>
+                                    <input type="number" id="iva-rate" class="input-field" value="16" min="0" max="100" step="0.01">
+                                    <div class="help-text">Impuesto al Valor Agregado</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stock Mínimo -->
+                        <div class="mb-8">
+                            <h4 class="text-lg font-medium text-gray-700 mb-4">Alertas de Stock</h4>
+                            <div class="form-group">
+                                <label for="stock-minimo-global">Stock Mínimo Global</label>
+                                <input type="number" id="stock-minimo-global" class="input-field" value="10" min="1">
+                                <div class="help-text">Cantidad mínima por defecto para alertas de stock bajo</div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end mt-6">
+                            <button id="guardar-config-negocio" class="btn-primary">
+                                <i class="fas fa-save mr-2"></i>
+                                Guardar Configuración
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección Usuarios -->
+                <div id="section-usuarios" class="config-section hidden">
+                    <div class="card p-6 mb-6 fade-in">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-6">
+                            <i class="fas fa-users mr-3 text-purple-600"></i>
+                            Gestión de Usuarios
+                        </h3>
+
+                        <!-- Lista de Usuarios -->
+                        <div class="mb-8">
+                            <h4 class="text-lg font-medium text-gray-700 mb-4">Usuarios del Sistema</h4>
+                            <div id="usuarios-list" class="space-y-4">
+                                <div class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                    <p>Cargando usuarios...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Agregar Usuario -->
+                        <div>
+                            <h4 class="text-lg font-medium text-gray-700 mb-4">Agregar Nuevo Usuario</h4>
+                            <form id="usuario-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="form-group">
+                                    <label for="usuario-nombre">Nombre Completo *</label>
+                                    <input type="text" id="usuario-nombre" class="input-field" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="usuario-username">Nombre de Usuario *</label>
+                                    <input type="text" id="usuario-username" class="input-field" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="usuario-password">Contraseña *</label>
+                                    <input type="password" id="usuario-password" class="input-field" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="usuario-rol">Rol *</label>
+                                    <select id="usuario-rol" class="input-field" required>
+                                        <option value="Vendedor">Vendedor</option>
+                                        <option value="Administrador">Administrador</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group md:col-span-2">
+                                    <button type="submit" class="btn-primary">
+                                        <i class="fas fa-user-plus mr-2"></i>
+                                        Crear Usuario
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección Backup -->
+                <div id="section-backup" class="config-section hidden">
                     <div class="card p-6 mb-6 fade-in">
                         <h3 class="text-xl font-semibold text-gray-800 mb-6">
                             <i class="fas fa-database mr-3 text-purple-600"></i>
-                            Gestión de Base de Datos
+                            Copias de Seguridad
                         </h3>
 
                         <!-- Crear Backup -->
@@ -165,7 +310,7 @@
                                 </button>
                                 <div class="form-group mb-0">
                                     <label class="switch">
-                                        <input type="checkbox" id="auto-backup" checked>
+                                        <input type="checkbox" id="auto-backup">
                                         <span class="slider"></span>
                                     </label>
                                     <span class="ml-3 text-sm text-gray-600">Backup automático diario</span>
@@ -176,451 +321,17 @@
                                 <div class="progress-bar">
                                     <div class="progress-fill" style="width: 0%"></div>
                                 </div>
-                                <p class="text-sm text-gray-600 mt-2">Creando copia de seguridad...</p>
-                            </div>
-                        </div>
-
-                        <!-- Restaurar Backup -->
-                        <div class="mb-8">
-                            <h4 class="text-lg font-medium text-gray-700 mb-4">Restaurar Base de Datos</h4>
-                            <div class="alert alert-warning mb-4">
-                                <i class="fas fa-exclamation-triangle mr-2"></i>
-                                ¡CUIDADO! Restaurar reemplazará todos los datos actuales.
-                            </div>
-
-                            <div class="file-upload" id="restore-upload">
-                                <i class="fas fa-upload text-4xl text-gray-400 mb-4"></i>
-                                <p class="text-gray-600 mb-2">Selecciona el archivo de backup (.sql)</p>
-                                <p class="text-sm text-gray-500">Solo archivos de backup válidos</p>
-                                <input type="file" id="restore-file" accept=".sql" class="hidden">
-                            </div>
-
-                            <div class="flex justify-end mt-4">
-                                <button id="restore-backup" class="btn-danger" disabled>
-                                    <i class="fas fa-upload mr-2"></i>
-                                    Restaurar Base de Datos
-                                </button>
+                                <p class="text-sm text-gray-600 mt-2" id="backup-status">Creando copia de seguridad...</p>
                             </div>
                         </div>
 
                         <!-- Historial de Backups -->
                         <div>
                             <h4 class="text-lg font-medium text-gray-700 mb-4">Historial de Copias de Seguridad</h4>
-                            <div id="backup-history">
-                                <div class="backup-item">
-                                    <div class="flex-1">
-                                        <div class="font-medium">backup_2024-01-15_14-30.sql</div>
-                                        <div class="text-sm text-gray-500">15 de Enero 2024, 2:30 PM - 2.5 MB</div>
-                                    </div>
-                                    <div class="flex space-x-2">
-                                        <button class="btn-info btn-sm">
-                                            <i class="fas fa-download"></i>
-                                        </button>
-                                        <button class="btn-danger btn-sm">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="backup-item">
-                                    <div class="flex-1">
-                                        <div class="font-medium">backup_2024-01-14_14-30.sql</div>
-                                        <div class="text-sm text-gray-500">14 de Enero 2024, 2:30 PM - 2.3 MB</div>
-                                    </div>
-                                    <div class="flex space-x-2">
-                                        <button class="btn-info btn-sm">
-                                            <i class="fas fa-download"></i>
-                                        </button>
-                                        <button class="btn-danger btn-sm">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sección Personalización -->
-                <div id="section-personalizacion" class="config-section hidden">
-                    <div class="card p-6 mb-6 fade-in">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-6">
-                            <i class="fas fa-palette mr-3 text-purple-600"></i>
-                            Personalización del Sistema
-                        </h3>
-
-                        <form id="personalizacion-form">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="form-group">
-                                    <label for="sistema-nombre">Nombre del Sistema</label>
-                                    <input type="text" id="sistema-nombre" class="input-field" value="Sistema Na'Guara">
-                                    <div class="help-text">Aparece en la barra de título y encabezados</div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="moneda">Moneda Predeterminada</label>
-                                    <select id="moneda" class="input-field">
-                                        <option value="VES">Bolívares (Bs.)</option>
-                                        <option value="USD">Dólares ($)</option>
-                                        <option value="EUR">Euros (€)</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="zona-horaria">Zona Horaria</label>
-                                    <select id="zona-horaria" class="input-field">
-                                        <option value="America/Caracas">Venezuela (UTC-4)</option>
-                                        <option value="America/New_York">Nueva York (UTC-5)</option>
-                                        <option value="Europe/Madrid">Madrid (UTC+1)</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Color Principal del Sistema</label>
-                                    <div class="flex items-center space-x-4">
-                                        <input type="color" id="color-primary" class="color-picker" value="#5a00b3">
-                                        <span class="text-sm text-gray-600">Color de botones y elementos principales</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="flex justify-end mt-6">
-                                <button type="submit" class="btn-primary">
-                                    <i class="fas fa-save mr-2"></i>
-                                    Guardar Personalización
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Sección Configuración de Negocio -->
-                <div id="section-negocio" class="config-section hidden">
-                    <div class="card p-6 mb-6 fade-in">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-6">
-                            <i class="fas fa-store mr-3 text-purple-600"></i>
-                            Configuración de Negocio
-                        </h3>
-
-                        <!-- Categorías -->
-                        <div class="mb-8">
-                            <h4 class="text-lg font-medium text-gray-700 mb-4">Categorías de Productos</h4>
-                            <div class="flex items-center space-x-4 mb-4">
-                                <input type="text" id="nueva-categoria" class="input-field flex-1" placeholder="Nueva categoría">
-                                <button id="add-categoria" class="btn-primary">
-                                    <i class="fas fa-plus mr-2"></i>
-                                    Agregar
-                                </button>
-                            </div>
-                            <div id="categorias-list" class="space-y-2">
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span>Producto 1</span>
-                                    <button class="btn-danger btn-sm">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span>Producto 2</span>
-                                    <button class="btn-danger btn-sm">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Métodos de Pago -->
-                        <div class="mb-8">
-                            <h4 class="text-lg font-medium text-gray-700 mb-4">Métodos de Pago</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span>Efectivo</span>
-                                    <label class="switch">
-                                        <input type="checkbox" checked>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span>Transferencia</span>
-                                    <label class="switch">
-                                        <input type="checkbox" checked>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span>Punto de Venta</span>
-                                    <label class="switch">
-                                        <input type="checkbox" checked>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span>Pago Móvil</span>
-                                    <label class="switch">
-                                        <input type="checkbox">
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Impuestos -->
-                        <div class="mb-8">
-                            <h4 class="text-lg font-medium text-gray-700 mb-4">Configuración de Impuestos</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="form-group">
-                                    <label for="iva-rate">Tasa de IVA (%)</label>
-                                    <input type="number" id="iva-rate" class="input-field" value="16" min="0" max="100" step="0.01">
-                                </div>
-                                <div class="form-group">
-                                    <label for="igtf-rate">Tasa de IGTF (%)</label>
-                                    <input type="number" id="igtf-rate" class="input-field" value="3" min="0" max="100" step="0.01">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Stock Mínimo -->
-                        <div>
-                            <h4 class="text-lg font-medium text-gray-700 mb-4">Alertas de Stock</h4>
-                            <div class="form-group">
-                                <label for="stock-minimo-global">Stock Mínimo Global</label>
-                                <input type="number" id="stock-minimo-global" class="input-field" value="10" min="1">
-                                <div class="help-text">Cantidad mínima por defecto para nuevos productos</div>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-end mt-6">
-                            <button class="btn-primary">
-                                <i class="fas fa-save mr-2"></i>
-                                Guardar Configuración
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sección Usuarios y Permisos -->
-                <div id="section-usuarios" class="config-section hidden">
-                    <div class="card p-6 mb-6 fade-in">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-6">
-                            <i class="fas fa-users mr-3 text-purple-600"></i>
-                            Usuarios y Permisos
-                        </h3>
-
-                        <!-- Roles del Sistema -->
-                        <div class="mb-8">
-                            <h4 class="text-lg font-medium text-gray-700 mb-4">Roles del Sistema</h4>
-                            <div class="space-y-4">
-                                <div class="p-4 border border-gray-200 rounded-lg">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <h5 class="font-medium">Super Administrador</h5>
-                                        <span class="role-badge role-super-admin">SUPER ADMINISTRADOR</span>
-                                    </div>
-                                    <p class="text-sm text-gray-600 mb-3">Acceso completo a todas las funciones del sistema</p>
-                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Ventas</span>
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Compras</span>
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Inventario</span>
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Reportes</span>
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Usuarios</span>
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Configuración</span>
-                                    </div>
-                                </div>
-
-                                <div class="p-4 border border-gray-200 rounded-lg">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <h5 class="font-medium">Administrador</h5>
-                                        <span class="role-badge role-super-admin">ADMINISTRADOR</span>
-                                    </div>
-                                    <p class="text-sm text-gray-600 mb-3">Acceso a operaciones principales, sin configuración del sistema</p>
-                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Ventas</span>
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Compras</span>
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Inventario</span>
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Reportes</span>
-                                        <span class="text-red-600"><i class="fas fa-times mr-1"></i>Usuarios</span>
-                                        <span class="text-red-600"><i class="fas fa-times mr-1"></i>Configuración</span>
-                                    </div>
-                                </div>
-
-                                <div class="p-4 border border-gray-200 rounded-lg">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <h5 class="font-medium">Vendedor</h5>
-                                        <span class="role-badge" style="background: #6b7280; color: white;">VENDEDOR</span>
-                                    </div>
-                                    <p class="text-sm text-gray-600 mb-3">Solo acceso a ventas e inventario básico</p>
-                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Ventas</span>
-                                        <span class="text-red-600"><i class="fas fa-times mr-1"></i>Compras</span>
-                                        <span class="text-green-600"><i class="fas fa-check mr-1"></i>Inventario</span>
-                                        <span class="text-yellow-600"><i class="fas fa-minus mr-1"></i>Reportes</span>
-                                        <span class="text-red-600"><i class="fas fa-times mr-1"></i>Usuarios</span>
-                                        <span class="text-red-600"><i class="fas fa-times mr-1"></i>Configuración</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Lista de Usuarios -->
-
-
-                <!-- Sección Notificaciones -->
-                <div id="section-notificaciones" class="config-section hidden">
-                    <div class="card p-6 mb-6 fade-in">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-6">
-                            <i class="fas fa-bell mr-3 text-purple-600"></i>
-                            Configuración de Notificaciones
-                        </h3>
-
-                        <form id="notificaciones-form">
-                            <!-- Email Notifications -->
-                            <div class="mb-8">
-                                <h4 class="text-lg font-medium text-gray-700 mb-4">Notificaciones por Email</h4>
-                                <div class="space-y-4">
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div>
-                                            <div class="font-medium">Stock Mínimo</div>
-                                            <div class="text-sm text-gray-500">Cuando un producto llegue al stock mínimo</div>
-                                        </div>
-                                        <label class="switch">
-                                            <input type="checkbox" checked>
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div>
-                                            <div class="font-medium">Ventas Diarias</div>
-                                            <div class="text-sm text-gray-500">Resumen de ventas al final del día</div>
-                                        </div>
-                                        <label class="switch">
-                                            <input type="checkbox">
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div>
-                                            <div class="font-medium">Productos Vencidos</div>
-                                            <div class="text-sm text-gray-500">Alertas de productos próximos a vencer</div>
-                                        </div>
-                                        <label class="switch">
-                                            <input type="checkbox" checked>
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4">
-                                    <label for="notification-email" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Email para Notificaciones
-                                    </label>
-                                    <input type="email" id="notification-email" class="input-field" value="admin@naguara.com">
-                                </div>
-                            </div>
-
-                            <!-- System Alerts -->
-                            <div class="mb-8">
-                                <h4 class="text-lg font-medium text-gray-700 mb-4">Alertas del Sistema</h4>
-                                <div class="space-y-4">
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div>
-                                            <div class="font-medium">Sonido de Alerta</div>
-                                            <div class="text-sm text-gray-500">Reproducir sonido en alertas importantes</div>
-                                        </div>
-                                        <label class="switch">
-                                            <input type="checkbox" checked>
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div>
-                                            <div class="font-medium">Notificaciones Push</div>
-                                            <div class="text-sm text-gray-500">Mostrar notificaciones en el navegador</div>
-                                        </div>
-                                        <label class="switch">
-                                            <input type="checkbox">
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="flex justify-end">
-                                <button type="submit" class="btn-primary">
-                                    <i class="fas fa-save mr-2"></i>
-                                    Guardar Notificaciones
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Sección Integraciones -->
-                <div id="section-integraciones" class="config-section hidden">
-                    <div class="card p-6 mb-6 fade-in">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-6">
-                            <i class="fas fa-plug mr-3 text-purple-600"></i>
-                            Integraciones
-                        </h3>
-
-                        <!-- WhatsApp Integration -->
-                        <div class="mb-8">
-                            <h4 class="text-lg font-medium text-gray-700 mb-4">WhatsApp Business</h4>
-                            <div class="alert alert-info mb-4">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                Conecta WhatsApp para enviar facturas y notificaciones a tus clientes.
-                            </div>
-
-                            <form id="whatsapp-form">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div class="form-group">
-                                        <label for="whatsapp-number">Número de WhatsApp Business</label>
-                                        <input type="tel" id="whatsapp-number" class="input-field" placeholder="+58 412-555-0123">
-                                        <div class="help-text">Incluye el código de país</div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="whatsapp-token">Token de API</label>
-                                        <input type="password" id="whatsapp-token" class="input-field" placeholder="Token de WhatsApp Business API">
-                                        <div class="help-text">Obténlo desde Facebook Business</div>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="flex items-center">
-                                        <input type="checkbox" id="whatsapp-enabled" class="mr-3">
-                                        <span>Habilitar integración con WhatsApp</span>
-                                    </label>
-                                </div>
-
-                                <div class="flex items-center space-x-4">
-                                    <button type="submit" class="btn-primary">
-                                        <i class="fas fa-save mr-2"></i>
-                                        Guardar Configuración
-                                    </button>
-                                    <button type="button" id="test-whatsapp" class="btn-info">
-                                        <i class="fas fa-paper-plane mr-2"></i>
-                                        Probar Conexión
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- Estado de Integraciones -->
-                        <div>
-                            <h4 class="text-lg font-medium text-gray-700 mb-4">Estado de Integraciones</h4>
-                            <div class="space-y-3">
-                                <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                    <div class="flex items-center">
-                                        <i class="fab fa-whatsapp text-2xl text-green-500 mr-4"></i>
-                                        <div>
-                                            <div class="font-medium">WhatsApp Business</div>
-                                            <div class="text-sm text-gray-500">Envío de facturas y notificaciones</div>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span class="text-red-600 mr-3">Desconectado</span>
-                                        <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-                                    </div>
+                            <div id="backup-history" class="space-y-3">
+                                <div class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                    <p>Cargando backups...</p>
                                 </div>
                             </div>
                         </div>
@@ -630,284 +341,18 @@
         </div>
     </main>
 
-    <script>
-        // Variables globales
-        let currentSection = 'empresa';
+    <!-- Modal de Confirmación -->
+    <div id="confirm-modal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-lg max-w-sm w-full text-center">
+            <h2 id="confirm-title" class="text-xl font-bold text-purple-600 mb-4">Confirmación</h2>
+            <p id="confirm-message" class="text-gray-700 mb-6">¿Desea continuar?</p>
+            <div class="flex justify-center space-x-4">
+                <button id="accept-confirm" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all">Aceptar</button>
+                <button id="cancel-confirm" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
-        // Inicialización
-        document.addEventListener('DOMContentLoaded', function() {
-            setupEventListeners();
-            initializeFileUploads();
-        });
-
-        function setupEventListeners() {
-            // Navegación lateral
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    switchSection(this.dataset.section);
-                });
-            });
-
-            // Formularios
-            document.getElementById('empresa-form').addEventListener('submit', handleEmpresaForm);
-            document.getElementById('personalizacion-form').addEventListener('submit', handlePersonalizacionForm);
-            document.getElementById('notificaciones-form').addEventListener('submit', handleNotificacionesForm);
-            document.getElementById('whatsapp-form').addEventListener('submit', handleWhatsAppForm);
-
-            // Backup y Restore
-            document.getElementById('create-backup').addEventListener('click', createBackup);
-            document.getElementById('restore-backup').addEventListener('click', restoreBackup);
-            document.getElementById('restore-file').addEventListener('change', handleRestoreFile);
-
-            // Categorías
-            document.getElementById('add-categoria').addEventListener('click', addCategoria);
-
-            // WhatsApp
-            document.getElementById('test-whatsapp').addEventListener('click', testWhatsApp);
-
-            // Color picker
-            document.getElementById('color-primary').addEventListener('change', updatePrimaryColor);
-        }
-
-        function switchSection(section) {
-            // Ocultar todas las secciones
-            document.querySelectorAll('.config-section').forEach(sec => {
-                sec.classList.add('hidden');
-            });
-
-            // Mostrar sección seleccionada
-            document.getElementById(`section-${section}`).classList.remove('hidden');
-
-            // Actualizar navegación
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            document.querySelector(`[data-section="${section}"]`).classList.add('active');
-
-            currentSection = section;
-        }
-
-        function initializeFileUploads() {
-            // Logo upload
-            const logoUpload = document.getElementById('logo-upload');
-            const logoFile = document.getElementById('logo-file');
-
-            logoUpload.addEventListener('click', () => logoFile.click());
-            logoUpload.addEventListener('dragover', handleDragOver);
-            logoUpload.addEventListener('drop', handleLogoDrop);
-            logoFile.addEventListener('change', handleLogoChange);
-
-            // Restore upload
-            const restoreUpload = document.getElementById('restore-upload');
-            const restoreFile = document.getElementById('restore-file');
-
-            restoreUpload.addEventListener('click', () => restoreFile.click());
-            restoreUpload.addEventListener('dragover', handleDragOver);
-            restoreUpload.addEventListener('drop', handleRestoreDrop);
-        }
-
-        function handleDragOver(e) {
-            e.preventDefault();
-            e.currentTarget.classList.add('dragover');
-        }
-
-        function handleLogoDrop(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleLogoFile(files[0]);
-            }
-        }
-
-        function handleRestoreDrop(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0 && files[0].name.endsWith('.sql')) {
-                document.getElementById('restore-file').files = files;
-                handleRestoreFile();
-            }
-        }
-
-        function handleLogoChange(e) {
-            if (e.target.files.length > 0) {
-                handleLogoFile(e.target.files[0]);
-            }
-        }
-
-        function handleLogoFile(file) {
-            if (file.type.startsWith('image/')) {
-                showAlert('Logo cargado correctamente', 'success');
-                // Aquí se procesaría la imagen
-            } else {
-                showAlert('Por favor selecciona un archivo de imagen válido', 'error');
-            }
-        }
-
-        function handleRestoreFile() {
-            const file = document.getElementById('restore-file').files[0];
-            if (file && file.name.endsWith('.sql')) {
-                document.getElementById('restore-backup').disabled = false;
-                showAlert('Archivo de backup seleccionado', 'info');
-            }
-        }
-
-        function handleEmpresaForm(e) {
-            e.preventDefault();
-            showAlert('Información de empresa guardada correctamente', 'success');
-        }
-
-        function handlePersonalizacionForm(e) {
-            e.preventDefault();
-            showAlert('Personalización guardada correctamente', 'success');
-        }
-
-        function handleNotificacionesForm(e) {
-            e.preventDefault();
-            showAlert('Configuración de notificaciones guardada', 'success');
-        }
-
-        function handleWhatsAppForm(e) {
-            e.preventDefault();
-            showAlert('Configuración de WhatsApp guardada', 'success');
-        }
-
-        function createBackup() {
-            const button = document.getElementById('create-backup');
-            const progress = document.getElementById('backup-progress');
-            const progressFill = progress.querySelector('.progress-fill');
-
-            button.disabled = true;
-            progress.classList.remove('hidden');
-
-            let width = 0;
-            const interval = setInterval(() => {
-                width += 10;
-                progressFill.style.width = width + '%';
-
-                if (width >= 100) {
-                    clearInterval(interval);
-                    setTimeout(() => {
-                        progress.classList.add('hidden');
-                        button.disabled = false;
-                        showAlert('Copia de seguridad creada exitosamente', 'success');
-                        
-                        // Agregar nuevo backup al historial
-                        const now = new Date();
-                        const filename = `backup_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}.sql`;
-                        addBackupToHistory(filename, now);
-                    }, 500);
-                }
-            }, 200);
-        }
-
-        function restoreBackup() {
-            if (confirm('¿Estás seguro de que quieres restaurar la base de datos? Esta acción reemplazará todos los datos actuales.')) {
-                showAlert('Restaurando base de datos...', 'info');
-                
-                setTimeout(() => {
-                    showAlert('Base de datos restaurada exitosamente', 'success');
-                    document.getElementById('restore-backup').disabled = true;
-                    document.getElementById('restore-file').value = '';
-                }, 3000);
-            }
-        }
-
-        function addBackupToHistory(filename, date) {
-            const history = document.getElementById('backup-history');
-            const backupItem = document.createElement('div');
-            backupItem.className = 'backup-item';
-            backupItem.innerHTML = `
-                <div class="flex-1">
-                    <div class="font-medium">${filename}</div>
-                    <div class="text-sm text-gray-500">${date.toLocaleDateString('es-ES', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })} - 2.1 MB</div>
-                </div>
-                <div class="flex space-x-2">
-                    <button class="btn-info btn-sm">
-                        <i class="fas fa-download"></i>
-                    </button>
-                    <button class="btn-danger btn-sm">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
-            history.insertBefore(backupItem, history.firstChild);
-        }
-
-        function addCategoria() {
-            const input = document.getElementById('nueva-categoria');
-            const categoria = input.value.trim();
-            
-            if (categoria) {
-                const list = document.getElementById('categorias-list');
-                const item = document.createElement('div');
-                item.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
-                item.innerHTML = `
-                    <span>${categoria}</span>
-                    <button class="btn-danger btn-sm" onclick="this.parentElement.remove()">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                `;
-                list.appendChild(item);
-                input.value = '';
-                showAlert('Categoría agregada correctamente', 'success');
-            }
-        }
-
-        function testWhatsApp() {
-            showAlert('Probando conexión con WhatsApp...', 'info');
-            
-            setTimeout(() => {
-                showAlert('Conexión exitosa con WhatsApp Business', 'success');
-            }, 2000);
-        }
-
-        function updatePrimaryColor(e) {
-            const color = e.target.value;
-            document.documentElement.style.setProperty('--primary', color);
-            showAlert('Color principal actualizado', 'success');
-        }
-
-        function showAlert(message, type = 'info') {
-            const alert = document.createElement('div');
-            alert.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm fade-in`;
-            
-            const colors = {
-                success: 'bg-green-500 text-white',
-                error: 'bg-red-500 text-white',
-                warning: 'bg-yellow-500 text-white',
-                info: 'bg-blue-500 text-white'
-            };
-            
-            alert.className += ` ${colors[type] || colors.info}`;
-            alert.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <span>${message}</span>
-                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `;
-            
-            document.body.appendChild(alert);
-            
-            setTimeout(() => {
-                if (alert.parentNode) {
-                    alert.remove();
-                }
-            }, 5000);
-        }
-
-        function loadDashboard() {
-            showAlert('Navegando al Dashboard...', 'info');
-        }
-    </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'992af0f694c47104',t:'MTc2MTE1NjUxOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+    <script src="configuracion.js"></script>
+</body>
 </html>

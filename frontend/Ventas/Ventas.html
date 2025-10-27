@@ -193,6 +193,10 @@
                             <i class="fas fa-plus mr-2"></i>
                             Nueva Venta
                         </button>
+                        <button id="close-cash-btn" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                            <i class="fas fa-cash-register mr-2"></i>
+                            Cierre de Caja
+                        </button>
                         <button id="cancel-sale" class="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all">
                             <i class="fas fa-times mr-2"></i>
                             Cancelar
@@ -249,6 +253,83 @@
             </div>
             <div id="invoice-content" class="p-6 overflow-y-auto max-h-[70vh]">
                 <!-- Contenido de la factura se carga aquí -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Cierre de Caja -->
+    <div id="close-cash-modal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div class="flex justify-between items-center border-b border-gray-200 p-6 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+                <h2 class="text-2xl font-bold">CIERRE DE CAJA</h2>
+                <button id="close-cash-modal-btn" class="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all">
+                    <i class="fas fa-times mr-2"></i>Cerrar
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[70vh]">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Información General -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Cierre</label>
+                  <!-- LÍNEA CORREGIDA -->
+                        <input type="date" id="close-date" class="input-field w-full">                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Efectivo Inicial</label>
+                            <input type="number" id="initial-cash" step="0.01" min="0" class="input-field w-full" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Efectivo Final (Contado)</label>
+                            <input type="number" id="final-cash-counted" step="0.01" min="0" class="input-field w-full" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <!-- Resumen de Ventas -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-gray-800 mb-3">RESUMEN DEL DÍA</h3>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span>Total Ventas:</span>
+                                <span class="font-semibold" id="close-total-sales">Bs. 0.00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Ventas Efectivo:</span>
+                                <span class="font-semibold text-green-600" id="close-cash-sales">Bs. 0.00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Ventas Tarjeta:</span>
+                                <span class="font-semibold text-blue-600" id="close-card-sales">Bs. 0.00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Ventas Transferencia:</span>
+                                <span class="font-semibold text-purple-600" id="close-transfer-sales">Bs. 0.00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Ventas Pago Móvil:</span>
+                                <span class="font-semibold text-orange-600" id="close-mobile-sales">Bs. 0.00</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="flex justify-between font-bold">
+                                <span>Efectivo Esperado:</span>
+                                <span id="close-expected-cash">Bs. 0.00</span>
+                            </div>
+                            <div class="flex justify-between font-bold text-lg" id="close-difference-container">
+                                <span>Diferencia:</span>
+                                <span id="close-difference">Bs. 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                    <button id="calculate-close" class="btn-primary">
+                        <i class="fas fa-calculator mr-2"></i>Calcular
+                    </button>
+                    <button id="process-close" class="btn-success">
+                        <i class="fas fa-lock mr-2"></i>Procesar Cierre
+                    </button>
+                </div>
             </div>
         </div>
     </div>

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict PhGEGF5bpFnitKT8VIz9voEqC4iqcmDyrYtp496niXKHebF5MUN7lbzyIODdfhi
+\restrict hYMO9S8DmBMzMKswMbWOXlQ7YRBtCEeqbAZEd1WDLaJSw2p4srFGVA8zhgfvomj
 
 -- Dumped from database version 18.0
 -- Dumped by pg_dump version 18.0
@@ -192,7 +192,8 @@ CREATE TABLE public.configuracion_empresa (
     rif character varying(20) DEFAULT 'J-123456789'::character varying,
     telefono character varying(20) DEFAULT '(0412) 123-4567'::character varying,
     direccion text DEFAULT 'Caracas, Venezuela'::text,
-    mensaje_factura text DEFAULT '¡Gracias por su compra!'::text
+    mensaje_factura text DEFAULT '¡Gracias por su compra!'::text,
+    email character varying(40)
 );
 
 
@@ -221,6 +222,42 @@ ALTER SEQUENCE public.configuracion_empresa_id_seq OWNED BY public.configuracion
 
 
 --
+-- Name: configuracion_negocio; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.configuracion_negocio (
+    id integer NOT NULL,
+    iva_rate numeric(5,2) DEFAULT 16.00,
+    stock_minimo integer DEFAULT 10,
+    fecha_actualizacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.configuracion_negocio OWNER TO postgres;
+
+--
+-- Name: configuracion_negocio_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.configuracion_negocio_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.configuracion_negocio_id_seq OWNER TO postgres;
+
+--
+-- Name: configuracion_negocio_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.configuracion_negocio_id_seq OWNED BY public.configuracion_negocio.id;
+
+
+--
 -- Name: detalle_compra; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -228,7 +265,7 @@ CREATE TABLE public.detalle_compra (
     id integer NOT NULL,
     id_compra integer,
     id_producto integer,
-    cantidad integer,
+    cantidad numeric(10,2),
     precio_compra numeric(10,2)
 );
 
@@ -302,7 +339,7 @@ CREATE TABLE public.productos (
     id integer NOT NULL,
     precio_venta numeric(10,2),
     costo_compra numeric(10,2),
-    stock integer,
+    stock numeric(10,2),
     unidad_medida character varying(20),
     id_provedores integer,
     fecha_actualizacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -420,6 +457,7 @@ CREATE TABLE public.usuarios (
     password character varying(255),
     rol character varying(20) NOT NULL,
     estado character varying(10) DEFAULT 'Activo'::character varying NOT NULL,
+    fecha_creacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT usuarios_estado_check CHECK (((estado)::text = ANY ((ARRAY['Activo'::character varying, 'Inactivo'::character varying])::text[]))),
     CONSTRAINT usuarios_rol_check CHECK (((rol)::text = ANY ((ARRAY['Administrador'::character varying, 'Vendedor'::character varying])::text[])))
 );
@@ -525,6 +563,13 @@ ALTER TABLE ONLY public.configuracion_empresa ALTER COLUMN id SET DEFAULT nextva
 
 
 --
+-- Name: configuracion_negocio id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.configuracion_negocio ALTER COLUMN id SET DEFAULT nextval('public.configuracion_negocio_id_seq'::regclass);
+
+
+--
 -- Name: detalle_compra id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -590,6 +635,7 @@ COPY public.categorias (id, nombre, descripcion, estado, fecha_creacion) FROM st
 --
 
 COPY public.cierre_caja (id, fecha, usuario_id, efectivo_inicial, efectivo_final, total_ventas, total_ventas_efectivo, total_ventas_tarjeta, total_ventas_transferencia, total_ventas_pago_movil, diferencia, estado, fecha_creacion) FROM stdin;
+1	2025-10-27	1	0.13	5.93	11.30	5.80	0.00	0.00	5.50	0.00	completado	2025-10-27 09:22:37.996997
 \.
 
 
@@ -617,8 +663,19 @@ COPY public.compras (id, fecha_compra, id_proveedor, id_usuario, num_factura) FR
 -- Data for Name: configuracion_empresa; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.configuracion_empresa (id, nombre_empresa, rif, telefono, direccion, mensaje_factura) FROM stdin;
-1	Na'Guara	J-123456789	(0412) 123-4567	Barquisimeto, Venezuela	¡Gracias por su compra!
+COPY public.configuracion_empresa (id, nombre_empresa, rif, telefono, direccion, mensaje_factura, email) FROM stdin;
+1	Na'Guara	J-123456789	(0412) 123-4567	Barquisimeto, Venezuela	¡Gracias por su compra!	PollosNaguara@gmail.com
+\.
+
+
+--
+-- Data for Name: configuracion_negocio; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.configuracion_negocio (id, iva_rate, stock_minimo, fecha_actualizacion) FROM stdin;
+1	16.00	10	2025-10-27 10:48:33.693327
+2	16.00	5	2025-10-27 11:22:40.699715
+3	16.00	10	2025-10-27 11:23:16.030464
 \.
 
 
@@ -649,6 +706,9 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 15	10	13	40.00	5.50
 16	11	11	29.00	45.00
 17	12	13	1.00	5.50
+18	13	18	1.00	5.80
+20	15	13	99.00	5.50
+28	23	13	1.60	5.50
 \.
 
 
@@ -657,15 +717,15 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 --
 
 COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, id_provedores, fecha_actualizacion, categoria_id, nombre, precio_dolares) FROM stdin;
-15	8.20	5.00	100	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04
-14	6.80	4.20	149	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial	0.03
-12	15.00	10.00	39	kg	1	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07
-10	25.00	18.50	49	kg	1	2025-10-24 18:53:42.73315	1	Pollo Entero Premium	0.12
-18	5.80	2.90	178	unidad	3	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03
-17	4.20	2.10	249	unidad	3	2025-10-24 18:53:42.73315	3	Sazonador con Especias	0.02
-16	3.50	1.80	298	unidad	3	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02
-11	45.00	32.00	0	kg	1	2025-10-24 18:53:42.73315	1	Pecho de Pollo	0.22
-13	5.50	3.50	157	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03
+15	8.20	5.00	100.00	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04
+14	6.80	4.20	149.00	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial	0.03
+12	15.00	10.00	39.00	kg	1	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07
+10	25.00	18.50	49.00	kg	1	2025-10-24 18:53:42.73315	1	Pollo Entero Premium	0.12
+17	4.20	2.10	249.00	unidad	3	2025-10-24 18:53:42.73315	3	Sazonador con Especias	0.02
+16	3.50	1.80	298.00	unidad	3	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02
+11	45.00	32.00	0.00	kg	1	2025-10-24 18:53:42.73315	1	Pecho de Pollo	0.22
+18	5.80	2.90	177.00	unidad	3	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03
+13	5.50	3.50	56.40	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03
 \.
 
 
@@ -694,8 +754,9 @@ COPY public.tasa_cambio (id, tasa_bs, fecha_actualizacion, fuente, activo) FROM 
 -- Data for Name: usuarios; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado) FROM stdin;
-1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Administrador	Activo
+COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado, fecha_creacion) FROM stdin;
+1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Administrador	Activo	2025-10-27 10:53:25.157895
+2	Fabian dacal	Dacal	$2b$10$sLrW6I2cogVZUFyhUqrY2e5lJyE21RwGBiizoIQmoH4cSSJRE0Ydq	Vendedor	Activo	2025-10-27 11:42:36.923343
 \.
 
 
@@ -711,6 +772,9 @@ COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente
 10	2025-10-26 17:56:14.19122	1	efectivo	completada	1
 11	2025-10-26 17:57:19.494139	1	efectivo	completada	4
 12	2025-10-27 08:28:49.77247	1	pago_movil	completada	1
+13	2025-10-27 09:05:06.081386	1	efectivo	completada	4
+15	2025-10-27 09:37:19.515523	1	transferencia	completada	1
+23	2025-10-27 09:45:57.973156	1	efectivo	completada	1
 \.
 
 
@@ -725,7 +789,7 @@ SELECT pg_catalog.setval('public.categorias_id_seq', 4, true);
 -- Name: cierre_caja_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.cierre_caja_id_seq', 1, false);
+SELECT pg_catalog.setval('public.cierre_caja_id_seq', 3, true);
 
 
 --
@@ -750,6 +814,13 @@ SELECT pg_catalog.setval('public.configuracion_empresa_id_seq', 1, true);
 
 
 --
+-- Name: configuracion_negocio_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.configuracion_negocio_id_seq', 3, true);
+
+
+--
 -- Name: detalle_compra_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -760,7 +831,7 @@ SELECT pg_catalog.setval('public.detalle_compra_id_seq', 1, false);
 -- Name: detalle_venta_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.detalle_venta_id_seq', 17, true);
+SELECT pg_catalog.setval('public.detalle_venta_id_seq', 28, true);
 
 
 --
@@ -788,14 +859,14 @@ SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 2, true);
 -- Name: usuarios_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.usuarios_id_seq', 1, true);
+SELECT pg_catalog.setval('public.usuarios_id_seq', 2, true);
 
 
 --
 -- Name: ventas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ventas_id_seq', 12, true);
+SELECT pg_catalog.setval('public.ventas_id_seq', 23, true);
 
 
 --
@@ -860,6 +931,14 @@ ALTER TABLE ONLY public.compras
 
 ALTER TABLE ONLY public.configuracion_empresa
     ADD CONSTRAINT configuracion_empresa_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: configuracion_negocio configuracion_negocio_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.configuracion_negocio
+    ADD CONSTRAINT configuracion_negocio_pkey PRIMARY KEY (id);
 
 
 --
@@ -1025,5 +1104,5 @@ ALTER TABLE ONLY public.ventas
 -- PostgreSQL database dump complete
 --
 
-\unrestrict PhGEGF5bpFnitKT8VIz9voEqC4iqcmDyrYtp496niXKHebF5MUN7lbzyIODdfhi
+\unrestrict hYMO9S8DmBMzMKswMbWOXlQ7YRBtCEeqbAZEd1WDLaJSw2p4srFGVA8zhgfvomj
 
