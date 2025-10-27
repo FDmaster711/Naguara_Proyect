@@ -1,31 +1,32 @@
 import pkg from 'pg';
 import dotenv from 'dotenv';
 
-const {Pool} = pkg;
 dotenv.config();
-const pool = new Pool({
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_NAME,
-    password: process.env.DB_PASSWORD,
-    port: process.env.DB_PORT,
+const { Pool } = pkg;
 
+const pool = new Pool({
+  host: process.env.PGHOST,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
+  port: process.env.PGPORT,
 });
 
 pool.on('error', (err) => {
-    console.error('Error inesperado en el pool de PostgreSQL:', err);
-    process.exit(-1);
+  console.error('❌ Error inesperado en el pool de PostgreSQL:', err);
+  process.exit(-1);
 });
 
+// Probar la conexión al iniciar
 const connectDB = async () => {
-    try {
-        const client = await pool.connect();
-        console.log('Conexión exitosa a la base de datos PostgreSQL');
-        client.release();
-    } catch (err) {
-        console.error('Error al conectar a la base de datos PostgreSQL:', err);
-    }
-}
+  try {
+    const client = await pool.connect();
+    console.log('✅ Conexión exitosa a la base de datos PostgreSQL');
+    client.release();
+  } catch (err) {
+    console.error('❌ Error al conectar a la base de datos PostgreSQL:', err);
+  }
+};
 
 connectDB();
 

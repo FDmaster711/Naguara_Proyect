@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Pollera Na'Guara</title>
+</head>
+<body>
+  <h1>Iniciar Sesión</h1>
+
+  <form id="loginForm">
+    <label>Usuario:</label>
+    <input type="text" id="usuario" required><br><br>
+
+    <label>Contraseña:</label>
+    <input type="password" id="password" required><br><br>
+
+    <button type="submit">Ingresar</button>
+  </form>
+
+  <p id="mensaje"></p>
+
+  <script>
+    const API_URL = 'http://localhost:3000/login';
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const nombre_usuario = document.getElementById('usuario').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', 
+          body: JSON.stringify({ nombre_usuario, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem('usuario', JSON.stringify(data.usuario));
+          window.location.href = 'index.html'; 
+        } else {
+          document.getElementById('mensaje').textContent = data.error || 'Error en el login';
+        }
+      } catch (err) {
+        document.getElementById('mensaje').textContent = 'Error de conexión con el servidor';
+      }
+    });
+  </script>
+</body>
+</html>

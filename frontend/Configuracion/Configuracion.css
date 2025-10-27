@@ -416,3 +416,48 @@
             color: #1e40af;
             border: 1px solid #93c5fd;
         }
+
+        /* Estilos para validación */
+.input-field.error {
+    border-color: #e53e3e;
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
+}
+
+.error-message {
+    color: #e53e3e;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.error-message.hidden {
+    display: none;
+}
+
+/* Estilos para modales */
+.modal {
+    transition: all 0.3s ease;
+}
+
+.modal:not(.hidden) {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Botones */
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+}
