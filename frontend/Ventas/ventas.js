@@ -17,7 +17,7 @@ class VentasManager {
         };
         
         this.init();
-        this.setCloseCashDate(); // ← LÍNEA AGREGADA
+        this.setCloseCashDate(); 
     }
 
     init() {
