@@ -6,6 +6,8 @@ import ventaRoutes from './ventas.js';
 import tasaRoutes from './tasas.js';
 import configuracionRoutes from './configuracion.js';
 import backupRoutes from './backup.js';
+import proveedoresRoutes from './proveedores.js'
+import comprasRoutes from './compras.js'; 
 
 export {
   authRoutes,
@@ -15,5 +17,7 @@ export {
   ventaRoutes,
   tasaRoutes,
   configuracionRoutes,
-  backupRoutes
+  backupRoutes,
+  proveedoresRoutes,
+  comprasRoutes
 };
