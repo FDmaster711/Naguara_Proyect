@@ -15,7 +15,9 @@ import {
   ventaRoutes,
   tasaRoutes,
   configuracionRoutes,
-  backupRoutes
+  backupRoutes,
+  proveedoresRoutes,
+  comprasRoutes
 } from './routes/index.js';
 
 dotenv.config();
