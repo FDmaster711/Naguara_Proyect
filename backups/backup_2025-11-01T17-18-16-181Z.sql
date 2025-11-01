@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict HMJCpTXa1cBcvqZuWAOw6ThuS11tqHv1pqmFtlheDxSVqfl7JfejasqloRiWs9z
+\restrict Gr4zH4pC4rZTXWJT0Atx4oZDQUgBOGmttsCDBqrylwOeRrm8dmpUNycN8jGJjph
 
 -- Dumped from database version 18.0
 -- Dumped by pg_dump version 18.0
@@ -506,8 +506,13 @@ CREATE TABLE public.ventas (
     metodo_pago character varying(15) DEFAULT 'Efectivo'::character varying NOT NULL,
     estado character varying(20) DEFAULT 'completada'::character varying,
     id_cliente integer,
+    detalles_pago jsonb,
+    referencia_pago character varying(100),
+    banco_pago character varying(50),
+    monto_recibido numeric(10,2),
+    cambio numeric(10,2),
     CONSTRAINT ventas_estado_check CHECK (((estado)::text = ANY ((ARRAY['completada'::character varying, 'cancelada'::character varying, 'pendiente'::character varying])::text[]))),
-    CONSTRAINT ventas_metodo_pago_check CHECK (((metodo_pago)::text = ANY ((ARRAY['efectivo'::character varying, 'transferencia'::character varying, 'pago_movil'::character varying, 'tarjeta'::character varying])::text[])))
+    CONSTRAINT ventas_metodo_pago_check CHECK (((metodo_pago)::text = ANY (ARRAY[('efectivo'::character varying)::text, ('tarjeta'::character varying)::text, ('transferencia'::character varying)::text, ('pago_movil'::character varying)::text, ('efectivo_bs'::character varying)::text, ('efectivo_usd'::character varying)::text, ('punto_venta'::character varying)::text, ('mixto'::character varying)::text])))
 );
 
 
@@ -644,6 +649,7 @@ COPY public.categorias (id, nombre, descripcion, estado, fecha_creacion) FROM st
 
 COPY public.cierre_caja (id, fecha, usuario_id, efectivo_inicial, efectivo_final, total_ventas, total_ventas_efectivo, total_ventas_tarjeta, total_ventas_transferencia, total_ventas_pago_movil, diferencia, estado, fecha_creacion) FROM stdin;
 1	2025-10-27	1	0.13	5.93	11.30	5.80	0.00	0.00	5.50	0.00	completado	2025-10-27 09:22:37.996997
+4	2025-11-01	1	10.00	10.00	1237.30	0.00	680.00	15.00	350.00	0.00	completado	2025-11-01 12:33:29.816532
 \.
 
 
@@ -722,6 +728,14 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 29	24	13	4.00	5.50
 30	25	13	1.00	5.50
 31	26	14	7.50	6.80
+32	27	13	9.00	5.50
+33	28	14	6.00	6.80
+34	29	12	1.00	15.00
+35	30	14	5.00	6.80
+36	31	14	100.00	6.80
+37	32	16	100.00	3.50
+38	33	14	10.00	6.80
+39	34	16	3.00	3.50
 \.
 
 
@@ -731,14 +745,14 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 
 COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, id_provedores, fecha_actualizacion, categoria_id, nombre, precio_dolares) FROM stdin;
 15	8.20	5.00	100.00	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04
-12	15.00	10.00	39.00	kg	1	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07
 10	25.00	18.50	49.00	kg	1	2025-10-24 18:53:42.73315	1	Pollo Entero Premium	0.12
 17	4.20	2.10	249.00	unidad	3	2025-10-24 18:53:42.73315	3	Sazonador con Especias	0.02
-16	3.50	1.80	298.00	unidad	3	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02
 11	45.00	32.00	0.00	kg	1	2025-10-24 18:53:42.73315	1	Pecho de Pollo	0.22
 18	5.80	2.90	177.00	unidad	3	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03
-13	5.50	3.50	51.40	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03
-14	6.80	4.20	141.50	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial	0.03
+13	5.50	3.50	42.40	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03
+12	15.00	10.00	38.00	kg	1	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07
+14	6.80	4.20	20.50	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial	0.03
+16	3.50	1.80	195.00	unidad	3	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02
 \.
 
 
@@ -762,6 +776,7 @@ COPY public.tasa_cambio (id, tasa_bs, fecha_actualizacion, fuente, activo) FROM 
 2	216.37	2025-10-26 17:40:13.446462	api	t
 3	218.17	2025-10-28 11:47:27.119438	api	t
 4	219.87	2025-10-29 10:17:03.284757	api	t
+5	223.96	2025-11-01 10:54:49.19683	api	t
 \.
 
 
@@ -780,20 +795,28 @@ COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado, fecha_c
 -- Data for Name: ventas; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente) FROM stdin;
-5	2025-10-26 10:04:56.701545	1	tarjeta	completada	1
-7	2025-10-26 10:13:43.783921	1	efectivo	completada	4
-8	2025-10-26 11:04:31.861996	1	efectivo	completada	3
-9	2025-10-26 11:25:58.424656	1	efectivo	completada	1
-10	2025-10-26 17:56:14.19122	1	efectivo	completada	1
-11	2025-10-26 17:57:19.494139	1	efectivo	completada	4
-12	2025-10-27 08:28:49.77247	1	pago_movil	completada	1
-13	2025-10-27 09:05:06.081386	1	efectivo	completada	4
-15	2025-10-27 09:37:19.515523	1	transferencia	completada	1
-23	2025-10-27 09:45:57.973156	1	efectivo	completada	1
-24	2025-10-27 12:54:04.414553	1	tarjeta	completada	1
-25	2025-10-27 13:49:56.696027	2	transferencia	completada	1
-26	2025-10-28 15:06:51.55373	1	transferencia	completada	1
+COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente, detalles_pago, referencia_pago, banco_pago, monto_recibido, cambio) FROM stdin;
+5	2025-10-26 10:04:56.701545	1	tarjeta	completada	1	\N	\N	\N	\N	\N
+7	2025-10-26 10:13:43.783921	1	efectivo	completada	4	\N	\N	\N	\N	\N
+8	2025-10-26 11:04:31.861996	1	efectivo	completada	3	\N	\N	\N	\N	\N
+9	2025-10-26 11:25:58.424656	1	efectivo	completada	1	\N	\N	\N	\N	\N
+10	2025-10-26 17:56:14.19122	1	efectivo	completada	1	\N	\N	\N	\N	\N
+11	2025-10-26 17:57:19.494139	1	efectivo	completada	4	\N	\N	\N	\N	\N
+12	2025-10-27 08:28:49.77247	1	pago_movil	completada	1	\N	\N	\N	\N	\N
+13	2025-10-27 09:05:06.081386	1	efectivo	completada	4	\N	\N	\N	\N	\N
+15	2025-10-27 09:37:19.515523	1	transferencia	completada	1	\N	\N	\N	\N	\N
+23	2025-10-27 09:45:57.973156	1	efectivo	completada	1	\N	\N	\N	\N	\N
+24	2025-10-27 12:54:04.414553	1	tarjeta	completada	1	\N	\N	\N	\N	\N
+25	2025-10-27 13:49:56.696027	2	transferencia	completada	1	\N	\N	\N	\N	\N
+26	2025-10-28 15:06:51.55373	1	transferencia	completada	1	\N	\N	\N	\N	\N
+27	2025-11-01 11:19:57.317312	1	efectivo_usd	completada	1	{"tasa": 223.9622, "total": 0.26, "change": 0.74, "method": "efectivo_usd", "received": 1}	\N	\N	1.00	0.74
+28	2025-11-01 11:23:45.058256	1	efectivo_usd	completada	1	{"tasa": 223.9622, "total": 0.21, "change": 4.79, "method": "efectivo_usd", "received": 5}	\N	\N	5.00	4.79
+29	2025-11-01 11:26:14.208204	1	transferencia	completada	4	{"bank": "Banesco", "total": 17.4, "amount": 17.4, "method": "transferencia", "holderId": "V-12345677", "reference": "123456789"}	123456789	Banesco	\N	\N
+30	2025-11-01 11:30:13.379898	1	mixto	completada	4	{"total": 39.44, "method": "mixto", "payments": [{"amount": 15, "method": "efectivo_bs"}, {"amount": 24.44, "method": "punto_venta"}]}	\N	\N	\N	\N
+31	2025-11-01 12:09:04.830358	1	punto_venta	completada	4	{"total": 788.8, "amount": 788.8, "method": "punto_venta", "reference": "7788"}	7788	\N	\N	\N
+32	2025-11-01 12:13:25.226615	1	pago_movil	completada	4	{"bank": "Banesco", "total": 406, "amount": 406, "method": "pago_movil", "holderId": "V-12345677", "reference": "123456789"}	123456789	Banesco	\N	\N
+33	2025-11-01 12:15:43.717679	1	efectivo_usd	completada	4	{"tasa": 223.9622, "total": 0.35, "change": 0.65, "method": "efectivo_usd", "received": 1}	\N	\N	1.00	0.65
+34	2025-11-01 12:34:28.409911	1	efectivo_bs	completada	1	{"total": 12.18, "change": 0, "method": "efectivo_bs", "received": 12.18}	\N	\N	12.18	\N
 \.
 
 
@@ -808,7 +831,7 @@ SELECT pg_catalog.setval('public.categorias_id_seq', 4, true);
 -- Name: cierre_caja_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.cierre_caja_id_seq', 3, true);
+SELECT pg_catalog.setval('public.cierre_caja_id_seq', 4, true);
 
 
 --
@@ -850,7 +873,7 @@ SELECT pg_catalog.setval('public.detalle_compra_id_seq', 1, false);
 -- Name: detalle_venta_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.detalle_venta_id_seq', 31, true);
+SELECT pg_catalog.setval('public.detalle_venta_id_seq', 39, true);
 
 
 --
@@ -871,7 +894,7 @@ SELECT pg_catalog.setval('public.proovedores_id_seq', 1, false);
 -- Name: tasa_cambio_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 4, true);
+SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 5, true);
 
 
 --
@@ -885,7 +908,7 @@ SELECT pg_catalog.setval('public.usuarios_id_seq', 3, true);
 -- Name: ventas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ventas_id_seq', 26, true);
+SELECT pg_catalog.setval('public.ventas_id_seq', 34, true);
 
 
 --
@@ -1123,5 +1146,5 @@ ALTER TABLE ONLY public.ventas
 -- PostgreSQL database dump complete
 --
 
-\unrestrict HMJCpTXa1cBcvqZuWAOw6ThuS11tqHv1pqmFtlheDxSVqfl7JfejasqloRiWs9z
+\unrestrict Gr4zH4pC4rZTXWJT0Atx4oZDQUgBOGmttsCDBqrylwOeRrm8dmpUNycN8jGJjph
 

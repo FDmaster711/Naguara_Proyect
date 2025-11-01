@@ -123,37 +123,36 @@
         }
         
         .autocomplete-container {
-    position: relative;
-}
-
-.autocomplete-suggestions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 100;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.autocomplete-item {
-    padding: 12px;
-    border-bottom: 1px solid #f3f4f6;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.autocomplete-item:hover {
-    background: #f3f4f6;
-}
-
-.autocomplete-item:last-child {
-    border-bottom: none;
-}
+            position: relative;
+        }
+        
+        .autocomplete-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid var(--primary);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .autocomplete-item {
+            padding: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            transition: all 0.3s ease;
+        }
+        
+        .autocomplete-item:hover,
+        .autocomplete-item.selected {
+            background: rgba(90, 0, 179, 0.1);
+        }
+        
         .table th {
             background: #f8fafc;
             color: #374151;
@@ -172,42 +171,6 @@
         .table tr:hover {
             background: #f8fafc;
         }
-        .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    background-color: #6b7280; /* gray-500 */
-    color: white;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.2s ease-in-out;
-    border: none;
-    cursor: pointer;
-}
-
-.btn-secondary:hover {
-    background-color: #4b5563; /* gray-600 */
-    transform: translateY(-1px);
-}
-
-.btn-secondary:active {
-    transform: translateY(0);
-}
-
-/* Si quieres que el botón se vea igual que los otros botones pero en gris */
-.btn-secondary {
-    background-color: #6b7280;
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-    background-color: #4b5563;
-}
         
         .modal {
             position: fixed;
@@ -239,60 +202,6 @@
         .fade-in {
             animation: fadeIn 0.3s ease-in;
         }
-
-        /* Estilos para precios duales */
-.price-dual {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.price-bs {
-    color: #8b5cf6; /* purple-600 */
-    font-weight: 600;
-}
-
-.price-usd {
-    color: #059669; /* green-600 */
-    font-size: 0.875rem;
-}
-
-/* Colores para las monedas */
-.text-bs { color: #8b5cf6; }
-.text-usd { color: #059669; }
-
-/* Mejora para autocomplete con precios duales */
-.autocomplete-item .price-info {
-    display: flex;
-    gap: 8px;
-    margin-top: 4px;
-}
-
-.positive-difference {
-    color: #059669;
-    background-color: #d1fae5;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-weight: bold;
-}
-
-.negative-difference {
-    color: #dc2626;
-    background-color: #fee2e2;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-weight: bold;
-}
-
-.neutral-difference {
-    color: #6b7280;
-    background-color: #f3f4f6;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-weight: bold;
-}
-
-        
         
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
