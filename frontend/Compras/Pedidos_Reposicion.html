@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Pedidos / Reposición</title>
+    <link rel="stylesheet" href="compras.css">
+</head>
+<body>
+
+<div class="header-section">
+    <h1>Pedidos / Reposición</h1>
+    <p>Gestiona los pedidos a proveedores y el estado de reposición de productos</p>
+</div>
+
+<!-- Cards de Resumen -->
+<div class="cards">
+    <div class="card morado">
+        <div class="card-title">Pedidos Pendientes</div>
+        <div class="card-value">8</div>
+    </div>
+    <div class="card verde">
+        <div class="card-title">Pedidos Completados</div>
+        <div class="card-value">15</div>
+    </div>
+    <div class="card azul">
+        <div class="card-title">Productos en Reposición</div>
+        <div class="card-value">32</div>
+    </div>
+    <div class="card rojo">
+        <div class="card-title">Pedidos Retrasados</div>
+        <div class="card-value">3</div>
+    </div>
+</div>
+
+<!-- Tabla de Pedidos -->
+<div class="table-section">
+    <h2>Listado de Pedidos</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Proveedor</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Fecha Pedido</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td data-label="Proveedor">Proveedor A</td>
+                <td data-label="Producto">Producto 1</td>
+                <td data-label="Cantidad">50</td>
+                <td data-label="Fecha Pedido">2025-10-15</td>
+                <td data-label="Estado"><span class="estado.medio">Pendiente</span></td>
+                <td data-label="Acciones"><button class="btn">Ver</button></td>
+            </tr>
+            <tr>
+                <td data-label="Proveedor">Proveedor B</td>
+                <td data-label="Producto">Producto 3</td>
+                <td data-label="Cantidad">20</td>
+                <td data-label="Fecha Pedido">2025-10-10</td>
+                <td data-label="Estado"><span class="estado.ok">Completado</span></td>
+                <td data-label="Acciones"><button class="btn">Ver</button></td>
+            </tr>
+            <tr>
+                <td data-label="Proveedor">Proveedor C</td>
+                <td data-label="Producto">Producto 2</td>
+                <td data-label="Cantidad">30</td>
+                <td data-label="Fecha Pedido">2025-10-12</td>
+                <td data-label="Estado"><span class="estado.no">Retrasado</span></td>
+                <td data-label="Acciones"><button class="btn">Ver</button></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Formulario para nuevo pedido -->
+<div class="table-section">
+    <h2>Agregar Nuevo Pedido</h2>
+    <form class="form-grid">
+        <input type="text" placeholder="Proveedor">
+        <input type="text" placeholder="Producto">
+        <input type="number" placeholder="Cantidad">
+        <input type="date" placeholder="Fecha Pedido">
+        <select>
+            <option value="">Estado</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="completado">Completado</option>
+            <option value="retrasado">Retrasado</option>
+        </select>
+        <div class="form-actions">
+            <button class="btn" type="submit">Agregar Pedido</button>
+        </div>
+    </form>
+</div>
+
+</body>
+</html>

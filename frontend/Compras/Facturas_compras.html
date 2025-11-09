@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Factura de Compras</title>
+    <link rel="stylesheet" href="compras.css">
+</head>
+<body>
+
+<div class="header-section">
+    <h1>Factura de Compras</h1>
+    <p>Registro y gestión de facturas de proveedores</p>
+</div>
+
+<!-- Cards de Resumen -->
+<div class="cards">
+    <div class="card morado">
+        <div class="card-title">Total Facturado</div>
+        <div class="card-value">$12,450</div>
+    </div>
+    <div class="card verde">
+        <div class="card-title">Facturas Pendientes</div>
+        <div class="card-value">5</div>
+    </div>
+    <div class="card azul">
+        <div class="card-title">Facturas Pagadas</div>
+        <div class="card-value">20</div>
+    </div>
+    <div class="card rojo">
+        <div class="card-title">Facturas Vencidas</div>
+        <div class="card-value">2</div>
+    </div>
+</div>
+
+<!-- Tabla de Facturas -->
+<div class="table-section">
+    <h2>Listado de Facturas</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Proveedor</th>
+                <th>Fecha</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td data-label="Proveedor">Proveedor A</td>
+                <td data-label="Fecha">2025-10-01</td>
+                <td data-label="Total">$1,200</td>
+                <td data-label="Estado"><span class="estado.ok">Pagada</span></td>
+                <td data-label="Acciones"><button class="btn">Ver</button></td>
+            </tr>
+            <tr>
+                <td data-label="Proveedor">Proveedor B</td>
+                <td data-label="Fecha">2025-10-03</td>
+                <td data-label="Total">$2,500</td>
+                <td data-label="Estado"><span class="estado.medio">Pendiente</span></td>
+                <td data-label="Acciones"><button class="btn">Ver</button></td>
+            </tr>
+            <tr>
+                <td data-label="Proveedor">Proveedor C</td>
+                <td data-label="Fecha">2025-09-28</td>
+                <td data-label="Total">$800</td>
+                <td data-label="Estado"><span class="estado.no">Vencida</span></td>
+                <td data-label="Acciones"><button class="btn">Ver</button></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Formulario para nueva factura -->
+<div class="table-section">
+    <h2>Agregar Nueva Factura</h2>
+    <form class="form-grid">
+        <input type="text" placeholder="Proveedor">
+        <input type="date" placeholder="Fecha">
+        <input type="number" placeholder="Total" step="0.01">
+        <select>
+            <option value="">Estado</option>
+            <option value="pagada">Pagada</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="vencida">Vencida</option>
+        </select>
+        <div class="form-actions">
+            <button class="btn" type="submit">Agregar Factura</button>
+        </div>
+    </form>
+</div>
+
+</body>
+</html>

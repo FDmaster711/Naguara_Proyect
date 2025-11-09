@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict g8ve9zaaZnziTZflvDFOw8yWFvpGvG7gaf12uOgI3fEkfhMPSeOG00o65v2h4zK
+\restrict PIMUZ6aqO7MLWZLa9tKeZo6zBOQ4MQ5RnbccFlrEw78Gg8CSYmFFFkYOOHC5kZv
 
 -- Dumped from database version 18.0
 -- Dumped by pg_dump version 18.0
@@ -340,6 +340,43 @@ ALTER SEQUENCE public.detalle_venta_id_seq OWNED BY public.detalle_venta.id;
 
 
 --
+-- Name: metodos_pago_config; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.metodos_pago_config (
+    id integer NOT NULL,
+    metodo_id character varying(50) NOT NULL,
+    nombre character varying(100) NOT NULL,
+    habilitado boolean DEFAULT true,
+    fecha_actualizacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.metodos_pago_config OWNER TO postgres;
+
+--
+-- Name: metodos_pago_config_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.metodos_pago_config_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.metodos_pago_config_id_seq OWNER TO postgres;
+
+--
+-- Name: metodos_pago_config_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.metodos_pago_config_id_seq OWNED BY public.metodos_pago_config.id;
+
+
+--
 -- Name: productos; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -349,11 +386,11 @@ CREATE TABLE public.productos (
     costo_compra numeric(10,2),
     stock numeric(10,2),
     unidad_medida character varying(20),
-    id_provedores integer,
     fecha_actualizacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     categoria_id integer NOT NULL,
     nombre character varying(100),
-    precio_dolares numeric(10,2)
+    precio_dolares numeric(10,2),
+    id_provedores integer
 );
 
 
@@ -455,6 +492,47 @@ ALTER SEQUENCE public.tasa_cambio_id_seq OWNED BY public.tasa_cambio.id;
 
 
 --
+-- Name: transformacion_producto; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.transformacion_producto (
+    id integer NOT NULL,
+    fecha_transformacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    usuario_id integer,
+    producto_entrada_id integer,
+    cantidad_entrada numeric(10,2),
+    producto_salida_id integer,
+    cantidad_salida numeric(10,2),
+    rendimiento numeric(5,2),
+    observaciones text
+);
+
+
+ALTER TABLE public.transformacion_producto OWNER TO postgres;
+
+--
+-- Name: transformacion_producto_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.transformacion_producto_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.transformacion_producto_id_seq OWNER TO postgres;
+
+--
+-- Name: transformacion_producto_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.transformacion_producto_id_seq OWNED BY public.transformacion_producto.id;
+
+
+--
 -- Name: usuarios; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -466,8 +544,9 @@ CREATE TABLE public.usuarios (
     rol character varying(20) NOT NULL,
     estado character varying(10) DEFAULT 'Activo'::character varying NOT NULL,
     fecha_creacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    ultimo_acceso timestamp without time zone,
     CONSTRAINT usuarios_estado_check CHECK (((estado)::text = ANY ((ARRAY['Activo'::character varying, 'Inactivo'::character varying])::text[]))),
-    CONSTRAINT usuarios_rol_check CHECK (((rol)::text = ANY ((ARRAY['Administrador'::character varying, 'Vendedor'::character varying])::text[])))
+    CONSTRAINT usuarios_rol_check CHECK (((rol)::text = ANY ((ARRAY['Super Admin'::character varying, 'Administrador'::character varying, 'Vendedor'::character varying])::text[])))
 );
 
 
@@ -597,6 +676,13 @@ ALTER TABLE ONLY public.detalle_venta ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
+-- Name: metodos_pago_config id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.metodos_pago_config ALTER COLUMN id SET DEFAULT nextval('public.metodos_pago_config_id_seq'::regclass);
+
+
+--
 -- Name: productos id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -615,6 +701,13 @@ ALTER TABLE ONLY public.proveedores ALTER COLUMN id SET DEFAULT nextval('public.
 --
 
 ALTER TABLE ONLY public.tasa_cambio ALTER COLUMN id SET DEFAULT nextval('public.tasa_cambio_id_seq'::regclass);
+
+
+--
+-- Name: transformacion_producto id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.transformacion_producto ALTER COLUMN id SET DEFAULT nextval('public.transformacion_producto_id_seq'::regclass);
 
 
 --
@@ -661,7 +754,8 @@ COPY public.clientes (id, cedula_rif, nombre, telefono, direccion, estado, fecha
 1	V-12345678	Juan Pérez	0412-1234567	Caracas, Venezuela	Activo	2025-10-23 20:17:38.768564
 2	V-87654321	María García	0414-7654321	Valencia, Venezuela	Activo	2025-10-23 20:17:38.768564
 3	J-123456789	Empresa ABC C.A.	0212-9876543	Caracas, Venezuela	Activo	2025-10-23 20:17:38.768564
-4	V-12345677	fabian da cal	04125566894	calle 13	Activo	2025-10-25 20:51:43.352716
+4	V-12345677	Fabian da cal	04125566894	calle 13	Activo	2025-10-25 20:51:43.352716
+5	V-12345674	jesus	04125566897	sss	Inactivo	2025-11-05 10:46:32.318949
 \.
 
 
@@ -692,6 +786,14 @@ COPY public.configuracion_negocio (id, iva_rate, stock_minimo, fecha_actualizaci
 3	16.00	10	2025-10-27 11:23:16.030464
 4	16.00	10	2025-10-27 13:49:40.452185
 5	16.00	10	2025-10-27 13:50:19.96529
+6	20.00	10	2025-11-03 13:59:47.89759
+7	100.00	10	2025-11-03 14:03:35.310115
+8	16.00	10	2025-11-03 14:04:12.644763
+9	16.00	10	2025-11-03 14:30:47.278698
+10	16.00	10	2025-11-03 14:37:54.110868
+11	16.00	10	2025-11-03 14:39:47.863148
+12	16.00	10	2025-11-05 10:45:16.095012
+13	16.00	10	2025-11-05 10:45:16.702341
 \.
 
 
@@ -736,6 +838,19 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 37	32	16	100.00	3.50
 38	33	14	10.00	6.80
 39	34	16	3.00	3.50
+40	35	13	1.00	5.50
+\.
+
+
+--
+-- Data for Name: metodos_pago_config; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.metodos_pago_config (id, metodo_id, nombre, habilitado, fecha_actualizacion) FROM stdin;
+1	efectivo	Efectivo	t	2025-11-03 14:34:31.087937
+2	tarjeta	Tarjeta	t	2025-11-03 14:34:31.087937
+4	pago_movil	Pago Móvil	t	2025-11-03 14:34:31.087937
+3	transferencia	Transferencia	f	2025-11-03 14:39:46.28377
 \.
 
 
@@ -743,16 +858,16 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 -- Data for Name: productos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, id_provedores, fecha_actualizacion, categoria_id, nombre, precio_dolares) FROM stdin;
-15	8.20	5.00	100.00	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04
-10	25.00	18.50	49.00	kg	1	2025-10-24 18:53:42.73315	1	Pollo Entero Premium	0.12
-17	4.20	2.10	249.00	unidad	3	2025-10-24 18:53:42.73315	3	Sazonador con Especias	0.02
-11	45.00	32.00	0.00	kg	1	2025-10-24 18:53:42.73315	1	Pecho de Pollo	0.22
-18	5.80	2.90	177.00	unidad	3	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03
-13	5.50	3.50	42.40	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03
-12	15.00	10.00	38.00	kg	1	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07
-14	6.80	4.20	20.50	unidad	2	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial	0.03
-16	3.50	1.80	195.00	unidad	3	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02
+COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, fecha_actualizacion, categoria_id, nombre, precio_dolares, id_provedores) FROM stdin;
+10	25.00	18.50	49.00	kg	2025-10-24 18:53:42.73315	1	Pollo Entero Premium	0.12	1
+11	45.00	32.00	0.00	kg	2025-10-24 18:53:42.73315	1	Pecho de Pollo	0.22	1
+12	15.00	10.00	38.00	kg	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07	1
+15	8.20	5.00	100.00	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04	2
+14	6.80	4.20	20.50	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial	0.03	2
+17	4.20	2.10	249.00	unidad	2025-10-24 18:53:42.73315	3	Sazonador con Especias	0.02	3
+18	5.80	2.90	177.00	unidad	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03	3
+16	3.50	1.80	195.00	unidad	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02	3
+13	5.50	3.50	41.40	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03	2
 \.
 
 
@@ -777,6 +892,20 @@ COPY public.tasa_cambio (id, tasa_bs, fecha_actualizacion, fuente, activo) FROM 
 3	218.17	2025-10-28 11:47:27.119438	api	t
 4	219.87	2025-10-29 10:17:03.284757	api	t
 5	223.96	2025-11-01 10:54:49.19683	api	t
+6	250.00	2025-11-03 12:42:42.183994	manual	t
+7	223.96	2025-11-03 12:42:42.373016	api	t
+8	250.00	2025-11-03 12:58:54.922164	manual	t
+9	223.96	2025-11-03 12:58:55.135478	api	t
+10	226.13	2025-11-05 10:44:58.103153	api	t
+11	228.48	2025-11-08 09:32:19.570451	api	t
+\.
+
+
+--
+-- Data for Name: transformacion_producto; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.transformacion_producto (id, fecha_transformacion, usuario_id, producto_entrada_id, cantidad_entrada, producto_salida_id, cantidad_salida, rendimiento, observaciones) FROM stdin;
 \.
 
 
@@ -784,10 +913,12 @@ COPY public.tasa_cambio (id, tasa_bs, fecha_actualizacion, fuente, activo) FROM 
 -- Data for Name: usuarios; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado, fecha_creacion) FROM stdin;
-1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Administrador	Activo	2025-10-27 10:53:25.157895
-2	Fabian dacal	Dacal7	$2b$10$sLrW6I2cogVZUFyhUqrY2e5lJyE21RwGBiizoIQmoH4cSSJRE0Ydq	Vendedor	Activo	2025-10-27 11:42:36.923343
-3	Enrique	Perez	$2b$10$y.L5BkHQwf3PpuRv.NMwxOeK9vJaZWMI.cnjs.nvqjqwCmrp2fgxu	Administrador	Activo	2025-10-29 10:22:45.513479
+COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado, fecha_creacion, ultimo_acceso) FROM stdin;
+8	francisco	velazco	$2b$10$afUaXHy9l/wTgSYrCxAN3OKPr9/FpoleSBQlqKuHsCsALoCs2Sweq	Super Admin	Activo	2025-11-08 11:43:17.74226	\N
+3	Enrique	Perez	$2b$10$GB6VRiHdl7ONeuO.GSsLYeZe6tb6rfm6LoNGcML.AoUuZZueDELh6	Administrador	Activo	2025-11-02 12:55:48.732599	\N
+2	Fabian dacal	Dacal7	$2b$10$sLrW6I2cogVZUFyhUqrY2e5lJyE21RwGBiizoIQmoH4cSSJRE0Ydq	Administrador	Activo	2025-11-02 12:55:48.732599	2025-11-08 12:06:04.441498
+7	mauricioo	varela	$2b$10$AG9TYxnUFeWyUlGM4jO4FezGq2abxxINwbOyZeQYMoV59NAs1zKjK	Vendedor	Activo	2025-11-02 12:55:48.732599	2025-11-08 12:06:28.303617
+1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Super Admin	Activo	2025-11-02 12:55:48.732599	2025-11-09 09:26:22.605085
 \.
 
 
@@ -817,6 +948,7 @@ COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente
 32	2025-11-01 12:13:25.226615	1	pago_movil	completada	4	{"bank": "Banesco", "total": 406, "amount": 406, "method": "pago_movil", "holderId": "V-12345677", "reference": "123456789"}	123456789	Banesco	\N	\N
 33	2025-11-01 12:15:43.717679	1	efectivo_usd	completada	4	{"tasa": 223.9622, "total": 0.35, "change": 0.65, "method": "efectivo_usd", "received": 1}	\N	\N	1.00	0.65
 34	2025-11-01 12:34:28.409911	1	efectivo_bs	completada	1	{"total": 12.18, "change": 0, "method": "efectivo_bs", "received": 12.18}	\N	\N	12.18	\N
+35	2025-11-08 09:42:57.251864	1	efectivo_usd	completada	4	{"tasa": 228.4796, "total": 0.03, "change": 1.97, "method": "efectivo_usd", "received": 2}	\N	\N	2.00	1.97
 \.
 
 
@@ -824,7 +956,7 @@ COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente
 -- Name: categorias_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.categorias_id_seq', 4, true);
+SELECT pg_catalog.setval('public.categorias_id_seq', 5, true);
 
 
 --
@@ -838,7 +970,7 @@ SELECT pg_catalog.setval('public.cierre_caja_id_seq', 4, true);
 -- Name: clientes_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.clientes_id_seq', 4, true);
+SELECT pg_catalog.setval('public.clientes_id_seq', 5, true);
 
 
 --
@@ -859,7 +991,7 @@ SELECT pg_catalog.setval('public.configuracion_empresa_id_seq', 1, true);
 -- Name: configuracion_negocio_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.configuracion_negocio_id_seq', 5, true);
+SELECT pg_catalog.setval('public.configuracion_negocio_id_seq', 13, true);
 
 
 --
@@ -873,7 +1005,14 @@ SELECT pg_catalog.setval('public.detalle_compra_id_seq', 1, false);
 -- Name: detalle_venta_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.detalle_venta_id_seq', 39, true);
+SELECT pg_catalog.setval('public.detalle_venta_id_seq', 40, true);
+
+
+--
+-- Name: metodos_pago_config_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.metodos_pago_config_id_seq', 4, true);
 
 
 --
@@ -894,21 +1033,28 @@ SELECT pg_catalog.setval('public.proovedores_id_seq', 1, false);
 -- Name: tasa_cambio_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 5, true);
+SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 11, true);
+
+
+--
+-- Name: transformacion_producto_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.transformacion_producto_id_seq', 1, false);
 
 
 --
 -- Name: usuarios_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.usuarios_id_seq', 3, true);
+SELECT pg_catalog.setval('public.usuarios_id_seq', 8, true);
 
 
 --
 -- Name: ventas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ventas_id_seq', 34, true);
+SELECT pg_catalog.setval('public.ventas_id_seq', 35, true);
 
 
 --
@@ -1000,6 +1146,22 @@ ALTER TABLE ONLY public.detalle_venta
 
 
 --
+-- Name: metodos_pago_config metodos_pago_config_metodo_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.metodos_pago_config
+    ADD CONSTRAINT metodos_pago_config_metodo_id_key UNIQUE (metodo_id);
+
+
+--
+-- Name: metodos_pago_config metodos_pago_config_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.metodos_pago_config
+    ADD CONSTRAINT metodos_pago_config_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: productos productos_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1021,6 +1183,14 @@ ALTER TABLE ONLY public.proveedores
 
 ALTER TABLE ONLY public.tasa_cambio
     ADD CONSTRAINT tasa_cambio_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: transformacion_producto transformacion_producto_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.transformacion_producto
+    ADD CONSTRAINT transformacion_producto_pkey PRIMARY KEY (id);
 
 
 --
@@ -1127,6 +1297,30 @@ ALTER TABLE ONLY public.productos
 
 
 --
+-- Name: transformacion_producto transformacion_producto_producto_entrada_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.transformacion_producto
+    ADD CONSTRAINT transformacion_producto_producto_entrada_id_fkey FOREIGN KEY (producto_entrada_id) REFERENCES public.productos(id);
+
+
+--
+-- Name: transformacion_producto transformacion_producto_producto_salida_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.transformacion_producto
+    ADD CONSTRAINT transformacion_producto_producto_salida_id_fkey FOREIGN KEY (producto_salida_id) REFERENCES public.productos(id);
+
+
+--
+-- Name: transformacion_producto transformacion_producto_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.transformacion_producto
+    ADD CONSTRAINT transformacion_producto_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id);
+
+
+--
 -- Name: ventas ventas_id_cliente_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1146,5 +1340,5 @@ ALTER TABLE ONLY public.ventas
 -- PostgreSQL database dump complete
 --
 
-\unrestrict g8ve9zaaZnziTZflvDFOw8yWFvpGvG7gaf12uOgI3fEkfhMPSeOG00o65v2h4zK
+\unrestrict PIMUZ6aqO7MLWZLa9tKeZo6zBOQ4MQ5RnbccFlrEw78Gg8CSYmFFFkYOOHC5kZv
 

@@ -10,6 +10,7 @@ class VentasManager {
         this.tasaCambio = 216.37;
         this.currentStep = 1;
         this.paymentDetails = {};
+        this.ivaRate = 0.16;
         
         this.init();
     }
@@ -23,11 +24,66 @@ class VentasManager {
         this.loadProducts();
         this.updateStepIndicator();
         this.loadEmpresaData();
+         this.loadIvaConfig();
+         this.loadMetodosPagoConfig();
+    }
+
+
+    async loadIvaConfig() {
+        try {
+            const response = await fetch('/api/configuracion/negocio', {
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                const config = await response.json();
+                this.ivaRate = (config.iva_rate || 16) / 100;
+                console.log('✅ IVA configurado cargado:', this.ivaRate);
+                
+                
+                this.updateIvaDisplay();
+            }
+        } catch (error) {
+            console.error('Error cargando IVA configurado:', error);
+            this.ivaRate = 0.16; 
+        }
+    }
+
+
+    updateIvaDisplay() {
+        const ivaElements = document.querySelectorAll('[id*="iva"], [class*="iva"]');
+        ivaElements.forEach(element => {
+            if (element.textContent.includes('16%')) {
+                element.textContent = element.textContent.replace('16%', `${(this.ivaRate * 100).toFixed(0)}%`);
+            }
+        });
     }
 
     async loadTasaCambio() {
+    // ✅ PASO 1: Verificar si hay tasa manual ACTIVA
+    const tasaManual = localStorage.getItem('tasaCambioManual');
+    const tasaTimestamp = localStorage.getItem('tasaCambioTimestamp');
+    
+    if (tasaManual && tasaTimestamp) {
+        const horasDesdeConfiguracion = (new Date() - new Date(tasaTimestamp)) / (1000 * 60 * 60);
+        
+        // Usar tasa manual si tiene menos de 24 horas
+        if (horasDesdeConfiguracion < 24) {
+            this.tasaCambio = parseFloat(tasaManual);
+            this.updateTasaDisplay();
+            console.log('✅ Usando TASA MANUAL configurada:', this.tasaCambio);
+            return;
+        } else {
+            // Limpiar tasa manual vieja (más de 24 horas)
+            localStorage.removeItem('tasaCambioManual');
+            localStorage.removeItem('tasaCambioTimestamp');
+            console.log('🔄 Tasa manual expirada (más de 24 horas)');
+        }
+    }
+
+    // ✅ PASO 2: Si no hay tasa manual, usar API
     try {
-        console.log('💰 Cargando tasa de cambio...');
+        console.log('💰 Cargando tasa de cambio desde API...');
         const response = await fetch('/api/tasa-cambio/actual');
         
         if (!response.ok) {
@@ -37,16 +93,16 @@ class VentasManager {
         const data = await response.json();
         this.tasaCambio = parseFloat(data.tasa_bs);
         
-        this.updateTasaDisplay();
-        console.log('✅ Tasa de cambio cargada:', this.tasaCambio);
+        console.log('✅ Tasa de API cargada:', this.tasaCambio);
         
     } catch (error) {
-        console.error('❌ Error cargando tasa:', error);
-        this.tasaCambio = 216.37; // Fallback
-        this.updateTasaDisplay();
+        console.error('❌ Error cargando tasa API:', error);
+        // Último fallback
+        this.tasaCambio = 36.50;
     }
+    
+    this.updateTasaDisplay();
 }
-
 updateTasaDisplay() {
     // Intentar diferentes IDs posibles
     const possibleIds = ['tasa-display', 'tasa-actual', 'exchange-rate'];
@@ -91,6 +147,89 @@ updateTasaDisplay() {
             };
         }
     }
+
+  loadMetodosPagoConfig() {
+    try {
+        const metodosConfig = localStorage.getItem('metodosPagoConfig');
+        const timestamp = localStorage.getItem('metodosPagoTimestamp');
+        
+        if (metodosConfig && timestamp) {
+            const horasDesdeActualizacion = (new Date() - new Date(timestamp)) / (1000 * 60 * 60);
+            
+            if (horasDesdeActualizacion < 1) {
+                this.metodosPagoConfig = JSON.parse(metodosConfig);
+                console.log('✅ Métodos de pago configurados cargados (cache):', this.metodosPagoConfig);
+            } else {
+                localStorage.removeItem('metodosPagoConfig');
+                localStorage.removeItem('metodosPagoTimestamp');
+                this.metodosPagoConfig = null;
+                console.log('🔄 Configuración de métodos muy vieja, se limpió');
+            }
+        } else {
+            this.metodosPagoConfig = null;
+        }
+        
+        this.updatePaymentMethodsUI();
+        
+    } catch (error) {
+        console.error('Error cargando métodos pago config:', error);
+        this.metodosPagoConfig = null;
+    }
+}
+
+updatePaymentMethodsUI() {
+    const paymentButtons = document.querySelectorAll('.payment-btn');
+    
+    paymentButtons.forEach(btn => {
+        const metodo = btn.dataset.method;
+        const metodoConfig = this.metodosPagoConfig?.find(m => m.id === metodo);
+        
+        if (metodoConfig && !metodoConfig.habilitado) {
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            btn.disabled = true;
+            btn.title = `Método deshabilitado en configuración`;
+            
+            // Si este método estaba seleccionado, limpiar selección
+            if (this.selectedPaymentMethod === metodo) {
+                this.selectedPaymentMethod = null;
+                this.showPaymentDetails(null);
+                
+                // Remover clases activas
+                btn.classList.remove('active', 'bg-purple-100', 'border-purple-300', 'ring-2', 'ring-purple-500');
+            }
+        } else {
+            // ✅ MÉTODO HABILITADO
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            btn.disabled = false;
+            btn.title = '';
+        }
+    });
+    
+    // ✅ Mostrar mensaje si no hay métodos habilitados
+    this.checkMetodosHabilitados();
+}
+
+// ✅ NUEVO MÉTODO: Verificar si hay métodos habilitados
+checkMetodosHabilitados() {
+    const metodosHabilitados = this.metodosPagoConfig?.filter(m => m.habilitado) || [];
+    const paymentDetails = document.getElementById('payment-details');
+    
+    if (metodosHabilitados.length === 0 && paymentDetails) {
+        paymentDetails.innerHTML = `
+            <div class="text-center p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <i class="fas fa-exclamation-triangle text-2xl text-yellow-600 mb-2"></i>
+                <h4 class="font-bold text-yellow-800">Métodos de Pago No Disponibles</h4>
+                <p class="text-yellow-600 text-sm mt-2">
+                    Todos los métodos de pago están deshabilitados en la configuración.
+                </p>
+                <button onclick="window.location.href='../configuracion/configuracion.html'" 
+                        class="mt-3 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-cog mr-2"></i>Ir a Configuración
+                </button>
+            </div>
+        `;
+    }
+}
 
     checkAuthentication() {
         fetch('/api/me')
@@ -190,6 +329,14 @@ updateTasaDisplay() {
     }
 
     selectPaymentMethod(method) {
+       
+       
+        const metodoConfig = this.metodosPagoConfig?.find(m => m.id === method);
+    if (metodoConfig && !metodoConfig.habilitado) {
+        this.showAlert(`El método de pago "${method}" está deshabilitado en la configuración`, 'error');
+        return;
+    }
+
         console.log('💳 Método de pago seleccionado:', method);
         this.selectedPaymentMethod = method;
         
@@ -1033,9 +1180,9 @@ async getCurrentUserId() {
         }
     }
 
-    updateTotals() {
+     updateTotals() {
         const subtotal_bs = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal_bs), 0);
-        const tax_bs = subtotal_bs * 0.16;
+        const tax_bs = subtotal_bs * this.ivaRate; 
         const total_bs = subtotal_bs + tax_bs;
 
         const subtotal_usd = this.bsToUsd(subtotal_bs);
@@ -1043,10 +1190,11 @@ async getCurrentUserId() {
         const total_usd = this.bsToUsd(total_bs);
 
         document.getElementById('subtotal-amount').textContent = `Bs. ${subtotal_bs.toFixed(2)}`;
-        document.getElementById('tax-amount').textContent = `Bs. ${tax_bs.toFixed(2)}`;
+        document.getElementById('tax-amount').textContent = `Bs. ${tax_bs.toFixed(2)} (${(this.ivaRate * 100).toFixed(0)}%)`; // ✅ Mostrar % correcto
         document.getElementById('total-bs').textContent = `Bs. ${total_bs.toFixed(2)}`;
         document.getElementById('total-usd').textContent = `$ ${total_usd.toFixed(2)}`;
     }
+
 
     updateSaleSummary() {
         const summaryElement = document.getElementById('current-sale-summary');
@@ -1065,9 +1213,10 @@ async getCurrentUserId() {
 
     getTotalBs() {
         const subtotal = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal_bs), 0);
-        const tax = subtotal * 0.16;
+        const tax = subtotal * this.ivaRate; 
         return (subtotal + tax).toFixed(2);
     }
+
 
     // ==================== MÉTODOS DE PAGO ====================
 
@@ -1446,134 +1595,139 @@ async getCurrentUserId() {
         }
     }
 
-    generateInvoiceHTML(ventaData) {
-        const invoiceContent = document.getElementById('invoice-content');
-        const subtotal_bs = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal_bs), 0);
-        const tax_bs = subtotal_bs * 0.16;
-        const total_bs = subtotal_bs + tax_bs;
+      generateInvoiceHTML(ventaData) {
+    const invoiceContent = document.getElementById('invoice-content');
+    
+    // ✅ CALCULAR CON IVA CONFIGURADO
+    const subtotal_bs = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal_bs), 0);
+    const tax_bs = subtotal_bs * this.ivaRate; // ✅ Usar IVA configurado
+    const total_bs = subtotal_bs + tax_bs;
 
-        const subtotal_usd = this.bsToUsd(subtotal_bs);
-        const tax_usd = this.bsToUsd(tax_bs);
-        const total_usd = this.bsToUsd(total_bs);
+    const subtotal_usd = this.bsToUsd(subtotal_bs);
+    const tax_usd = this.bsToUsd(tax_bs);
+    const total_usd = this.bsToUsd(total_bs);
 
-        const empresa = this.empresaData || {
-            nombre_empresa: "Na'Guara",
-            rif: "J-123456789",
-            telefono: "(0412) 123-4567",
-            direccion: "Barquisimeto, Venezuela",
-            mensaje_factura: "¡Gracias por su compra!"
-        };
+    const empresa = this.empresaData || {
+        nombre_empresa: "Na'Guara",
+        rif: "J-123456789",
+        telefono: "(0412) 123-4567",
+        direccion: "Barquisimeto, Venezuela",
+        mensaje_factura: "¡Gracias por su compra!"
+    };
 
-        const invoiceHTML = `
-            <div class="invoice-container">
-                <!-- Encabezado -->
-                <div class="grid grid-cols-2 gap-6 mb-8">
-                    <div>
-                        <h3 class="text-xl font-bold text-gray-800">${empresa.nombre_empresa}</h3>
-                        <p class="text-gray-600">Sistema de Venta Rápida</p>
-                        <p class="text-gray-600">RIF: ${empresa.rif}</p>
-                        <p class="text-gray-600">Teléfono: ${empresa.telefono}</p>
-                        <p class="text-gray-600">${empresa.direccion}</p>
-                    </div>
-                    <div class="text-right">
-                        <h3 class="text-xl font-bold text-purple-600">FACTURA #${ventaData.id}</h3>
-                        <p class="text-gray-600">Fecha: ${new Date(ventaData.fecha_venta).toLocaleDateString('es-ES')}</p>
-                        <p class="text-gray-600">Hora: ${new Date(ventaData.fecha_venta).toLocaleTimeString('es-ES')}</p>
-                        <p class="text-gray-600 text-sm">Tasa: ${this.tasaCambio.toFixed(2)} Bs/$</p>
-                    </div>
+    const invoiceHTML = `
+        <div class="invoice-container">
+            <!-- Encabezado -->
+            <div class="grid grid-cols-2 gap-6 mb-8">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">${empresa.nombre_empresa}</h3>
+                    <p class="text-gray-600">Sistema de Venta Rápida</p>
+                    <p class="text-gray-600">RIF: ${empresa.rif}</p>
+                    <p class="text-gray-600">Teléfono: ${empresa.telefono}</p>
+                    <p class="text-gray-600">${empresa.direccion}</p>
                 </div>
-
-                <!-- Información del Cliente -->
-                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-                    <h4 class="font-bold text-gray-800 mb-2">INFORMACIÓN DEL CLIENTE</h4>
-                    <p><strong>Nombre:</strong> ${this.currentCustomer.nombre}</p>
-                    <p><strong>Cédula/RIF:</strong> ${this.currentCustomer.cedula_rif}</p>
-                    <p><strong>Teléfono:</strong> ${this.currentCustomer.telefono || 'No especificado'}</p>
-                    <p><strong>Dirección:</strong> ${this.currentCustomer.direccion || 'No especificada'}</p>
-                </div>
-
-                <!-- Detalles de la Venta -->
-                <div class="mb-6">
-                    <h4 class="font-bold text-gray-800 mb-3">DETALLES DE LA VENTA</h4>
-                    <table class="w-full border-collapse border border-gray-300">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="border border-gray-300 p-3 text-left">Producto</th>
-                                <th class="border border-gray-300 p-3 text-center">Cantidad</th>
-                                <th class="border border-gray-300 p-3 text-right">Precio Unitario</th>
-                                <th class="border border-gray-300 p-3 text-right">Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${this.cart.map(item => `
-                                <tr>
-                                    <td class="border border-gray-300 p-3">${item.nombre}</td>
-                                    <td class="border border-gray-300 p-3 text-center">${item.cantidad} ${item.unidad_medida}</td>
-                                    <td class="border border-gray-300 p-3 text-right">
-                                        <div>Bs. ${item.precio_bs.toFixed(2)}</div>
-                                        <div class="text-sm text-green-600">$ ${item.precio_usd.toFixed(2)}</div>
-                                    </td>
-                                    <td class="border border-gray-300 p-3 text-right">
-                                        <div>Bs. ${item.subtotal_bs}</div>
-                                        <div class="text-sm text-green-600">$ ${item.subtotal_usd.toFixed(2)}</div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Resumen -->
-                <div class="grid grid-cols-2 gap-6">
-                    <div class="p-4 bg-purple-50 rounded-lg">
-                        <h4 class="font-bold text-purple-800 mb-2">MÉTODO DE PAGO</h4>
-                        <p class="text-purple-700 font-semibold">${this.selectedPaymentMethod.toUpperCase()}</p>
-                        ${this.paymentDetails.method === 'mixto' ? `
-                            <div class="mt-2 text-sm">
-                                ${this.paymentDetails.payments.map(p => `
-                                    <div>${p.method}: Bs. ${p.amount.toFixed(2)}</div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-                        <p class="text-sm text-purple-600 mt-2">Tasa de cambio: ${this.tasaCambio.toFixed(2)} Bs/$</p>
-                    </div>
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <h4 class="font-bold text-gray-800 mb-2">RESUMEN</h4>
-                        <div class="flex justify-between mb-1">
-                            <span>Subtotal:</span>
-                            <div class="text-right">
-                                <div>Bs. ${subtotal_bs.toFixed(2)}</div>
-                                <div class="text-sm text-green-600">$ ${subtotal_usd.toFixed(2)}</div>
-                            </div>
-                        </div>
-                        <div class="flex justify-between mb-1">
-                            <span>IVA (16%):</span>
-                            <div class="text-right">
-                                <div>Bs. ${tax_bs.toFixed(2)}</div>
-                                <div class="text-sm text-green-600">$ ${tax_usd.toFixed(2)}</div>
-                            </div>
-                        </div>
-                        <div class="flex justify-between font-bold text-lg border-t border-gray-300 pt-2 mt-2">
-                            <span>TOTAL:</span>
-                            <div class="text-right">
-                                <div class="text-purple-600">Bs. ${total_bs.toFixed(2)}</div>
-                                <div class="text-green-600 text-sm">$ ${total_usd.toFixed(2)}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pie de página -->
-                <div class="mt-8 text-center text-gray-500 text-sm">
-                    <p>${empresa.mensaje_factura}</p>
-                    <p>${empresa.nombre_empresa} - Sistema de Venta Rápida</p>
-                    <p>Factura generada el ${new Date().toLocaleString('es-ES')}</p>
+                <div class="text-right">
+                    <h3 class="text-xl font-bold text-purple-600">FACTURA #${ventaData.id}</h3>
+                    <p class="text-gray-600">Fecha: ${new Date(ventaData.fecha_venta).toLocaleDateString('es-ES')}</p>
+                    <p class="text-gray-600">Hora: ${new Date(ventaData.fecha_venta).toLocaleTimeString('es-ES')}</p>
+                    <p class="text-gray-600 text-sm">Tasa: ${this.tasaCambio.toFixed(2)} Bs/$</p>
+                    <p class="text-gray-600 text-sm">IVA: ${(this.ivaRate * 100).toFixed(0)}%</p>
                 </div>
             </div>
-        `;
 
-        invoiceContent.innerHTML = invoiceHTML;
-    }
+            <!-- Información del Cliente -->
+            <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h4 class="font-bold text-gray-800 mb-2">INFORMACIÓN DEL CLIENTE</h4>
+                <p><strong>Nombre:</strong> ${this.currentCustomer.nombre}</p>
+                <p><strong>Cédula/RIF:</strong> ${this.currentCustomer.cedula_rif}</p>
+                <p><strong>Teléfono:</strong> ${this.currentCustomer.telefono || 'No especificado'}</p>
+                <p><strong>Dirección:</strong> ${this.currentCustomer.direccion || 'No especificada'}</p>
+            </div>
+
+            <!-- Detalles de la Venta -->
+            <div class="mb-6">
+                <h4 class="font-bold text-gray-800 mb-3">DETALLES DE LA VENTA</h4>
+                <table class="w-full border-collapse border border-gray-300">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="border border-gray-300 p-3 text-left">Producto</th>
+                            <th class="border border-gray-300 p-3 text-center">Cantidad</th>
+                            <th class="border border-gray-300 p-3 text-right">Precio Unitario</th>
+                            <th class="border border-gray-300 p-3 text-right">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${this.cart.map(item => `
+                            <tr>
+                                <td class="border border-gray-300 p-3">${item.nombre}</td>
+                                <td class="border border-gray-300 p-3 text-center">${item.cantidad} ${item.unidad_medida}</td>
+                                <td class="border border-gray-300 p-3 text-right">
+                                    <div>Bs. ${item.precio_bs.toFixed(2)}</div>
+                                    <div class="text-sm text-green-600">$ ${item.precio_usd.toFixed(2)}</div>
+                                </td>
+                                <td class="border border-gray-300 p-3 text-right">
+                                    <div>Bs. ${item.subtotal_bs}</div>
+                                    <div class="text-sm text-green-600">$ ${item.subtotal_usd.toFixed(2)}</div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Resumen -->
+            <div class="grid grid-cols-2 gap-6">
+                <div class="p-4 bg-purple-50 rounded-lg">
+                    <h4 class="font-bold text-purple-800 mb-2">MÉTODO DE PAGO</h4>
+                    <p class="text-purple-700 font-semibold">${this.selectedPaymentMethod.toUpperCase()}</p>
+                    ${this.paymentDetails.method === 'mixto' ? `
+                        <div class="mt-2 text-sm">
+                            ${this.paymentDetails.payments.map(p => `
+                                <div>${p.method}: Bs. ${p.amount.toFixed(2)}</div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    <p class="text-sm text-purple-600 mt-2">Tasa de cambio: ${this.tasaCambio.toFixed(2)} Bs/$</p>
+                </div>
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <h4 class="font-bold text-gray-800 mb-2">RESUMEN</h4>
+                    <div class="flex justify-between mb-1">
+                        <span>Subtotal:</span>
+                        <div class="text-right">
+                            <div>Bs. ${subtotal_bs.toFixed(2)}</div>
+                            <div class="text-sm text-green-600">$ ${subtotal_usd.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between mb-1">
+                        <span>IVA (${(this.ivaRate * 100).toFixed(0)}%):</span> <!-- ✅ % DINÁMICO -->
+                        <div class="text-right">
+                            <div>Bs. ${tax_bs.toFixed(2)}</div>
+                            <div class="text-sm text-green-600">$ ${tax_usd.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between font-bold text-lg border-t border-gray-300 pt-2 mt-2">
+                        <span>TOTAL:</span>
+                        <div class="text-right">
+                            <div class="text-purple-600">Bs. ${total_bs.toFixed(2)}</div>
+                            <div class="text-green-600 text-sm">$ ${total_usd.toFixed(2)}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pie de página -->
+            <div class="mt-8 text-center text-gray-500 text-sm">
+                <p>${empresa.mensaje_factura}</p>
+                <p>${empresa.nombre_empresa} - Sistema de Venta Rápida</p>
+                <p>Factura generada el ${new Date().toLocaleString('es-ES')}</p>
+            </div>
+        </div>
+    `;
+
+    invoiceContent.innerHTML = invoiceHTML;
+}
+    
+
 
     printInvoice() {
         const invoiceContent = document.getElementById('invoice-content').innerHTML;

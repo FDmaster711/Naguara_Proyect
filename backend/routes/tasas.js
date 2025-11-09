@@ -93,4 +93,78 @@ router.get('/api/tasa-cambio/historial', requireAuth, async (req, res) => {
   }
 });
 
+// POST para guardar tasa manual
+router.post('/api/tasa-cambio/manual', requireAuth, async (req, res) => {
+  try {
+    const { tasa_bs, fuente = 'manual' } = req.body;
+    
+    const result = await pool.query(
+      'INSERT INTO tasa_cambio (tasa_bs, fuente) VALUES ($1, $2) RETURNING *',
+      [tasa_bs, fuente]
+    );
+    
+    res.json({ 
+      message: 'Tasa manual guardada correctamente',
+      tasa: result.rows[0] 
+    });
+  } catch (error) {
+    console.error('Error guardando tasa manual:', error);
+    res.status(500).json({ error: 'Error al guardar tasa manual' });
+  }
+});
+
+// PUT para cambiar estado activo/inactivo
+router.put('/api/tasa-cambio/estado', requireAuth, async (req, res) => {
+  try {
+    const { activo } = req.body;
+    
+    // Desactivar todas las tasas primero
+    await pool.query('UPDATE tasa_cambio SET activo = false');
+    
+    // Activar la más reciente si se está activando
+    if (activo) {
+      await pool.query(`
+        UPDATE tasa_cambio 
+        SET activo = true 
+        WHERE id = (SELECT id FROM tasa_cambio ORDER BY fecha_actualizacion DESC LIMIT 1)
+      `);
+    }
+    
+    res.json({ 
+      message: `Tasa ${activo ? 'activada' : 'desactivada'} correctamente`,
+      activo 
+    });
+  } catch (error) {
+    console.error('Error cambiando estado tasa:', error);
+    res.status(500).json({ error: 'Error al cambiar estado' });
+  }
+});
+
+// POST para forzar actualización
+router.post('/api/tasa-cambio/forzar-actualizacion', requireAuth, async (req, res) => {
+  try {
+    // Lógica similar a la ruta actual pero sin verificación de cambios
+    const response = await fetch(API_DOLAR_URL);
+    if (response.ok) {
+      const data = await response.json();
+      const tasaAPI = parseFloat(data.promedio) || parseFloat(data.compra) || parseFloat(data.venta);
+      
+      await pool.query(
+        'INSERT INTO tasa_cambio (tasa_bs, fuente) VALUES ($1, $2) RETURNING *',
+        [tasaAPI, 'api_forzado']
+      );
+      
+      res.json({ 
+        message: 'Actualización forzada completada',
+        tasa_bs: tasaAPI 
+      });
+    } else {
+      throw new Error('API no disponible');
+    }
+  } catch (error) {
+    console.error('Error forzando actualización:', error);
+    res.status(500).json({ error: 'Error forzando actualización' });
+  }
+});
+
 export default router;

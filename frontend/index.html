@@ -25,9 +25,9 @@
             <i class="fas fa-warehouse"></i> <span>Inventario</span> <i class="fas fa-chevron-down submenu-arrow"></i>
           </button>
           <ul id="inventario-submenu" class="submenu">
-            <li><a href="Inventario/InventarioGeneral.html" class="submenu-item">Inventario General</a></li>
-            <li><a href="Productos/Productos.html" class="submenu-item">Productos</a></li>
-            <li><a href="Categorias/Categorias.html" class="submenu-item">Categorías</a></li>
+            <li><a href="Inventario/inventario-general.html" class="submenu-item">Inventario General</a></li>
+            <li><a href="Inventario/Productos.html" class="submenu-item">Productos</a></li>
+            <li><a href="Inventario/Categorias.html" class="submenu-item">Categorías</a></li>
           </ul>
         </li>
         <li>
@@ -35,14 +35,19 @@
             <i class="fas fa-shopping-bag"></i> <span>Compras</span> <i class="fas fa-chevron-down submenu-arrow"></i>
           </button>
           <ul id="compras-submenu" class="submenu">
-            <li><a href="Proveedores/Proveedores.html" class="submenu-item">Proveedores</a></li>
-            <li><a href="Pedidos/Pedidos.html" class="submenu-item">Pedidos / Reposición</a></li>
-            <li><a href="Facturas/FacturasCompra.html" class="submenu-item">Facturas de Compra</a></li>
+            <li><a href="Compras/Proveedores.html" class="submenu-item">Proveedores</a></li>
+            <li><a href="Compras/Pedidos_Reposicion.html" class="submenu-item">Pedidos / Reposición</a></li>
+            <li><a href="Compras/Facturas_compras.html" class="submenu-item">Facturas de Compra</a></li>
           </ul>
         </li>
         <li><a href="Reportes/Reportes.html" class="menu-item"><i class="fas fa-chart-line"></i> <span>Reportes</span></a></li>
         <li><a href="Configuracion/Configuracion.html" class="menu-item"><i class="fas fa-cog"></i> <span>Configuración</span></a></li>
-        <li><a href="Usuarios/GestionU.html" class="menu-item"><i class="fas fa-users"></i> <span>Usuarios</span></a></li>
+        <li>
+          <a href="Clientes/clientes.html" class="menu-item">
+            <i class="fas fa-users"></i> <span>Clientes</span>
+          </a>
+        </li>   
+        <li><a href="GestionUsuarios/GestionU.html" class="menu-item"><i class="fas fa-user-shield"></i> <span>Usuarios</span></a></li>
       </ul>
     </nav>
   </aside>
@@ -91,7 +96,55 @@
         document.getElementById('userName').textContent = usuario.nombre;
         document.getElementById('userRole').textContent = usuario.rol;
         usuarioActual = usuario;
+        
+        // Aplicar restricciones de menú según el rol
+        aplicarRestriccionesPorRol(usuario);
       }
+    }
+
+    function aplicarRestriccionesPorRol(usuario) {
+      const rol = usuario.rol;
+      
+      // Obtener todos los elementos del menú
+      const elementosMenu = {
+        'dashboard': document.querySelector('a[onclick*="loadDashboard"]').closest('li'),
+        'ventas': document.querySelector('a[href*="Ventas.html"]').closest('li'),
+        'inventario': document.querySelector('button[onclick*="inventario-submenu"]').closest('li'),
+        'compras': document.querySelector('button[onclick*="compras-submenu"]').closest('li'),
+        'reportes': document.querySelector('a[href*="Reportes.html"]').closest('li'),
+        'configuracion': document.querySelector('a[href*="Configuracion.html"]').closest('li'),
+        'clientes': document.querySelector('a[href*="clientes.html"]').closest('li'),
+        'usuarios': document.querySelector('a[href*="GestionU.html"]').closest('li')
+      };
+
+      // Ocultar todo primero
+      Object.values(elementosMenu).forEach(element => {
+        if (element) element.style.display = 'none';
+      });
+
+      // Mostrar según rol
+      if (rol === 'Vendedor') {
+        // Vendedor: solo Ventas e Inventario
+        if (elementosMenu.ventas) elementosMenu.ventas.style.display = '';
+        if (elementosMenu.inventario) elementosMenu.inventario.style.display = '';
+      } 
+      else if (rol === 'Administrador') {
+        // Admin: todo menos Compras y Configuración
+        if (elementosMenu.dashboard) elementosMenu.dashboard.style.display = '';
+        if (elementosMenu.ventas) elementosMenu.ventas.style.display = '';
+        if (elementosMenu.inventario) elementosMenu.inventario.style.display = '';
+        if (elementosMenu.reportes) elementosMenu.reportes.style.display = '';
+        if (elementosMenu.clientes) elementosMenu.clientes.style.display = '';
+        if (elementosMenu.usuarios) elementosMenu.usuarios.style.display = '';
+      } 
+      else if (rol === 'Super Admin') {
+        // Super Admin: acceso completo
+        Object.values(elementosMenu).forEach(element => {
+          if (element) element.style.display = '';
+        });
+      }
+      
+      console.log(`✅ Restricciones aplicadas para rol: ${rol}`);
     }
 
     function obtenerIniciales(nombre) {
@@ -110,7 +163,7 @@
               <div class="card_content">
                 <h1 class="card_title"><b>Productos</b></h1>
                 <p class="card_text">Total registrados.</p>
-                <a href="Productos/Productos.html" class="card_btn uno">Ver</a>
+                <a href="Inventario/Productos.html" class="card_btn uno">Ver</a>
               </div>
             </div>
             <div class="card_wrap">
@@ -126,7 +179,7 @@
               <div class="card_content">
                 <h1 class="card_title"><b>Proveedores</b></h1>
                 <p class="card_text">Activos registrados.</p>
-                <a href="Proveedores/Proveedores.html" class="card_btn tres">Ver</a>
+                <a href="Compras/Proveedores.html" class="card_btn tres">Ver</a>
               </div>
             </div>
             <div class="card_wrap">
@@ -134,7 +187,7 @@
               <div class="card_content">
                 <h1 class="card_title"><b>Stock mínimo</b></h1>
                 <p class="card_text">Productos con bajo inventario.</p>
-                <a href="Productos/Productos.html" class="card_btn cuatro">Ver</a>
+                <a href="Inventario/Productos.html" class="card_btn cuatro">Ver</a>
               </div>
             </div>
           </section>
@@ -165,6 +218,7 @@
         `;
       }
     }
+
     function toggleSubmenu(id, btn) {
       const submenu = document.getElementById(id);
       submenu.classList.toggle('open');
@@ -191,16 +245,23 @@
     }
 
     // ✅ Carga automática al iniciar
-    window.addEventListener('DOMContentLoaded', async () => {
-      try {
+   window.addEventListener('DOMContentLoaded', async () => {
+    try {
         const usuario = await authChecker.getCurrentUser();
+        
+        if (!usuario) {
+            window.location.href = '/login.html';
+            return;
+        }
+        
         actualizarInfoUsuario(usuario);
-      } catch (err) {
+        loadDashboard();
+        
+    } catch (err) {
         console.error('❌ Error cargando usuario:', err);
-      }
-
-      loadDashboard();
-    });
+        window.location.href = '/login.html';
+    }
+});
   </script>
 
   <!-- Script de autenticación -->
