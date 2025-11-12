@@ -90,7 +90,20 @@ body {
             transform: translateY(-3px);
             box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
         }
+
+              .breadcrumb a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+
         
+
+        
+
+
         .role-badge {
             padding: 6px 12px;
             border-radius: 20px;

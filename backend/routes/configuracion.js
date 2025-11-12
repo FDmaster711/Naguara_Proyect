@@ -171,35 +171,42 @@ router.get('/api/configuracion/negocio', requireAuth, async (req, res) => {
 
 // Métodos de pago
 router.get('/api/configuracion/metodos-pago', requireAuth, async (req, res) => {
-  try {
-    res.json([
-      { id: 'efectivo', nombre: 'Efectivo', habilitado: true },
-      { id: 'tarjeta', nombre: 'Tarjeta', habilitado: true },
-      { id: 'transferencia', nombre: 'Transferencia', habilitado: true },
-      { id: 'pago_movil', nombre: 'Pago Móvil', habilitado: true }
-    ]);
-  } catch (error) {
-    console.error('Error obteniendo métodos pago:', error);
-    res.status(500).json({ error: 'Error al obtener métodos de pago' });
-  }
+    try {
+        const result = await pool.query(
+            'SELECT metodo_id as id, nombre, habilitado FROM metodos_pago_config ORDER BY id'
+        );
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error obteniendo métodos pago:', error);
+        res.status(500).json({ error: 'Error al obtener métodos de pago' });
+    }
 });
 
 router.put('/api/configuracion/metodos-pago/:metodo', requireAuth, async (req, res) => {
-  try {
-    const { metodo } = req.params;
-    const { habilitado } = req.body;
+    try {
+        const { metodo } = req.params;
+        const { habilitado } = req.body;
 
-    console.log(`🔧 Actualizando método ${metodo} a:`, habilitado);
-    
-    res.json({ 
-      message: `Método ${metodo} ${habilitado ? 'habilitado' : 'deshabilitado'}`,
-      metodo,
-      habilitado 
-    });
-  } catch (error) {
-    console.error('Error actualizando método pago:', error);
-    res.status(500).json({ error: 'Error al actualizar método de pago' });
-  }
+        console.log(`🔧 Actualizando método ${metodo} a:`, habilitado);
+        
+        const result = await pool.query(
+            'UPDATE metodos_pago_config SET habilitado = $1, fecha_actualizacion = CURRENT_TIMESTAMP WHERE metodo_id = $2 RETURNING *',
+            [habilitado, metodo]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Método de pago no encontrado' });
+        }
+        
+        res.json({ 
+            message: `Método ${metodo} ${habilitado ? 'habilitado' : 'deshabilitado'}`,
+            metodo: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error actualizando método pago:', error);
+        res.status(500).json({ error: 'Error al actualizar método de pago' });
+    }
 });
 
 export default router;

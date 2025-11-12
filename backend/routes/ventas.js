@@ -261,6 +261,305 @@ router.get('/api/ventas/resumen-diario', requireAuth, async (req, res) => {
   }
 });
 
+// Ruta para obtener todas las facturas con filtros avanzados
+router.get('/api/facturas-venta', requireAuth, async (req, res) => {
+  try {
+    const { 
+      fecha_inicio, 
+      fecha_fin, 
+      cliente, 
+      metodo_pago, 
+      estado,
+      page = 1, 
+      limit = 20 
+    } = req.query;
+
+    let query = `
+      SELECT 
+        v.id,
+        v.fecha_venta,
+        v.metodo_pago,
+        v.estado,
+        v.detalles_pago,
+        v.referencia_pago,
+        v.banco_pago,
+        v.motivo_anulacion,
+        c.nombre as cliente_nombre,
+        c.cedula_rif as cliente_cedula,
+        u.nombre as vendedor_nombre,
+        (SELECT SUM(dv.cantidad * dv.precio_unitario) 
+         FROM detalle_venta dv 
+         WHERE dv.id_venta = v.id) as total
+      FROM ventas v
+      LEFT JOIN clientes c ON v.id_cliente = c.id
+      LEFT JOIN usuarios u ON v.id_usuario = u.id
+      WHERE 1=1
+    `;
+
+    let params = [];
+    let conditions = [];
+    let paramCount = 0;
+
+    if (estado) {
+      paramCount += 1;
+      conditions.push(`v.estado = $${paramCount}`);
+      params.push(estado);
+    }
+
+    if (fecha_inicio && fecha_fin) {
+      paramCount += 2;
+      conditions.push(`DATE(v.fecha_venta) BETWEEN $${paramCount-1} AND $${paramCount}`);
+      params.push(fecha_inicio, fecha_fin);
+    } else if (fecha_inicio) {
+      paramCount += 1;
+      conditions.push(`DATE(v.fecha_venta) >= $${paramCount}`);
+      params.push(fecha_inicio);
+    } else if (fecha_fin) {
+      paramCount += 1;
+      conditions.push(`DATE(v.fecha_venta) <= $${paramCount}`);
+      params.push(fecha_fin);
+    }
+
+    if (cliente) {
+      paramCount += 1;
+      conditions.push(`(c.nombre ILIKE $${paramCount} OR c.cedula_rif ILIKE $${paramCount})`);
+      params.push(`%${cliente}%`);
+    }
+
+    if (metodo_pago) {
+      paramCount += 1;
+      conditions.push(`v.metodo_pago = $${paramCount}`);
+      params.push(metodo_pago);
+    }
+
+    if (conditions.length > 0) {
+      query += ` AND ${conditions.join(' AND ')}`;
+    }
+
+    query += ` ORDER BY v.fecha_venta DESC`;
+    
+    const offset = (page - 1) * limit;
+    paramCount += 2;
+    query += ` LIMIT $${paramCount-1} OFFSET $${paramCount}`;
+    params.push(parseInt(limit), offset);
+
+    const result = await pool.query(query, params);
+
+    let countQuery = `
+      SELECT COUNT(*) 
+      FROM ventas v
+      LEFT JOIN clientes c ON v.id_cliente = c.id
+      WHERE 1=1
+    `;
+
+    let countParams = [];
+    let countConditions = [];
+    let countParamCount = 0;
+
+    if (estado) {
+      countParamCount += 1;
+      countConditions.push(`v.estado = $${countParamCount}`);
+      countParams.push(estado);
+    }
+
+    if (fecha_inicio && fecha_fin) {
+      countParamCount += 2;
+      countConditions.push(`DATE(v.fecha_venta) BETWEEN $${countParamCount-1} AND $${countParamCount}`);
+      countParams.push(fecha_inicio, fecha_fin);
+    } else if (fecha_inicio) {
+      countParamCount += 1;
+      countConditions.push(`DATE(v.fecha_venta) >= $${countParamCount}`);
+      countParams.push(fecha_inicio);
+    } else if (fecha_fin) {
+      countParamCount += 1;
+      countConditions.push(`DATE(v.fecha_venta) <= $${countParamCount}`);
+      countParams.push(fecha_fin);
+    }
+
+    if (cliente) {
+      countParamCount += 1;
+      countConditions.push(`(c.nombre ILIKE $${countParamCount} OR c.cedula_rif ILIKE $${countParamCount})`);
+      countParams.push(`%${cliente}%`);
+    }
+
+    if (metodo_pago) {
+      countParamCount += 1;
+      countConditions.push(`v.metodo_pago = $${countParamCount}`);
+      countParams.push(metodo_pago);
+    }
+
+    if (countConditions.length > 0) {
+      countQuery += ` AND ${countConditions.join(' AND ')}`;
+    }
+
+    const countResult = await pool.query(countQuery, countParams);
+    const totalFacturas = parseInt(countResult.rows[0].count);
+
+    res.json({
+      facturas: result.rows,
+      paginacion: {
+        pagina_actual: parseInt(page),
+        total_paginas: Math.ceil(totalFacturas / limit),
+        total_facturas: totalFacturas,
+        por_pagina: parseInt(limit)
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener las facturas de venta' });
+  }
+});
+
+// Ruta para anular una factura
+router.put('/api/facturas-venta/:id/anular', requireAuth, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { id } = req.params;
+    const { motivo } = req.body;
+    const motivo_anulacion = motivo || 'Anulación por usuario';
+
+    console.log(`❌ Anulando factura ${id}, motivo: ${motivo_anulacion}`);
+
+    // 1. Verificar que la factura existe y está activa
+    const facturaResult = await client.query(
+      'SELECT id, estado FROM ventas WHERE id = $1',
+      [id]
+    );
+
+    if (facturaResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Factura no encontrada' });
+    }
+
+    const factura = facturaResult.rows[0];
+    
+    if (factura.estado === 'anulada') {
+      return res.status(400).json({ error: 'La factura ya está anulada' });
+    }
+
+    if (factura.estado !== 'completada') {
+      return res.status(400).json({ error: 'Solo se pueden anular facturas completadas' });
+    }
+
+    // 2. Obtener detalles de la venta para revertir stock
+    const detallesResult = await client.query(
+      `SELECT dv.id_producto, dv.cantidad, p.nombre, p.stock
+       FROM detalle_venta dv 
+       JOIN productos p ON dv.id_producto = p.id 
+       WHERE dv.id_venta = $1`,
+      [id]
+    );
+
+    // 3. Revertir stock de productos
+    for (const detalle of detallesResult.rows) {
+      await client.query(
+        'UPDATE productos SET stock = stock + $1 WHERE id = $2',
+        [detalle.cantidad, detalle.id_producto]
+      );
+      console.log(`📦 Stock revertido: ${detalle.nombre} +${detalle.cantidad}`);
+    }
+
+    // 4. Marcar factura como anulada
+    await client.query(
+      'UPDATE ventas SET estado = $1, motivo_anulacion = $2 WHERE id = $3',
+      ['anulada', motivo_anulacion, id]
+    );
+
+    await client.query('COMMIT');
+
+    console.log(`✅ Factura ${id} anulada exitosamente`);
+    res.json({ 
+      mensaje: 'Factura anulada exitosamente',
+      factura_id: id
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Error anulando factura:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Ruta para obtener estadísticas de facturas
+router.get('/api/facturas-venta/estadisticas', requireAuth, async (req, res) => {
+    try {
+        const { fecha_inicio, fecha_fin } = req.query;
+        
+        let query = `
+            SELECT 
+                COALESCE(COUNT(*), 0) as total_facturas,
+                COALESCE(COUNT(CASE WHEN estado = 'anulada' THEN 1 END), 0) as facturas_anuladas,
+                COALESCE(SUM(
+                    CASE WHEN estado = 'completada' THEN
+                        (SELECT COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0)
+                         FROM detalle_venta dv 
+                         WHERE dv.id_venta = v.id)
+                    ELSE 0 END
+                ), 0) as total_ventas,
+                COALESCE(AVG(
+                    CASE WHEN estado = 'completada' THEN
+                        (SELECT COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0)
+                         FROM detalle_venta dv 
+                         WHERE dv.id_venta = v.id)
+                    ELSE NULL END
+                ), 0) as promedio_venta
+            FROM ventas v
+            WHERE 1=1
+        `;
+
+        let params = [];
+        let conditions = [];
+        let paramCount = 0;
+
+        if (fecha_inicio && fecha_fin) {
+            paramCount += 2;
+            conditions.push(`DATE(v.fecha_venta) BETWEEN $${paramCount-1} AND $${paramCount}`);
+            params.push(fecha_inicio, fecha_fin);
+        }
+
+        if (conditions.length > 0) {
+            query += ` AND ${conditions.join(' AND ')}`;
+        }
+
+        const result = await pool.query(query, params);
+        const estadisticas = result.rows[0];
+
+        // Obtener métodos de pago (solo de facturas completadas)
+        const metodosPagoQuery = `
+            SELECT 
+                metodo_pago,
+                COALESCE(COUNT(*), 0) as cantidad,
+                COALESCE(SUM(
+                    (SELECT COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0)
+                     FROM detalle_venta dv 
+                     WHERE dv.id_venta = v.id)
+                ), 0) as total
+            FROM ventas v
+            WHERE estado = 'completada'
+            ${fecha_inicio && fecha_fin ? ' AND DATE(v.fecha_venta) BETWEEN $1 AND $2' : ''}
+            GROUP BY metodo_pago
+            ORDER BY total DESC
+        `;
+
+        const metodosResult = await pool.query(
+            metodosPagoQuery, 
+            fecha_inicio && fecha_fin ? [fecha_inicio, fecha_fin] : []
+        );
+
+        res.json({
+            estadisticas,
+            metodos_pago: metodosResult.rows
+        });
+
+    } catch (error) {
+        console.error('❌ Error obteniendo estadísticas:', error);
+        res.status(500).json({ error: 'Error al obtener estadísticas' });
+    }
+});
+
 router.get('/api/cierre-caja/verificar', requireAuth, async (req, res) => {
   try {
     const { fecha, usuario_id } = req.query;
@@ -477,11 +776,102 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Ruta para reimprimir factura (obtener datos completos para impresión)
+router.get('/api/facturas-venta/:id/reimprimir', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log('🖨️ Solicitando reimpresión de factura:', id);
+    
+    // Reutilizar la lógica de la ruta /api/ventas/:id pero con más datos para impresión
+    const ventaResult = await pool.query(`
+      SELECT v.*, c.nombre as cliente_nombre, c.cedula_rif, c.telefono, c.direccion,
+             u.nombre as vendedor_nombre
+      FROM ventas v
+      LEFT JOIN clientes c ON v.id_cliente = c.id
+      LEFT JOIN usuarios u ON v.id_usuario = u.id
+      WHERE v.id = $1
+    `, [id]);
 
+    if (ventaResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Factura no encontrada' });
+    }
 
+    const venta = ventaResult.rows[0];
 
-// Agrega esto antes del export default
+    // CORREGIDO: Eliminar p.codigo ya que no existe en la tabla productos
+    const detallesResult = await pool.query(`
+      SELECT dv.*, p.nombre as producto_nombre, p.unidad_medida
+      FROM detalle_venta dv
+      LEFT JOIN productos p ON dv.id_producto = p.id
+      WHERE dv.id_venta = $1
+    `, [id]);
 
+    const detalles = detallesResult.rows;
+    
+    const subtotal = detalles.reduce((sum, detalle) => 
+      sum + (parseFloat(detalle.cantidad) * parseFloat(detalle.precio_unitario)), 0);
+    const iva = subtotal * 0.16;
+    const total = subtotal + iva;
+
+    // Obtener información de la empresa
+    const empresaResult = await pool.query('SELECT * FROM configuracion_empresa WHERE id = 1');
+    const empresa = empresaResult.rows[0] || {
+      nombre_empresa: "Pollera Na'Guara",
+      rif: "J-123456789",
+      telefono: "(0412) 123-4567",
+      direccion: "Barquisimeto, Venezuela",
+      mensaje_factura: "¡Gracias por su compra!"
+    };
+
+    // Manejar detalles_pago de forma segura
+    let detallesPago = venta.detalles_pago;
+    if (detallesPago && typeof detallesPago === 'string') {
+      try {
+        detallesPago = JSON.parse(detallesPago);
+      } catch (parseError) {
+        console.warn('⚠️ Error parseando detalles_pago:', parseError);
+        detallesPago = null;
+      }
+    }
+
+    console.log('✅ Datos para reimpresión obtenidos:', { 
+      id, 
+      items: detalles.length,
+      total: total
+    });
+
+    res.json({
+      factura: {
+        id: venta.id,
+        fecha_venta: venta.fecha_venta,
+        numero_factura: `F-${venta.id.toString().padStart(6, '0')}`,
+        estado: venta.estado,
+        metodo_pago: venta.metodo_pago
+      },
+      empresa: empresa,
+      cliente: {
+        nombre: venta.cliente_nombre,
+        cedula_rif: venta.cedula_rif,
+        telefono: venta.telefono,
+        direccion: venta.direccion
+      },
+      vendedor: venta.vendedor_nombre,
+      detalles_pago: detallesPago,
+      referencia_pago: venta.referencia_pago,
+      banco_pago: venta.banco_pago,
+      items: detalles,
+      subtotal: subtotal,
+      iva: iva,
+      total: total,
+      fecha_reimpresion: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Error reimprimiendo factura:', error);
+    res.status(500).json({ error: 'Error al reimprimir la factura' });
+  }
+});
 
 
 

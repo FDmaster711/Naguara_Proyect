@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categorías | Pollo Na'Guara</title>
+<link rel="stylesheet" href="estilos.css">
+<link rel="stylesheet" href="./inventario.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<section class="header-section">
+    <h1><i class="fa-solid fa-tags"></i> Categorías de Productos</h1>
+    <p>Administra las categorías que agrupan los productos de Pollo Na’Guara.</p>
+</section>
+
+<section class="table-section">
+    <div class="form-actions">
+        <button class="btn"><i class="fa-solid fa-plus"></i> Nueva Categoría</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre de Categoría</th>
+                <th>Descripción</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>C01</td>
+                <td>Pollos</td>
+                <td>Productos de pollo entero y en cortes listos para consumo.</td>
+                <td>
+                    <button class="btn"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn" style="background:#F44336;"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+            <tr>
+                <td>C02</td>
+                <td>Milanesas</td>
+                <td>Diferentes tipos de milanesas y filetes empanizados.</td>
+                <td>
+                    <button class="btn"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn" style="background:#F44336;"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+            <tr>
+                <td>C03</td>
+                <td>Aliños</td>
+                <td>Aliños naturales, ajos frescos y procesados.</td>
+                <td>
+                    <button class="btn"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn" style="background:#F44336;"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+            <tr>
+                <td>C04</td>
+                <td>Especias</td>
+                <td>Variedad de especias nacionales e importadas.</td>
+                <td>
+                    <button class="btn"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn" style="background:#F44336;"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<section class="form-section">
+    <h2><i class="fa-solid fa-plus-circle"></i> Registrar Nueva Categoría</h2>
+    <form>
+        <div class="form-grid">
+            <input type="text" placeholder="ID de categoría">
+            <input type="text" placeholder="Nombre de categoría">
+            <input type="text" placeholder="Descripción corta">
+        </div>
+        <div class="form-actions">
+            <button class="btn" type="submit"><i class="fa-solid fa-save"></i> Guardar</button>
+        </div>
+    </form>
+</section>
+
+</body>
+</html>

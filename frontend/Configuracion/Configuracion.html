@@ -27,8 +27,7 @@
                     <p class="text-gray-600">Personaliza y configura tu sistema Na'Guara</p>
                 </div>
                 <div class="text-right">
-                    <div class="role-badge role-super-admin mb-2" id="user-role">Cargando...</div>
-                    <p class="text-sm text-gray-500" id="user-name">Usuario</p>
+                    <div class="text-sm text-gray-500">Sistema Na'Guara</div>
                 </div>
             </div>
         </header>
@@ -54,9 +53,9 @@
                             <i class="fas fa-store"></i>
                             <span>Configuración de Negocio</span>
                         </div>
-                        <div class="nav-item" data-section="usuarios">
-                            <i class="fas fa-users"></i>
-                            <span>Usuarios</span>
+                        <div class="nav-item" data-section="tasa-cambio">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>Tasa de Cambio</span>
                         </div>
                         <div class="nav-item" data-section="backup">
                             <i class="fas fa-database"></i>
@@ -165,39 +164,48 @@
                         </h3>
 
                         <!-- Métodos de Pago -->
-                        <div class="mb-8">
-                            <h4 class="text-lg font-medium text-gray-700 mb-4">Métodos de Pago Habilitados</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span>Efectivo</span>
-                                    <label class="switch">
-                                        <input type="checkbox" id="pago-efectivo" checked>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span>Tarjeta</span>
-                                    <label class="switch">
-                                        <input type="checkbox" id="pago-tarjeta" checked>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span>Transferencia</span>
-                                    <label class="switch">
-                                        <input type="checkbox" id="pago-transferencia" checked>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span>Pago Móvil</span>
-                                    <label class="switch">
-                                        <input type="checkbox" id="pago-movil" checked>
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div>
+            <span>Efectivo</span>
+            <span class="status-text text-sm text-green-600 font-medium ml-2">Habilitado</span>
+        </div>
+        <label class="switch">
+            <input type="checkbox" id="pago-efectivo" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div>
+            <span>Tarjeta</span>
+            <span class="status-text text-sm text-green-600 font-medium ml-2">Habilitado</span>
+        </div>
+        <label class="switch">
+            <input type="checkbox" id="pago-tarjeta" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div>
+            <span>Transferencia</span>
+            <span class="status-text text-sm text-green-600 font-medium ml-2">Habilitado</span>
+        </div>
+        <label class="switch">
+            <input type="checkbox" id="pago-transferencia" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div>
+            <span>Pago Móvil</span>
+            <span class="status-text text-sm text-green-600 font-medium ml-2">Habilitado</span>
+        </div>
+        <label class="switch">
+            <input type="checkbox" id="pago-movil" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+</div>
 
                         <!-- Impuestos -->
                         <div class="mb-8">
@@ -230,62 +238,90 @@
                     </div>
                 </div>
 
-                <!-- Sección Usuarios -->
-                <div id="section-usuarios" class="config-section hidden">
-                    <div class="card p-6 mb-6 fade-in">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-6">
-                            <i class="fas fa-users mr-3 text-purple-600"></i>
-                            Gestión de Usuarios
-                        </h3>
+                <!-- Sección Tasa de Cambio -->
+<div id="section-tasa-cambio" class="config-section hidden">
+    <div class="card p-6 mb-6 fade-in">
+        <h3 class="text-xl font-semibold text-gray-800 mb-6">
+            <i class="fas fa-exchange-alt mr-3 text-purple-600"></i>
+            Gestión de Tasa de Cambio
+        </h3>
 
-                        <!-- Lista de Usuarios -->
-                        <div class="mb-8">
-                            <h4 class="text-lg font-medium text-gray-700 mb-4">Usuarios del Sistema</h4>
-                            <div id="usuarios-list" class="space-y-4">
-                                <div class="text-center py-8 text-gray-500">
-                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                                    <p>Cargando usuarios...</p>
-                                </div>
-                            </div>
-                        </div>
+        <!-- Tasa Actual -->
+        <div class="mb-8">
+            <h4 class="text-lg font-medium text-gray-700 mb-4">Tasa de Cambio Actual</h4>
+            
+            <!-- AGREGAR ESTE ALERTA INFORMATIVA -->
+            <div class="alert alert-info mb-4" id="tasa-manual-status">
+                <i class="fas fa-info-circle mr-2"></i>
+                <span id="tasa-status-text">Usando tasa automática desde API</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                <div class="form-group">
+                    <label for="tasa-actual">Tasa BS/USD Actual</label>
+                    <div class="flex items-center space-x-3">
+                        <input type="number" id="tasa-actual" class="input-field" step="0.01" min="0" readonly>
+                        <span class="text-gray-500 font-medium">BS</span>
+                    </div>
+                    <div class="help-text" id="tasa-fuente">Cargando...</div>
+                </div>
 
-                        <!-- Agregar Usuario -->
-                        <div>
-                            <h4 class="text-lg font-medium text-gray-700 mb-4">Agregar Nuevo Usuario</h4>
-                            <form id="usuario-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="form-group">
-                                    <label for="usuario-nombre">Nombre Completo *</label>
-                                    <input type="text" id="usuario-nombre" class="input-field" required>
-                                </div>
+                <div class="form-group">
+                    <label for="tasa-manual">Tasa Manual BS/USD</label>
+                    <div class="flex items-center space-x-3">
+                        <input type="number" id="tasa-manual" class="input-field" step="0.01" min="0" placeholder="0.00">
+                        <span class="text-gray-500 font-medium">BS</span>
+                    </div>
+                    <div class="help-text">Establecer tasa manualmente</div>
+                </div>
 
-                                <div class="form-group">
-                                    <label for="usuario-username">Nombre de Usuario *</label>
-                                    <input type="text" id="usuario-username" class="input-field" required>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="usuario-password">Contraseña *</label>
-                                    <input type="password" id="usuario-password" class="input-field" required>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="usuario-rol">Rol *</label>
-                                    <select id="usuario-rol" class="input-field" required>
-                                        <option value="Vendedor">Vendedor</option>
-                                        <option value="Administrador">Administrador</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group md:col-span-2">
-                                    <button type="submit" class="btn-primary">
-                                        <i class="fas fa-user-plus mr-2"></i>
-                                        Crear Usuario
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                <div class="form-group">
+                    <label for="tasa-activa">Estado</label>
+                    <div class="flex items-center space-x-3 mt-2">
+                        <label class="switch">
+                            <input type="checkbox" id="tasa-activa" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <span class="text-sm text-gray-600" id="tasa-estado">Activa</span>
                     </div>
                 </div>
+            </div>
+
+            <div class="flex space-x-4">
+                <button id="actualizar-tasa-api" class="btn-primary">
+                    <i class="fas fa-sync-alt mr-2"></i>
+                    Actualizar desde API
+                </button>
+                <button id="guardar-tasa-manual" class="btn-success">
+                    <i class="fas fa-save mr-2"></i>
+                    Guardar Tasa Manual
+                </button>
+                
+                <!-- 🆕 NUEVO BOTÓN PARA DESACTIVAR TASA MANUAL -->
+                <button id="desactivar-tasa-manual" class="btn-warning hidden">
+                    <i class="fas fa-times mr-2"></i>
+                    Desactivar Tasa Manual
+                </button>
+                
+                <button id="forzar-actualizacion" class="btn-warning">
+                    <i class="fas fa-bolt mr-2"></i>
+                    Forzar Actualización
+                </button>
+            </div>
+        </div>
+
+        <!-- Historial de Tasas -->
+        <div>
+            <h4 class="text-lg font-medium text-gray-700 mb-4">Historial de Tasas (Últimos 30 días)</h4>
+            <div id="tasa-historial" class="space-y-3">
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>Cargando historial...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
                 <!-- Sección Backup -->
                 <div id="section-backup" class="config-section hidden">
@@ -353,9 +389,7 @@
         </div>
     </div>
 
-     <script src="../auth-check.js"></script>
+    <script src="../auth-check.js"></script>
     <script src="configuracion.js"></script>
-        
-
 </body>
 </html>

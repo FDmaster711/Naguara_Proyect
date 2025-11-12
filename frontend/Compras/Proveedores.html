@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Proveedores</title>
+    <link rel="stylesheet" href="compras.css">
+</head>
+<body>
+
+<div class="header-section">
+    <h1>Proveedores</h1>
+    <p>Gestiona tus proveedores y mantén la información actualizada</p>
+</div>
+
+<!-- Cards de Resumen -->
+<div class="cards">
+    <div class="card morado">
+        <div class="card-title">Total Proveedores</div>
+        <div class="card-value">12</div>
+    </div>
+    <div class="card verde">
+        <div class="card-title">Activos</div>
+        <div class="card-value">10</div>
+    </div>
+    <div class="card azul">
+        <div class="card-title">Inactivos</div>
+        <div class="card-value">2</div>
+    </div>
+    <div class="card rojo">
+        <div class="card-title">Pendientes de Pago</div>
+        <div class="card-value">3</div>
+    </div>
+</div>
+
+<!-- Tabla de Proveedores -->
+<div class="table-section">
+    <h2>Listado de Proveedores</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Contacto</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td data-label="Nombre">Proveedor A</td>
+                <td data-label="Contacto">Juan Pérez</td>
+                <td data-label="Teléfono">555-1234</td>
+                <td data-label="Email">juan@proveedor.com</td>
+                <td data-label="Estado"><span class="estado.ok">Activo</span></td>
+                <td data-label="Acciones"><button class="btn">Editar</button></td>
+            </tr>
+            <tr>
+                <td data-label="Nombre">Proveedor B</td>
+                <td data-label="Contacto">Ana Gómez</td>
+                <td data-label="Teléfono">555-5678</td>
+                <td data-label="Email">ana@proveedor.com</td>
+                <td data-label="Estado"><span class="estado.medio">Inactivo</span></td>
+                <td data-label="Acciones"><button class="btn">Editar</button></td>
+            </tr>
+            <tr>
+                <td data-label="Nombre">Proveedor C</td>
+                <td data-label="Contacto">Carlos Ruiz</td>
+                <td data-label="Teléfono">555-9012</td>
+                <td data-label="Email">carlos@proveedor.com</td>
+                <td data-label="Estado"><span class="estado.no">Pendiente</span></td>
+                <td data-label="Acciones"><button class="btn">Editar</button></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Formulario para agregar nuevo proveedor -->
+<div class="table-section">
+    <h2>Agregar / Editar Proveedor</h2>
+    <form class="form-grid">
+        <input type="text" placeholder="Nombre del proveedor">
+        <input type="text" placeholder="Contacto">
+        <input type="tel" placeholder="Teléfono">
+        <input type="email" placeholder="Email">
+        <select>
+            <option value="">Estado</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+            <option value="pendiente">Pendiente</option>
+        </select>
+        <div class="form-actions">
+            <button class="btn" type="submit">Guardar Proveedor</button>
+        </div>
+    </form>
+</div>
+
+</body>
+</html>

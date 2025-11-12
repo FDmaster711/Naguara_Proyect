@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productos | Pollo Na'Guara</title>
+<link rel="stylesheet" href="estilos.css">
+<link rel="stylesheet" href="./inventario.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<section class="header-section">
+    <h1><i class="fa-solid fa-drumstick-bite"></i> Gestión de Productos</h1>
+    <p>Administra los productos del inventario: pollos, milanesas, aliños y otros derivados.</p>
+</section>
+
+<section class="table-section">
+    <div class="form-actions">
+        <button class="btn"><i class="fa-solid fa-plus"></i> Nuevo Producto</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Precio (Bs)</th>
+                <th>Stock</th>
+                <th>Unidad</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>P001</td>
+                <td>Pollo Entero Fresco</td>
+                <td>Pollos</td>
+                <td>95.00</td>
+                <td>350</td>
+                <td>Unidad</td>
+                <td>
+                    <button class="btn"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn" style="background:#F44336;"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+            <tr>
+                <td>P010</td>
+                <td>Milanesa Empanizada</td>
+                <td>Milanesas</td>
+                <td>130.00</td>
+                <td>120</td>
+                <td>Kg</td>
+                <td>
+                    <button class="btn"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn" style="background:#F44336;"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+            <tr>
+                <td>P015</td>
+                <td>Aliño Verde Natural</td>
+                <td>Aliños</td>
+                <td>30.00</td>
+                <td>60</td>
+                <td>Frasco</td>
+                <td>
+                    <button class="btn"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn" style="background:#F44336;"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<section class="form-section">
+    <h2><i class="fa-solid fa-plus-circle"></i> Registrar Nuevo Producto</h2>
+    <form>
+        <div class="form-grid">
+            <input type="text" placeholder="Código del producto">
+            <input type="text" placeholder="Nombre del producto">
+            <select>
+                <option value="">Categoría</option>
+                <option>Pollos</option>
+                <option>Milanesas</option>
+                <option>Aliños</option>
+                <option>Especias</option>
+            </select>
+            <input type="number" placeholder="Precio (Bs)">
+            <input type="number" placeholder="Stock inicial">
+            <input type="text" placeholder="Unidad (Kg, Unidad, Frasco...)">
+        </div>
+        <div class="form-actions">
+            <button class="btn" type="submit"><i class="fa-solid fa-save"></i> Guardar</button>
+        </div>
+    </form>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario General</title>
+<link rel="stylesheet" href="estilos.css">
+<link rel="stylesheet" href="./inventario.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+    <section class="header-section">
+    <h1><i class="fa-solid fa-boxes-stacked"></i> Inventario General</h1>
+    <p>Resumen de existencias y control de stock general de productos de Pollo Na'Guara.</p>
+</section>
+
+<!-- Tarjetas de resumen -->
+<section class="cards">
+    <div class="card">
+        <i class="fa-solid fa-drumstick-bite"></i>
+        <div>
+            <h3>1,250</h3>
+            <p>Pollos en stock</p>
+        </div>
+    </div>
+    <div class="card">
+        <i class="fa-solid fa-bacon"></i>
+        <div>
+            <h3>820</h3>
+            <p>Milanesas disponibles</p>
+        </div>
+    </div>
+    <div class="card">
+        <i class="fa-solid fa-seedling"></i>
+        <div>
+            <h3>430</h3>
+            <p>Aliños y especias</p>
+        </div>
+    </div>
+    <div class="card">
+        <i class="fa-solid fa-truck"></i>
+        <div>
+            <h3>5</h3>
+            <p>Sucursales activas</p>
+        </div>
+    </div>
+</section>
+
+<!-- Tabla de inventario -->
+<section class="table-section">
+    <h2><i class="fa-solid fa-list"></i> Detalle de Inventario</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Stock Actual</th>
+                <th>Unidad</th>
+                <th>Precio (Bs)</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>P001</td>
+                <td>Pollo Entero Fresco</td>
+                <td>Pollos</td>
+                <td>350</td>
+                <td>Unidad</td>
+                <td>95.00</td>
+                <td><span class="estado ok">Disponible</span></td>
+            </tr>
+            <tr>
+                <td>P002</td>
+                <td>Pechuga Fileteada</td>
+                <td>Pollos</td>
+                <td>220</td>
+                <td>Kg</td>
+                <td>110.00</td>
+                <td><span class="estado ok">Disponible</span></td>
+            </tr>
+            <tr>
+                <td>P010</td>
+                <td>Milanesa Empanizada</td>
+                <td>Milanesas</td>
+                <td>120</td>
+                <td>Kg</td>
+                <td>130.00</td>
+                <td><span class="estado medio">Bajo Stock</span></td>
+            </tr>
+            <tr>
+                <td>P015</td>
+                <td>Aliño Verde Natural</td>
+                <td>Aliños</td>
+                <td>60</td>
+                <td>Frascos</td>
+                <td>30.00</td>
+                <td><span class="estado medio">Bajo Stock</span></td>
+            </tr>
+            <tr>
+                <td>P021</td>
+                <td>Ajo Triturado 250g</td>
+                <td>Aliños</td>
+                <td>0</td>
+                <td>Unidades</td>
+                <td>18.00</td>
+                <td><span class="estado no">Agotado</span></td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+</body>
+</html>
