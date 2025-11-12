@@ -19,7 +19,15 @@
     <nav class="sidebar-menu" aria-label="Menú principal">
       <ul>
         <li><a href="#" class="menu-item active" onclick="loadDashboard(); setActive(this);"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
-        <li><a href="Ventas/Ventas.html" class="menu-item"><i class="fas fa-shopping-cart"></i> <span>Ventas</span></a></li>
+        <li>
+          <button class="menu-item submenu-toggle" onclick="toggleSubmenu('ventas-submenu', this);">
+            <i class="fas fa-shopping-cart"></i> <span>Ventas</span> <i class="fas fa-chevron-down submenu-arrow"></i>
+          </button>
+          <ul id="ventas-submenu" class="submenu">
+            <li><a href="Ventas/Ventas.html" class="submenu-item">Registro de Ventas</a></li>
+            <li><a href="Ventas/Facturas_ventas.html" class="submenu-item">Facturas de Venta</a></li>
+          </ul>
+        </li>
         <li>
           <button class="menu-item submenu-toggle" onclick="toggleSubmenu('inventario-submenu', this);">
             <i class="fas fa-warehouse"></i> <span>Inventario</span> <i class="fas fa-chevron-down submenu-arrow"></i>
@@ -108,7 +116,7 @@
       // Obtener todos los elementos del menú
       const elementosMenu = {
         'dashboard': document.querySelector('a[onclick*="loadDashboard"]').closest('li'),
-        'ventas': document.querySelector('a[href*="Ventas.html"]').closest('li'),
+        'ventas': document.querySelector('button[onclick*="ventas-submenu"]').closest('li'),
         'inventario': document.querySelector('button[onclick*="inventario-submenu"]').closest('li'),
         'compras': document.querySelector('button[onclick*="compras-submenu"]').closest('li'),
         'reportes': document.querySelector('a[href*="Reportes.html"]').closest('li'),
@@ -171,7 +179,7 @@
               <div class="card_content">
                 <h1 class="card_title"><b>Ventas Hoy</b></h1>
                 <p class="card_text">Realizadas hoy.</p>
-                <a href="Ventas/Ventas.html" class="card_btn dos">Ver</a>
+                <a href="Ventas/Facturas_ventas.html?fecha=${new Date().toISOString().split('T')[0]}" class="card_btn dos">Ver</a>
               </div>
             </div>
             <div class="card_wrap">
@@ -245,23 +253,23 @@
     }
 
     // ✅ Carga automática al iniciar
-   window.addEventListener('DOMContentLoaded', async () => {
-    try {
-        const usuario = await authChecker.getCurrentUser();
-        
-        if (!usuario) {
-            window.location.href = '/login.html';
-            return;
-        }
-        
-        actualizarInfoUsuario(usuario);
-        loadDashboard();
-        
-    } catch (err) {
-        console.error('❌ Error cargando usuario:', err);
-        window.location.href = '/login.html';
-    }
-});
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+          const usuario = await authChecker.getCurrentUser();
+          
+          if (!usuario) {
+              window.location.href = '/login.html';
+              return;
+          }
+          
+          actualizarInfoUsuario(usuario);
+          loadDashboard();
+          
+      } catch (err) {
+          console.error('❌ Error cargando usuario:', err);
+          window.location.href = '/login.html';
+      }
+    });
   </script>
 
   <!-- Script de autenticación -->

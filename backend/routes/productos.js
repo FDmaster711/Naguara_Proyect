@@ -15,7 +15,6 @@ router.get('/api/productos', requireAuth, async (req, res) => {
 
     console.log('📊 Tasa actual para productos:', tasaActual);
 
-    // ✅ CORREGIDO: Sin comentarios en el SQL
     let query = `
       SELECT 
         p.id,
@@ -44,7 +43,6 @@ router.get('/api/productos', requireAuth, async (req, res) => {
       params.push(categoria_id);
     }
 
-    // ✅ CORREGIDO: Lógica de stock mejorada
     if (stock_alerts === 'true') {
       // Para alertas: obtener stock mínimo configurado
       const configResult = await pool.query(
