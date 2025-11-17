@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compras y Pedidos | Pollo Na'Guara</title>
+    <link rel="stylesheet" href="compras.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+    <div class="compras-container">
+        <!-- Header Section -->
+        <section class="header-section">
+            <h1><i class="fa-solid fa-cart-shopping"></i> Compras y Pedidos</h1>
+            <p>Gestiona pedidos a proveedores, facturas de compra y controla el proceso completo de adquisiciones.</p>
+        </section>
+
+        <!-- Cards de Resumen -->
+        <section class="cards">
+            <div class="card morado">
+                <div class="card-icon">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                </div>
+                <div class="card-content">
+                    <h3>$24,850</h3>
+                    <p>Total Facturado</p>
+                </div>
+            </div>
+            <div class="card verde">
+                <div class="card-icon">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+                <div class="card-content">
+                    <h3>8</h3>
+                    <p>Pedidos Pendientes</p>
+                </div>
+            </div>
+            <div class="card azul">
+                <div class="card-icon">
+                    <i class="fa-solid fa-truck"></i>
+                </div>
+                <div class="card-content">
+                    <h3>12</h3>
+                    <p>En Proceso</p>
+                </div>
+            </div>
+            <div class="card rojo">
+                <div class="card-icon">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                </div>
+                <div class="card-content">
+                    <h3>3</h3>
+                    <p>Pedidos Retrasados</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navegación por Pestañas MEJORADA -->
+        <section class="tabs-section">
+            <input type="radio" name="tab" id="tab-pedidos" checked>
+            <input type="radio" name="tab" id="tab-facturas">
+            <input type="radio" name="tab" id="tab-nuevo-pedido">
+            
+            <div class="tabs-header">
+                <label for="tab-pedidos" class="tab-btn">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    Pedidos
+                    <span class="tab-badge">8</span>
+                </label>
+                
+                <label for="tab-facturas" class="tab-btn">
+                    <i class="fa-solid fa-file-invoice"></i>
+                    Facturas
+                    <span class="tab-badge">12</span>
+                </label>
+                
+                <label for="tab-nuevo-pedido" class="tab-btn">
+                    <i class="fa-solid fa-plus"></i>
+                    Nuevo Pedido
+                </label>
+            </div>
+
+            <!-- Contenido de Pestañas -->
+            <div class="tabs-content">
+                <!-- Pestaña de Pedidos -->
+                <div class="tab-pane" id="content-pedidos">
+                    <div class="tab-header">
+                        <h3><i class="fa-solid fa-list-check"></i> Gestión de Pedidos</h3>
+                        <div class="tab-actions">
+                            <button class="btn btn-primary">
+                                <i class="fa-solid fa-file-export"></i> Exportar
+                            </button>
+                            <button class="btn btn-success">
+                                <i class="fa-solid fa-sync"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-actions">
+                        <div class="search-box">
+                            <i class="fa-solid fa-search"></i>
+                            <input type="text" placeholder="Buscar pedido...">
+                        </div>
+                        <div class="filter-options">
+                            <select class="form-control">
+                                <option value="">Todos los estados</option>
+                                <option value="pendiente">Pendiente</option>
+                                <option value="proceso">En Proceso</option>
+                                <option value="completado">Completado</option>
+                                <option value="retrasado">Retrasado</option>
+                            </select>
+                            <button class="btn btn-sm">
+                                <i class="fa-solid fa-filter"></i> Filtrar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID Pedido</th>
+                                    <th>Proveedor</th>
+                                    <th>Fecha Pedido</th>
+                                    <th>Fecha Entrega</th>
+                                    <th>Productos</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="id-badge">PED-001</span></td>
+                                    <td>
+                                        <div class="supplier-info">
+                                            <i class="fa-solid fa-building"></i>
+                                            <span>Proveedor A</span>
+                                        </div>
+                                    </td>
+                                    <td>15/12/2024</td>
+                                    <td>20/12/2024</td>
+                                    <td>
+                                        <div class="products-count">
+                                            <span class="count">5 productos</span>
+                                            <button class="btn-view-items" title="Ver items">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>$1,250.00</td>
+                                    <td><span class="status-badge pendiente">Pendiente</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-primary" title="Editar">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-success" title="Recibir">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" title="Cancelar">
+                                                <i class="fa-solid fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><span class="id-badge">PED-002</span></td>
+                                    <td>
+                                        <div class="supplier-info">
+                                            <i class="fa-solid fa-building"></i>
+                                            <span>Proveedor B</span>
+                                        </div>
+                                    </td>
+                                    <td>10/12/2024</td>
+                                    <td>18/12/2024</td>
+                                    <td>
+                                        <div class="products-count">
+                                            <span class="count">3 productos</span>
+                                            <button class="btn-view-items" title="Ver items">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>$850.00</td>
+                                    <td><span class="status-badge proceso">En Proceso</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-primary" title="Editar">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-success" title="Recibir">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" title="Cancelar">
+                                                <i class="fa-solid fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><span class="id-badge">PED-003</span></td>
+                                    <td>
+                                        <div class="supplier-info">
+                                            <i class="fa-solid fa-building"></i>
+                                            <span>Proveedor C</span>
+                                        </div>
+                                    </td>
+                                    <td>05/12/2024</td>
+                                    <td>12/12/2024</td>
+                                    <td>
+                                        <div class="products-count">
+                                            <span class="count">8 productos</span>
+                                            <button class="btn-view-items" title="Ver items">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>$2,150.00</td>
+                                    <td><span class="status-badge retrasado">Retrasado</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-primary" title="Editar">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-success" title="Recibir">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" title="Cancelar">
+                                                <i class="fa-solid fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pestaña de Facturas -->
+                <div class="tab-pane" id="content-facturas">
+                    <div class="tab-header">
+                        <h3><i class="fa-solid fa-file-invoice-dollar"></i> Gestión de Facturas</h3>
+                        <div class="tab-actions">
+                            <button class="btn btn-primary">
+                                <i class="fa-solid fa-download"></i> Descargar Todas
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-actions">
+                        <div class="search-box">
+                            <i class="fa-solid fa-search"></i>
+                            <input type="text" placeholder="Buscar factura...">
+                        </div>
+                        <div class="filter-options">
+                            <select class="form-control">
+                                <option value="">Todos los estados</option>
+                                <option value="pagada">Pagada</option>
+                                <option value="pendiente">Pendiente</option>
+                                <option value="vencida">Vencida</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID Factura</th>
+                                    <th>Proveedor</th>
+                                    <th>Pedido Relacionado</th>
+                                    <th>Fecha Emisión</th>
+                                    <th>Fecha Vencimiento</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="invoice-id">
+                                            <i class="fa-solid fa-file-invoice"></i>
+                                            <span>FAC-2024-001</span>
+                                        </div>
+                                    </td>
+                                    <td>Proveedor A</td>
+                                    <td><span class="id-badge">PED-001</span></td>
+                                    <td>18/12/2024</td>
+                                    <td>25/12/2024</td>
+                                    <td>$1,250.00</td>
+                                    <td><span class="status-badge pagada">Pagada</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-primary" title="Ver Detalles">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-success" title="Descargar">
+                                                <i class="fa-solid fa-download"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-warning" title="Marcar Pagada">
+                                                <i class="fa-solid fa-check-circle"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="invoice-id">
+                                            <i class="fa-solid fa-file-invoice"></i>
+                                            <span>FAC-2024-002</span>
+                                        </div>
+                                    </td>
+                                    <td>Proveedor B</td>
+                                    <td><span class="id-badge">PED-002</span></td>
+                                    <td>15/12/2024</td>
+                                    <td>22/12/2024</td>
+                                    <td>$850.00</td>
+                                    <td><span class="status-badge pendiente">Pendiente</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-primary" title="Ver Detalles">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-success" title="Descargar">
+                                                <i class="fa-solid fa-download"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-warning" title="Marcar Pagada">
+                                                <i class="fa-solid fa-check-circle"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="invoice-id">
+                                            <i class="fa-solid fa-file-invoice"></i>
+                                            <span>FAC-2024-003</span>
+                                        </div>
+                                    </td>
+                                    <td>Proveedor C</td>
+                                    <td><span class="id-badge">PED-003</span></td>
+                                    <td>10/12/2024</td>
+                                    <td>17/12/2024</td>
+                                    <td>$2,150.00</td>
+                                    <td><span class="status-badge vencida">Vencida</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-primary" title="Ver Detalles">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-success" title="Descargar">
+                                                <i class="fa-solid fa-download"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-warning" title="Marcar Pagada">
+                                                <i class="fa-solid fa-check-circle"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pestaña de Nuevo Pedido -->
+                <div class="tab-pane" id="content-nuevo-pedido">
+                    <div class="pedido-form-container">
+                        <form class="pedido-form">
+                            <div class="form-header">
+                                <h3><i class="fa-solid fa-plus-circle"></i> Nuevo Pedido</h3>
+                                <div class="form-actions">
+                                    <button type="button" class="btn">
+                                        <i class="fa-solid fa-times"></i> Cancelar
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fa-solid fa-save"></i> Guardar Pedido
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="proveedor">Proveedor *</label>
+                                    <select id="proveedor" class="form-control" required>
+                                        <option value="">Seleccionar proveedor</option>
+                                        <option value="1">Proveedor A</option>
+                                        <option value="2">Proveedor B</option>
+                                        <option value="3">Proveedor C</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fecha-pedido">Fecha Pedido *</label>
+                                    <input type="date" id="fecha-pedido" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fecha-entrega">Fecha Entrega Esperada *</label>
+                                    <input type="date" id="fecha-entrega" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="observaciones">Observaciones</label>
+                                    <textarea id="observaciones" class="form-control" rows="2" placeholder="Notas adicionales..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Detalle del Pedido -->
+                            <div class="detalle-pedido">
+                                <div class="detalle-header">
+                                    <h4><i class="fa-solid fa-list"></i> Detalle del Pedido</h4>
+                                    <button type="button" class="btn btn-sm btn-primary" id="agregar-producto">
+                                        <i class="fa-solid fa-plus"></i> Agregar Producto
+                                    </button>
+                                </div>
+
+                                <div class="table-container">
+                                    <table class="detalle-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th>Cantidad</th>
+                                                <th>Precio Unitario</th>
+                                                <th>Subtotal</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="detalle-body">
+                                            <tr class="detalle-item">
+                                                <td>
+                                                    <select class="form-control producto-select" required>
+                                                        <option value="">Seleccionar producto</option>
+                                                        <option value="1">Pollo Entero Fresco</option>
+                                                        <option value="2">Pechuga Fileteada</option>
+                                                        <option value="3">Milanesa Empanizada</option>
+                                                        <option value="4">Aliño Verde Natural</option>
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control cantidad" min="1" value="1" required>
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control precio" step="0.01" min="0" placeholder="0.00" required>
+                                                </td>
+                                                <td>
+                                                    <span class="subtotal">0.00</span>
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-danger eliminar-item">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td colspan="3" class="text-right"><strong>Total:</strong></td>
+                                                <td colspan="2">
+                                                    <span class="total-pedido">$0.00</span>
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Modal para Ver Detalles de Pedido -->
+        <div class="modal" id="modal-detalles">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Detalles del Pedido <span id="pedido-id">PED-001</span></h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Contenido dinámico del modal -->
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

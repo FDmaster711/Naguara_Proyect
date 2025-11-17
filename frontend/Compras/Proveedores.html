@@ -2,98 +2,630 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Proveedores</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proveedores | Pollo Na'Guara</title>
     <link rel="stylesheet" href="compras.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
+    <div class="compras-container">
+        <!-- Header Section -->
+        <section class="header-section">
+            <h1><i class="fa-solid fa-truck"></i> Gestión de Proveedores</h1>
+            <p>Administra la información de proveedores y mantén actualizados los datos de contacto.</p>
+        </section>
 
-<div class="header-section">
-    <h1>Proveedores</h1>
-    <p>Gestiona tus proveedores y mantén la información actualizada</p>
-</div>
+        <!-- Cards de Resumen -->
+        <section class="cards">
+            <div class="card morado">
+                <div class="card-icon">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+                <div class="card-content">
+                    <h3>24</h3>
+                    <p>Total Proveedores</p>
+                </div>
+            </div>
+            <div class="card verde">
+                <div class="card-icon">
+                    <i class="fa-solid fa-check-circle"></i>
+                </div>
+                <div class="card-content">
+                    <h3>18</h3>
+                    <p>Proveedores Activos</p>
+                </div>
+            </div>
+            <div class="card azul">
+                <div class="card-icon">
+                    <i class="fa-solid fa-pause-circle"></i>
+                </div>
+                <div class="card-content">
+                    <h3>4</h3>
+                    <p>Proveedores Inactivos</p>
+                </div>
+            </div>
+            <div class="card rojo">
+                <div class="card-icon">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                </div>
+                <div class="card-content">
+                    <h3>2</h3>
+                    <p>Pendientes de Pago</p>
+                </div>
+            </div>
+        </section>
 
-<!-- Cards de Resumen -->
-<div class="cards">
-    <div class="card morado">
-        <div class="card-title">Total Proveedores</div>
-        <div class="card-value">12</div>
-    </div>
-    <div class="card verde">
-        <div class="card-title">Activos</div>
-        <div class="card-value">10</div>
-    </div>
-    <div class="card azul">
-        <div class="card-title">Inactivos</div>
-        <div class="card-value">2</div>
-    </div>
-    <div class="card rojo">
-        <div class="card-title">Pendientes de Pago</div>
-        <div class="card-value">3</div>
-    </div>
-</div>
+        <!-- Controles Rápidos -->
+        <section class="quick-controls">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <h3><i class="fa-solid fa-filter"></i> Filtros</h3>
+                    <div class="filter-options">
+                        <select class="form-control">
+                            <option value="">Todos los estados</option>
+                            <option value="activo">Activos</option>
+                            <option value="inactivo">Inactivos</option>
+                            <option value="pendiente">Pendientes</option>
+                        </select>
+                        <select class="form-control">
+                            <option value="">Todas las categorías</option>
+                            <option value="pollos">Proveedores de Pollos</option>
+                            <option value="aliños">Proveedores de Aliños</option>
+                            <option value="especias">Proveedores de Especias</option>
+                            <option value="empaques">Proveedores de Empaques</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h3><i class="fa-solid fa-bolt"></i> Acciones Rápidas</h3>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="abrirModalProveedor()">
+                            <i class="fa-solid fa-plus"></i> Nuevo Proveedor
+                        </button>
+                        <button class="btn btn-success">
+                            <i class="fa-solid fa-file-export"></i> Exportar
+                        </button>
+                        <button class="btn btn-info">
+                            <i class="fa-solid fa-sync"></i> Actualizar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-<!-- Tabla de Proveedores -->
-<div class="table-section">
-    <h2>Listado de Proveedores</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Contacto</th>
-                <th>Teléfono</th>
-                <th>Email</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td data-label="Nombre">Proveedor A</td>
-                <td data-label="Contacto">Juan Pérez</td>
-                <td data-label="Teléfono">555-1234</td>
-                <td data-label="Email">juan@proveedor.com</td>
-                <td data-label="Estado"><span class="estado.ok">Activo</span></td>
-                <td data-label="Acciones"><button class="btn">Editar</button></td>
-            </tr>
-            <tr>
-                <td data-label="Nombre">Proveedor B</td>
-                <td data-label="Contacto">Ana Gómez</td>
-                <td data-label="Teléfono">555-5678</td>
-                <td data-label="Email">ana@proveedor.com</td>
-                <td data-label="Estado"><span class="estado.medio">Inactivo</span></td>
-                <td data-label="Acciones"><button class="btn">Editar</button></td>
-            </tr>
-            <tr>
-                <td data-label="Nombre">Proveedor C</td>
-                <td data-label="Contacto">Carlos Ruiz</td>
-                <td data-label="Teléfono">555-9012</td>
-                <td data-label="Email">carlos@proveedor.com</td>
-                <td data-label="Estado"><span class="estado.no">Pendiente</span></td>
-                <td data-label="Acciones"><button class="btn">Editar</button></td>
-            </tr>
-        </tbody>
-    </table>
-</div>
+        <!-- Tabla de Proveedores -->
+        <section class="table-section">
+            <div class="table-header">
+                <h2><i class="fa-solid fa-list"></i> Lista de Proveedores</h2>
+                <div class="table-actions">
+                    <div class="search-box">
+                        <i class="fa-solid fa-search"></i>
+                        <input type="text" placeholder="Buscar proveedor...">
+                    </div>
+                    <div class="view-options">
+                        <button class="btn btn-sm active" title="Vista de tabla">
+                            <i class="fa-solid fa-table"></i>
+                        </button>
+                        <button class="btn btn-sm" title="Vista de tarjetas">
+                            <i class="fa-solid fa-grip"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-<!-- Formulario para agregar nuevo proveedor -->
-<div class="table-section">
-    <h2>Agregar / Editar Proveedor</h2>
-    <form class="form-grid">
-        <input type="text" placeholder="Nombre del proveedor">
-        <input type="text" placeholder="Contacto">
-        <input type="tel" placeholder="Teléfono">
-        <input type="email" placeholder="Email">
-        <select>
-            <option value="">Estado</option>
-            <option value="activo">Activo</option>
-            <option value="inactivo">Inactivo</option>
-            <option value="pendiente">Pendiente</option>
-        </select>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Proveedor</th>
+                            <th>Contacto</th>
+                            <th>Teléfono</th>
+                            <th>Email</th>
+                            <th>Categoría</th>
+                            <th>Estado</th>
+                            <th>Última Compra</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="id-badge">PROV-001</span></td>
+                            <td>
+                                <div class="supplier-info">
+                                    <div class="supplier-avatar">
+                                        <i class="fa-solid fa-building"></i>
+                                    </div>
+                                    <div class="supplier-details">
+                                        <strong>Distribuidora Avícola Santa María</strong>
+                                        <small>RIF: J-12345678-9</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="contact-info">
+                                    <strong>Carlos Rodríguez</strong>
+                                    <small>Gerente de Ventas</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="phone-info">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span>0412-555-1234</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="email-info">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span>carlos@santamaria.com</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="category-tag">Pollos</span>
+                            </td>
+                            <td><span class="status-badge activo">Activo</span></td>
+                            <td>15/12/2024</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-info" title="Ver Detalles">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Historial">
+                                        <i class="fa-solid fa-history"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-badge">PROV-002</span></td>
+                            <td>
+                                <div class="supplier-info">
+                                    <div class="supplier-avatar">
+                                        <i class="fa-solid fa-building"></i>
+                                    </div>
+                                    <div class="supplier-details">
+                                        <strong>Especias del Caribe C.A.</strong>
+                                        <small>RIF: J-87654321-0</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="contact-info">
+                                    <strong>María González</strong>
+                                    <small>Directora Comercial</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="phone-info">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span>0414-555-5678</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="email-info">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span>m.gonzalez@especiascaribe.com</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="category-tag">Especias</span>
+                            </td>
+                            <td><span class="status-badge activo">Activo</span></td>
+                            <td>12/12/2024</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-info" title="Ver Detalles">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Historial">
+                                        <i class="fa-solid fa-history"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-badge">PROV-003</span></td>
+                            <td>
+                                <div class="supplier-info">
+                                    <div class="supplier-avatar">
+                                        <i class="fa-solid fa-building"></i>
+                                    </div>
+                                    <div class="supplier-details">
+                                        <strong>Aliños Naturales La Huerta</strong>
+                                        <small>RIF: J-11223344-5</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="contact-info">
+                                    <strong>Roberto Silva</strong>
+                                    <small>Representante</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="phone-info">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span>0426-555-9012</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="email-info">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span>ventas@lahuerta.com</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="category-tag">Aliños</span>
+                            </td>
+                            <td><span class="status-badge activo">Activo</span></td>
+                            <td>10/12/2024</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-info" title="Ver Detalles">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Historial">
+                                        <i class="fa-solid fa-history"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-badge">PROV-004</span></td>
+                            <td>
+                                <div class="supplier-info">
+                                    <div class="supplier-avatar">
+                                        <i class="fa-solid fa-building"></i>
+                                    </div>
+                                    <div class="supplier-details">
+                                        <strong>Empaques Plásticos del Centro</strong>
+                                        <small>RIF: J-55667788-9</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="contact-info">
+                                    <strong>Ana Martínez</strong>
+                                    <small>Coordinadora de Ventas</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="phone-info">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span>0416-555-3456</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="email-info">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span>a.martinez@empaquescentro.com</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="category-tag">Empaques</span>
+                            </td>
+                            <td><span class="status-badge inactivo">Inactivo</span></td>
+                            <td>05/11/2024</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-info" title="Ver Detalles">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Historial">
+                                        <i class="fa-solid fa-history"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-badge">PROV-005</span></td>
+                            <td>
+                                <div class="supplier-info">
+                                    <div class="supplier-avatar">
+                                        <i class="fa-solid fa-building"></i>
+                                    </div>
+                                    <div class="supplier-details">
+                                        <strong>Carnes Premium Andinas</strong>
+                                        <small>RIF: J-99887766-5</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="contact-info">
+                                    <strong>José Hernández</strong>
+                                    <small>Gerente General</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="phone-info">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span>0424-555-7890</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="email-info">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <span>j.hernandez@carnesandinas.com</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="category-tag">Carnes</span>
+                            </td>
+                            <td><span class="status-badge pendiente">Pendiente</span></td>
+                            <td>-</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-info" title="Ver Detalles">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Historial">
+                                        <i class="fa-solid fa-history"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="pagination">
+                <button class="btn btn-sm">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <span class="page-active">1</span>
+                <button class="btn btn-sm">2</button>
+                <button class="btn btn-sm">3</button>
+                <button class="btn btn-sm">4</button>
+                <button class="btn btn-sm">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Sección del Formulario Actualizada -->
+<section class="form-section">
+    <div class="form-header">
+        <h2><i class="fa-solid fa-plus-circle"></i> Registrar Nuevo Proveedor</h2>
+    </div>
+    <form class="proveedor-form">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="codigo-proveedor">Código de Proveedor *</label>
+                <input type="text" id="codigo-proveedor" class="form-control" required placeholder="Ej: PROV-006">
+            </div>
+            <div class="form-group">
+                <label for="nombre-proveedor">Nombre del Proveedor *</label>
+                <input type="text" id="nombre-proveedor" class="form-control" required placeholder="Ej: Distribuidora XYZ">
+            </div>
+            <div class="form-group">
+                <label for="rif-proveedor">RIF *</label>
+                <input type="text" id="rif-proveedor" class="form-control" required placeholder="Ej: J-12345678-9">
+            </div>
+            <div class="form-group">
+                <label for="categoria-proveedor">Categoría *</label>
+                <select id="categoria-proveedor" class="form-control" required>
+                    <option value="">Seleccionar categoría</option>
+                    <option value="pollos">Proveedor de Pollos</option>
+                    <option value="carnes">Proveedor de Carnes</option>
+                    <option value="aliños">Proveedor de Aliños</option>
+                    <option value="especias">Proveedor de Especias</option>
+                    <option value="empaques">Proveedor de Empaques</option>
+                    <option value="otros">Otros</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="estado-proveedor">Estado</label>
+                <select id="estado-proveedor" class="form-control">
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                    <option value="pendiente">Pendiente</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="tipo-proveedor">Tipo de Proveedor</label>
+                <select id="tipo-proveedor" class="form-control">
+                    <option value="nacional">Nacional</option>
+                    <option value="internacional">Internacional</option>
+                    <option value="local">Local</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-section-divider">
+            <h4><i class="fa-solid fa-user"></i> Información de Contacto</h4>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="nombre-contacto">Nombre del Contacto *</label>
+                <input type="text" id="nombre-contacto" class="form-control" required placeholder="Ej: Juan Pérez">
+            </div>
+            <div class="form-group">
+                <label for="cargo-contacto">Cargo del Contacto</label>
+                <input type="text" id="cargo-contacto" class="form-control" placeholder="Ej: Gerente de Ventas">
+            </div>
+            <div class="form-group">
+                <label for="telefono-proveedor">Teléfono *</label>
+                <input type="tel" id="telefono-proveedor" class="form-control" required placeholder="Ej: 0412-555-1234">
+            </div>
+            <div class="form-group">
+                <label for="email-proveedor">Email *</label>
+                <input type="email" id="email-proveedor" class="form-control" required placeholder="Ej: contacto@proveedor.com">
+            </div>
+        </div>
+
+        <div class="form-section-divider">
+            <h4><i class="fa-solid fa-location-dot"></i> Información de Dirección</h4>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="direccion-proveedor">Dirección</label>
+                <textarea id="direccion-proveedor" class="form-control" rows="2" placeholder="Dirección completa..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="ciudad-proveedor">Ciudad</label>
+                <input type="text" id="ciudad-proveedor" class="form-control" placeholder="Ej: Caracas">
+            </div>
+            <div class="form-group">
+                <label for="estado-proveedor">Estado/Provincia</label>
+                <input type="text" id="estado-proveedor" class="form-control" placeholder="Ej: Distrito Capital">
+            </div>
+            <div class="form-group">
+                <label for="codigo-postal">Código Postal</label>
+                <input type="text" id="codigo-postal" class="form-control" placeholder="Ej: 1010">
+            </div>
+        </div>
+
+        <div class="form-section-divider">
+            <h4><i class="fa-solid fa-file-invoice-dollar"></i> Información Comercial</h4>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="terminos-pago">Términos de Pago</label>
+                <select id="terminos-pago" class="form-control">
+                    <option value="contado">Contado</option>
+                    <option value="15dias">15 Días</option>
+                    <option value="30dias">30 Días</option>
+                    <option value="60dias">60 Días</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="limite-credito">Límite de Crédito (Bs)</label>
+                <input type="number" id="limite-credito" class="form-control" step="0.01" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label for="descuento">Descuento (%)</label>
+                <input type="number" id="descuento" class="form-control" min="0" max="100" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label for="dias-entrega">Días de Entrega Promedio</label>
+                <input type="number" id="dias-entrega" class="form-control" min="1" placeholder="Ej: 3">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="observaciones-proveedor">Observaciones</label>
+            <textarea id="observaciones-proveedor" class="form-control" rows="3" placeholder="Información adicional sobre el proveedor..."></textarea>
+        </div>
+
         <div class="form-actions">
-            <button class="btn" type="submit">Guardar Proveedor</button>
+            <button type="reset" class="btn">
+                <i class="fa-solid fa-times"></i> Limpiar
+            </button>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-save"></i> Guardar Proveedor
+            </button>
         </div>
     </form>
-</div>
+</section>
 
+        <!-- Estadísticas de Proveedores -->
+        <section class="stats-section">
+            <h2><i class="fa-solid fa-chart-pie"></i> Distribución de Proveedores</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-drumstick-bite"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>8</h3>
+                        <p>Proveedores de Pollos</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-mortar-pestle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>6</h3>
+                        <p>Proveedores de Aliños</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-seedling"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>5</h3>
+                        <p>Proveedores de Especias</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-box"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>3</h3>
+                        <p>Proveedores de Empaques</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Funcionalidad básica para el formulario
+        document.querySelector('.proveedor-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Proveedor registrado correctamente');
+            this.reset();
+        });
+
+        // Efectos hover en las tarjetas
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+            });
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Alternar vista de tabla/tarjetas
+        document.querySelectorAll('.view-options .btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.view-options .btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Simular función para abrir modal (placeholder)
+        function abrirModalProveedor() {
+            alert('Funcionalidad para abrir modal de nuevo proveedor');
+        }
+    </script>
 </body>
 </html>
