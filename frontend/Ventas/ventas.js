@@ -11,6 +11,7 @@ class VentasManager {
         this.currentStep = 1;
         this.paymentDetails = {};
         this.ivaRate = 0.16;
+        this.tasasIva = [];
         
         this.init();
     }
@@ -24,31 +25,73 @@ class VentasManager {
         this.loadProducts();
         this.updateStepIndicator();
         this.loadEmpresaData();
-         this.loadIvaConfig();
          this.loadMetodosPagoConfig();
+         this.loadTasasIva();
+         this.setupAutocompleteClickHandler();
     }
 
 
-    async loadIvaConfig() {
+
+     async loadTasasIva() {
         try {
-            const response = await fetch('/api/configuracion/negocio', {
+            const response = await fetch('/api/tasas-iva', {
                 credentials: 'include'
             });
             
             if (response.ok) {
-                const config = await response.json();
-                this.ivaRate = (config.iva_rate || 16) / 100;
-                console.log('✅ IVA configurado cargado:', this.ivaRate);
+                this.tasasIva = await response.json();
+                console.log('✅ Tasas de IVA cargadas:', this.tasasIva);
                 
+                // Establecer la tasa general como predeterminada
+                const tasaGeneral = this.tasasIva.find(t => t.tipo === 'general');
+                if (tasaGeneral) {
+                    this.ivaRate = parseFloat(tasaGeneral.tasa) / 100;
+                }
                 
                 this.updateIvaDisplay();
             }
         } catch (error) {
-            console.error('Error cargando IVA configurado:', error);
-            this.ivaRate = 0.16; 
+            console.error('Error cargando tasas IVA:', error);
+            // Fallback a valores por defecto
+            this.tasasIva = [
+                { id: 1, tasa: 16.00, descripcion: 'IVA General', tipo: 'general', estado: 'Activa' },
+                { id: 2, tasa: 0.00, descripcion: 'Exento de IVA', tipo: 'exento', estado: 'Activa' },
+                { id: 3, tasa: 8.00, descripcion: 'IVA Reducido', tipo: 'reducido', estado: 'Activa' }
+            ];
+            this.ivaRate = 0.16;
         }
     }
 
+    getIvaRateForProduct(producto) {
+        if (!producto || !producto.id_tasa_iva) {
+            return this.ivaRate;
+        }
+        
+        const tasa = this.tasasIva.find(t => t.id === producto.id_tasa_iva);
+        return tasa ? (parseFloat(tasa.tasa) / 100) : this.ivaRate;
+    }
+
+     calcularPrecioConIva(precioSinIva, tasaIva) {
+        return precioSinIva * (1 + tasaIva);
+    }
+
+     calcularPrecioSinIva(precioConIva, tasaIva) {
+        return precioConIva / (1 + tasaIva);
+    }
+
+    updateIvaDisplay() {
+        const ivaElements = document.querySelectorAll('[id*="iva"], [class*="iva"]');
+        ivaElements.forEach(element => {
+            if (element.textContent.includes('16%')) {
+                element.textContent = element.textContent.replace('16%', `${(this.ivaRate * 100).toFixed(0)}%`);
+            }
+        });
+    }
+
+
+
+
+    
 
     updateIvaDisplay() {
         const ivaElements = document.querySelectorAll('[id*="iva"], [class*="iva"]');
@@ -96,7 +139,7 @@ class VentasManager {
         console.log('✅ Tasa de API cargada:', this.tasaCambio);
         
     } catch (error) {
-        console.error('❌ Error cargando tasa API:', error);
+        console.error(' Error cargando tasa API:', error);
         // Último fallback
         this.tasaCambio = 36.50;
     }
@@ -209,7 +252,6 @@ updatePaymentMethodsUI() {
     this.checkMetodosHabilitados();
 }
 
-// ✅ NUEVO MÉTODO: Verificar si hay métodos habilitados
 checkMetodosHabilitados() {
     const metodosHabilitados = this.metodosPagoConfig?.filter(m => m.habilitado) || [];
     const paymentDetails = document.getElementById('payment-details');
@@ -441,7 +483,7 @@ async processCashClose() {
         } else if (response.status === 409) {
             const error = await response.json();
             this.showAlert(
-                `❌ Ya existe un cierre de caja para hoy.\n\n` +
+                ` Ya existe un cierre de caja para hoy.\n\n` +
                 `No puedes realizar más de un cierre por día.`,
                 'warning'
             );
@@ -831,93 +873,137 @@ async getCurrentUserId() {
         }
     }
 
-    // ==================== GESTIÓN DE PRODUCTOS (Mismo código que antes) ====================
 
     async loadProducts() {
-        try {
-            console.log('📦 Cargando productos...');
-            const response = await fetch('/api/productos', { 
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+    try {
+        console.log('📦 Cargando productos...');
+        const response = await fetch('/api/productos', { 
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const rawProducts = await response.json();
+            console.log('📊 Productos recibidos (primeros 3):', rawProducts.slice(0, 3));
             
-            if (response.ok) {
-                const rawProducts = await response.json();
-                console.log('📊 Productos recibidos (primeros 3):', rawProducts.slice(0, 3));
+            this.products = rawProducts.map(product => {
+                const precioBs = parseFloat(product.precio_venta) || 0;
+                const precioUsd = parseFloat(product.precio_dolares) || this.bsToUsd(precioBs);
                 
-                this.products = rawProducts.map(product => ({
+                return {
                     id: product.id,
                     nombre: product.nombre,
-                    precio_bs: parseFloat(product.precio_venta) || 0,
-                    precio_usd: parseFloat(product.precio_dolares) || this.bsToUsd(parseFloat(product.precio_venta) || 0),
-                    stock: parseInt(product.stock) || 0,
+                    precio_bs: precioBs,
+                    precio_usd: precioUsd,
+                    stock: parseFloat(product.stock) || 0,
                     unidad_medida: product.unidad_medida || 'unidad',
-                    categoria: product.categoria || 'Sin categoría'
-                }));
-                
-                console.log(`✅ ${this.products.length} productos formateados`);
-            } else {
-                console.error('❌ Error cargando productos:', response.status, response.statusText);
-                this.showAlert('Error al cargar productos del servidor');
-            }
-        } catch (error) {
-            console.error('❌ Error cargando productos:', error);
-            this.showAlert('Error de conexión al cargar productos');
-        }
-    }
-
-    searchProducts(query) {
-        console.log('🔍 Buscando productos con:', query);
-        
-        if (!query || query.trim() === '') {
-            document.getElementById('product-suggestions').classList.add('hidden');
-            return;
-        }
-
-        if (!this.products || this.products.length === 0) {
-            console.log('No hay productos cargados');
-            return;
-        }
-        
-        const suggestions = document.getElementById('product-suggestions');
-        suggestions.innerHTML = '';
-        
-        const searchTerm = query.toLowerCase().trim();
-        
-        const filteredProducts = this.products.filter(product => {
-            const nombreMatch = product.nombre && product.nombre.toLowerCase().includes(searchTerm);
-            const idMatch = product.id && product.id.toString().includes(searchTerm);
-            const categoriaMatch = product.categoria && product.categoria.toLowerCase().includes(searchTerm);
-            
-            return nombreMatch || idMatch || categoriaMatch;
-        }).slice(0, 5);
-
-        if (filteredProducts.length > 0) {
-            filteredProducts.forEach(product => {
-                const div = document.createElement('div');
-                div.className = 'autocomplete-item';
-                div.innerHTML = `
-                    <div class="font-semibold text-gray-800">${product.nombre}</div>
-                    <div class="text-sm text-gray-600">
-                        Código: ${product.id} | 
-                        <span class="text-purple-600">Bs. ${product.precio_bs.toFixed(2)}</span> | 
-                        <span class="text-green-600">$ ${product.precio_usd.toFixed(2)}</span> | 
-                        Stock: ${product.stock}
-                    </div>
-                `;
-                div.addEventListener('click', () => {
-                    console.log('Producto seleccionado:', product.nombre);
-                    this.addProductToCart(product);
-                });
-                suggestions.appendChild(div);
+                    categoria: product.categoria || 'Sin categoría',
+                    id_tasa_iva: product.id_tasa_iva || 1,
+                    tasa_iva: parseFloat(product.tasa_iva) || 16,
+                    tipo_iva: product.tipo_iva || 'general',
+                    stock_minimo: parseFloat(product.stock_minimo) || 10
+                };
             });
-            suggestions.classList.remove('hidden');
+            
+            console.log(`✅ ${this.products.length} productos formateados correctamente`);
+            
+            const productosSinPrecio = this.products.filter(p => !p.precio_bs);
+            if (productosSinPrecio.length > 0) {
+                console.warn('⚠️ Productos sin precio:', productosSinPrecio);
+            }
+            
         } else {
-            suggestions.classList.add('hidden');
+            console.error(' Error cargando productos:', response.status, response.statusText);
+            this.showAlert('Error al cargar productos del servidor');
         }
+    } catch (error) {
+        console.error(' Error cargando productos:', error);
+        this.showAlert('Error de conexión al cargar productos');
     }
+
+    
+}
+
+
+
+ searchProducts(query) {
+    console.log('🔍 Buscando productos con:', query);
+    
+    if (!query || query.trim() === '') {
+        document.getElementById('product-suggestions').classList.add('hidden');
+        return;
+    }
+
+    if (!this.products || this.products.length === 0) {
+        console.log('No hay productos cargados');
+        return;
+    }
+    
+    const suggestions = document.getElementById('product-suggestions');
+    suggestions.innerHTML = '';
+    
+    const searchTerm = query.toLowerCase().trim();
+    
+    const filteredProducts = this.products.filter(product => {
+        const nombreMatch = product.nombre && product.nombre.toLowerCase().includes(searchTerm);
+        const idMatch = product.id && product.id.toString().includes(searchTerm);
+        const categoriaMatch = product.categoria && product.categoria.toLowerCase().includes(searchTerm);
+        
+        return nombreMatch || idMatch || categoriaMatch;
+    }).slice(0, 5);
+
+    if (filteredProducts.length > 0) {
+        filteredProducts.forEach(product => {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.dataset.productId = product.id; 
+            
+            const precioBs = product.precio_bs || 0;
+            const precioUsd = product.precio_usd || 0;
+            const stock = product.stock || 0;
+            
+            div.innerHTML = `
+                <div class="font-semibold text-gray-800">${product.nombre}</div>
+                <div class="text-sm text-gray-600">
+                    Código: ${product.id} | 
+                    <span class="text-purple-600">Bs. ${precioBs.toFixed(2)}</span> | 
+                    <span class="text-green-600">$ ${precioUsd.toFixed(2)}</span> | 
+                    Stock: ${stock}
+                </div>
+            `;
+            suggestions.appendChild(div);
+        });
+        suggestions.classList.remove('hidden');
+    } else {
+        suggestions.classList.add('hidden');
+    }
+}
+
+
+setupAutocompleteClickHandler() {
+    const suggestionsContainer = document.getElementById('product-suggestions');
+    
+    // ✅ USAR EVENT DELEGATION - MÁS EFICIENTE Y EVITA MÚLTIPLES LISTENERS
+    suggestionsContainer.addEventListener('click', (e) => {
+        const autocompleteItem = e.target.closest('.autocomplete-item');
+        
+        if (autocompleteItem) {
+            const productId = parseInt(autocompleteItem.dataset.productId);
+            const product = this.products.find(p => p.id === productId);
+            
+            if (product) {
+                console.log('🛒 Producto seleccionado desde autocomplete:', product.nombre);
+                this.addProductToCart(product);
+                
+                // Ocultar sugerencias después de seleccionar
+                suggestionsContainer.classList.add('hidden');
+                document.getElementById('product-search').value = '';
+            }
+        }
+    });
+}
 
     handleProductSearch(query) {
         if (!query.trim()) return;
@@ -946,65 +1032,69 @@ async getCurrentUserId() {
         }
     }
 
-    addProductToCart(product) {
-        console.log('🛒 Agregando producto al carrito:', product);
-        
-        document.getElementById('product-suggestions').classList.add('hidden');
-        document.getElementById('product-search').value = '';
+  addProductToCart(product) {
+    console.log('🛒 Agregando producto al carrito:', product);
+    
+    document.getElementById('product-suggestions').classList.add('hidden');
+    document.getElementById('product-search').value = '';
 
-        if (!product || !product.id) {
-            this.showAlert('Error: Producto no válido');
-            return;
-        }
-
-        if (!product.stock || product.stock <= 0) {
-            this.showAlert('Producto sin stock disponible');
-            return;
-        }
-
-        const existingItemIndex = this.cart.findIndex(item => item.id === product.id);
-        
-        if (existingItemIndex !== -1) {
-            const existingItem = this.cart[existingItemIndex];
-            
-            if (existingItem.cantidad >= product.stock) {
-                this.showAlert(`No hay suficiente stock. Stock disponible: ${product.stock}`);
-                return;
-            }
-            
-            this.cart[existingItemIndex].cantidad += 1;
-            this.cart[existingItemIndex].subtotal_bs = (this.cart[existingItemIndex].cantidad * this.cart[existingItemIndex].precio_bs).toFixed(2);
-            this.cart[existingItemIndex].subtotal_usd = this.bsToUsd(parseFloat(this.cart[existingItemIndex].subtotal_bs));
-        } else {
-            this.cart.push({
-                id: product.id,
-                nombre: product.nombre,
-                precio_bs: parseFloat(product.precio_bs) || 0,
-                precio_usd: parseFloat(product.precio_usd) || 0,
-                categoria: product.categoria || 'Sin categoría',
-                unidad_medida: product.unidad_medida || 'unidad',
-                stock: product.stock || 0,
-                cantidad: 1,
-                subtotal_bs: (parseFloat(product.precio_bs) || 0).toFixed(2),
-                subtotal_usd: parseFloat(product.precio_usd) || 0
-            });
-        }
-
-        this.updateCart();
-        this.showAlert(`"${product.nombre}" agregado al carrito`, 'success');
-        
-        // Avanzar al paso 3 si es el primer producto
-        if (this.cart.length === 1) {
-            this.goToStep(3);
-        }
+    if (!product || !product.id) {
+        this.showAlert('Error: Producto no válido');
+        return;
     }
+
+    if (!product.stock || product.stock <= 0) {
+        this.showAlert('Producto sin stock disponible');
+        return;
+    }
+
+    const existingItemIndex = this.cart.findIndex(item => item.id === product.id);
+    
+    if (existingItemIndex !== -1) {
+        const existingItem = this.cart[existingItemIndex];
+        
+        if (existingItem.cantidad >= product.stock) {
+            this.showAlert(`No hay suficiente stock. Stock disponible: ${product.stock}`);
+            return;
+        }
+        
+        this.cart[existingItemIndex].cantidad += 1;
+        this.cart[existingItemIndex].subtotal_bs = (this.cart[existingItemIndex].cantidad * this.cart[existingItemIndex].precio_bs).toFixed(2);
+        this.cart[existingItemIndex].subtotal_usd = this.bsToUsd(parseFloat(this.cart[existingItemIndex].subtotal_bs));
+    } else {
+        // ✅ CORREGIDO: Usar las propiedades correctas del producto
+        this.cart.push({
+            id: product.id,
+            nombre: product.nombre,
+            precio_bs: parseFloat(product.precio_bs) || 0,  
+            precio_usd: parseFloat(product.precio_usd) || 0, 
+            categoria: product.categoria || 'Sin categoría',
+            unidad_medida: product.unidad_medida || 'unidad',
+            stock: product.stock || 0,
+            id_tasa_iva: product.id_tasa_iva || 1, 
+            tasa_iva: parseFloat(product.tasa_iva) || 16, 
+            tipo_iva: product.tipo_iva || 'general', 
+            cantidad: 1,
+            subtotal_bs: (parseFloat(product.precio_bs) || 0).toFixed(2), 
+            subtotal_usd: parseFloat(product.precio_usd) || 0 
+        });
+    }
+
+    this.updateCart();
+    this.showAlert(`"${product.nombre}" agregado al carrito`, 'success');
+    
+    // Avanzar al paso 3 si es el primer producto
+    if (this.cart.length === 1) {
+        this.goToStep(3);
+    }
+}
 
     updateCart() {
         const cartItems = document.getElementById('cart-items');
         let emptyCart = document.getElementById('empty-cart');
 
         if (!cartItems) {
-            console.error('❌ No se encontró #cart-items en el DOM.');
+            console.error(' No se encontró #cart-items en el DOM.');
             return;
         }
 
@@ -1180,9 +1270,19 @@ async getCurrentUserId() {
         }
     }
 
-     updateTotals() {
-        const subtotal_bs = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal_bs), 0);
-        const tax_bs = subtotal_bs * this.ivaRate; 
+updateTotals() {
+        let subtotal_bs = 0;
+        let tax_bs = 0;
+
+        this.cart.forEach(item => {
+            const itemSubtotal = parseFloat(item.subtotal_bs);
+            subtotal_bs += itemSubtotal;
+            
+            // Calcular IVA específico para este producto
+            const itemTax = itemSubtotal * (item.tasa_iva / 100);
+            tax_bs += itemTax;
+        });
+
         const total_bs = subtotal_bs + tax_bs;
 
         const subtotal_usd = this.bsToUsd(subtotal_bs);
@@ -1190,9 +1290,49 @@ async getCurrentUserId() {
         const total_usd = this.bsToUsd(total_bs);
 
         document.getElementById('subtotal-amount').textContent = `Bs. ${subtotal_bs.toFixed(2)}`;
-        document.getElementById('tax-amount').textContent = `Bs. ${tax_bs.toFixed(2)} (${(this.ivaRate * 100).toFixed(0)}%)`; // ✅ Mostrar % correcto
+        document.getElementById('tax-amount').textContent = `Bs. ${tax_bs.toFixed(2)}`; // Ya no mostramos % fijo
         document.getElementById('total-bs').textContent = `Bs. ${total_bs.toFixed(2)}`;
         document.getElementById('total-usd').textContent = `$ ${total_usd.toFixed(2)}`;
+
+        // Mostrar desglose de IVA si hay múltiples tasas
+        this.mostrarDesgloseIva();
+    }
+
+
+     mostrarDesgloseIva() {
+        const taxElement = document.getElementById('tax-amount');
+        const tasasUtilizadas = {};
+        
+        this.cart.forEach(item => {
+            const tasaKey = `${item.tasa_iva}% (${item.tipo_iva})`;
+            if (!tasasUtilizadas[tasaKey]) {
+                tasasUtilizadas[tasaKey] = 0;
+            }
+            tasasUtilizadas[tasaKey] += parseFloat(item.subtotal_bs) * (item.tasa_iva / 100);
+        });
+
+        const tasasUnicas = Object.keys(tasasUtilizadas);
+        if (tasasUnicas.length > 1) {
+            let desgloseHTML = 'Bs. ';
+            tasasUnicas.forEach((tasa, index) => {
+                if (index > 0) desgloseHTML += ' + ';
+                desgloseHTML += `${tasasUtilizadas[tasa].toFixed(2)} ${tasa}`;
+            });
+            taxElement.innerHTML = desgloseHTML;
+        }
+    }
+
+     getTotalBs() {
+        let subtotal = 0;
+        let tax = 0;
+
+        this.cart.forEach(item => {
+            const itemSubtotal = parseFloat(item.subtotal_bs);
+            subtotal += itemSubtotal;
+            tax += itemSubtotal * (item.tasa_iva / 100);
+        });
+
+        return (subtotal + tax).toFixed(2);
     }
 
 
@@ -1511,7 +1651,7 @@ async getCurrentUserId() {
 
     // ==================== PROCESAR VENTA ====================
 
-    async processSale() {
+   async processSale() {
         if (this.cart.length === 0) {
             this.showAlert('El carrito está vacío');
             return;
@@ -1545,6 +1685,8 @@ async getCurrentUserId() {
                 payment_details: this.paymentDetails
             };
 
+            console.log('📤 Enviando datos de venta:', saleData);
+
             const response = await fetch('/api/ventas', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1567,6 +1709,7 @@ async getCurrentUserId() {
             this.showAlert('Error de conexión al procesar la venta');
         }
     }
+
 
     // ==================== FACTURA (Mismo código que antes) ====================
 
@@ -1595,137 +1738,161 @@ async getCurrentUserId() {
         }
     }
 
-      generateInvoiceHTML(ventaData) {
-    const invoiceContent = document.getElementById('invoice-content');
-    
-    // ✅ CALCULAR CON IVA CONFIGURADO
-    const subtotal_bs = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal_bs), 0);
-    const tax_bs = subtotal_bs * this.ivaRate; // ✅ Usar IVA configurado
-    const total_bs = subtotal_bs + tax_bs;
+       generateInvoiceHTML(ventaData) {
+        const invoiceContent = document.getElementById('invoice-content');
+        
+        // ✅ ACTUALIZADO: Calcular con IVA por producto
+        let subtotal_bs = 0;
+        let tax_bs = 0;
+        const desgloseIva = {};
 
-    const subtotal_usd = this.bsToUsd(subtotal_bs);
-    const tax_usd = this.bsToUsd(tax_bs);
-    const total_usd = this.bsToUsd(total_bs);
+        this.cart.forEach(item => {
+            const itemSubtotal = parseFloat(item.subtotal_bs);
+            subtotal_bs += itemSubtotal;
+            
+            const itemTax = itemSubtotal * (item.tasa_iva / 100);
+            tax_bs += itemTax;
+            
+            // Acumular por tipo de IVA
+            const claveIva = `${item.tasa_iva}% (${item.tipo_iva})`;
+            if (!desgloseIva[claveIva]) {
+                desgloseIva[claveIva] = 0;
+            }
+            desgloseIva[claveIva] += itemTax;
+        });
 
-    const empresa = this.empresaData || {
-        nombre_empresa: "Na'Guara",
-        rif: "J-123456789",
-        telefono: "(0412) 123-4567",
-        direccion: "Barquisimeto, Venezuela",
-        mensaje_factura: "¡Gracias por su compra!"
-    };
+        const total_bs = subtotal_bs + tax_bs;
 
-    const invoiceHTML = `
-        <div class="invoice-container">
-            <!-- Encabezado -->
-            <div class="grid grid-cols-2 gap-6 mb-8">
-                <div>
-                    <h3 class="text-xl font-bold text-gray-800">${empresa.nombre_empresa}</h3>
-                    <p class="text-gray-600">Sistema de Venta Rápida</p>
-                    <p class="text-gray-600">RIF: ${empresa.rif}</p>
-                    <p class="text-gray-600">Teléfono: ${empresa.telefono}</p>
-                    <p class="text-gray-600">${empresa.direccion}</p>
+        const subtotal_usd = this.bsToUsd(subtotal_bs);
+        const tax_usd = this.bsToUsd(tax_bs);
+        const total_usd = this.bsToUsd(total_bs);
+
+        const empresa = this.empresaData || {
+            nombre_empresa: "Na'Guara",
+            rif: "J-123456789",
+            telefono: "(0412) 123-4567",
+            direccion: "Barquisimeto, Venezuela",
+            mensaje_factura: "¡Gracias por su compra!"
+        };
+
+        // ✅ NUEVO: Generar HTML del desglose de IVA
+        let desgloseIvaHTML = '';
+        Object.keys(desgloseIva).forEach(tipo => {
+            desgloseIvaHTML += `
+                <div class="flex justify-between text-sm">
+                    <span>IVA ${tipo}:</span>
+                    <span>Bs. ${desgloseIva[tipo].toFixed(2)}</span>
                 </div>
-                <div class="text-right">
-                    <h3 class="text-xl font-bold text-purple-600">FACTURA #${ventaData.id}</h3>
-                    <p class="text-gray-600">Fecha: ${new Date(ventaData.fecha_venta).toLocaleDateString('es-ES')}</p>
-                    <p class="text-gray-600">Hora: ${new Date(ventaData.fecha_venta).toLocaleTimeString('es-ES')}</p>
-                    <p class="text-gray-600 text-sm">Tasa: ${this.tasaCambio.toFixed(2)} Bs/$</p>
-                    <p class="text-gray-600 text-sm">IVA: ${(this.ivaRate * 100).toFixed(0)}%</p>
+            `;
+        });
+
+        const invoiceHTML = `
+            <div class="invoice-container">
+                <!-- Encabezado -->
+                <div class="grid grid-cols-2 gap-6 mb-8">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">${empresa.nombre_empresa}</h3>
+                        <p class="text-gray-600">Sistema de Venta Rápida</p>
+                        <p class="text-gray-600">RIF: ${empresa.rif}</p>
+                        <p class="text-gray-600">Teléfono: ${empresa.telefono}</p>
+                        <p class="text-gray-600">${empresa.direccion}</p>
+                    </div>
+                    <div class="text-right">
+                        <h3 class="text-xl font-bold text-purple-600">FACTURA #${ventaData.id}</h3>
+                        <p class="text-gray-600">Fecha: ${new Date(ventaData.fecha_venta).toLocaleDateString('es-ES')}</p>
+                        <p class="text-gray-600">Hora: ${new Date(ventaData.fecha_venta).toLocaleTimeString('es-ES')}</p>
+                        <p class="text-gray-600 text-sm">Tasa: ${this.tasaCambio.toFixed(2)} Bs/$</p>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Información del Cliente -->
-            <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h4 class="font-bold text-gray-800 mb-2">INFORMACIÓN DEL CLIENTE</h4>
-                <p><strong>Nombre:</strong> ${this.currentCustomer.nombre}</p>
-                <p><strong>Cédula/RIF:</strong> ${this.currentCustomer.cedula_rif}</p>
-                <p><strong>Teléfono:</strong> ${this.currentCustomer.telefono || 'No especificado'}</p>
-                <p><strong>Dirección:</strong> ${this.currentCustomer.direccion || 'No especificada'}</p>
-            </div>
+                <!-- Información del Cliente -->
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h4 class="font-bold text-gray-800 mb-2">INFORMACIÓN DEL CLIENTE</h4>
+                    <p><strong>Nombre:</strong> ${this.currentCustomer.nombre}</p>
+                    <p><strong>Cédula/RIF:</strong> ${this.currentCustomer.cedula_rif}</p>
+                    <p><strong>Teléfono:</strong> ${this.currentCustomer.telefono || 'No especificado'}</p>
+                    <p><strong>Dirección:</strong> ${this.currentCustomer.direccion || 'No especificada'}</p>
+                </div>
 
-            <!-- Detalles de la Venta -->
-            <div class="mb-6">
-                <h4 class="font-bold text-gray-800 mb-3">DETALLES DE LA VENTA</h4>
-                <table class="w-full border-collapse border border-gray-300">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="border border-gray-300 p-3 text-left">Producto</th>
-                            <th class="border border-gray-300 p-3 text-center">Cantidad</th>
-                            <th class="border border-gray-300 p-3 text-right">Precio Unitario</th>
-                            <th class="border border-gray-300 p-3 text-right">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${this.cart.map(item => `
+                <!-- Detalles de la Venta -->
+                <div class="mb-6">
+                    <h4 class="font-bold text-gray-800 mb-3">DETALLES DE LA VENTA</h4>
+                    <table class="w-full border-collapse border border-gray-300">
+                        <thead class="bg-gray-100">
                             <tr>
-                                <td class="border border-gray-300 p-3">${item.nombre}</td>
-                                <td class="border border-gray-300 p-3 text-center">${item.cantidad} ${item.unidad_medida}</td>
-                                <td class="border border-gray-300 p-3 text-right">
-                                    <div>Bs. ${item.precio_bs.toFixed(2)}</div>
-                                    <div class="text-sm text-green-600">$ ${item.precio_usd.toFixed(2)}</div>
-                                </td>
-                                <td class="border border-gray-300 p-3 text-right">
-                                    <div>Bs. ${item.subtotal_bs}</div>
-                                    <div class="text-sm text-green-600">$ ${item.subtotal_usd.toFixed(2)}</div>
-                                </td>
+                                <th class="border border-gray-300 p-3 text-left">Producto</th>
+                                <th class="border border-gray-300 p-3 text-center">Cantidad</th>
+                                <th class="border border-gray-300 p-3 text-center">IVA</th>
+                                <th class="border border-gray-300 p-3 text-right">Precio Unitario</th>
+                                <th class="border border-gray-300 p-3 text-right">Subtotal</th>
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Resumen -->
-            <div class="grid grid-cols-2 gap-6">
-                <div class="p-4 bg-purple-50 rounded-lg">
-                    <h4 class="font-bold text-purple-800 mb-2">MÉTODO DE PAGO</h4>
-                    <p class="text-purple-700 font-semibold">${this.selectedPaymentMethod.toUpperCase()}</p>
-                    ${this.paymentDetails.method === 'mixto' ? `
-                        <div class="mt-2 text-sm">
-                            ${this.paymentDetails.payments.map(p => `
-                                <div>${p.method}: Bs. ${p.amount.toFixed(2)}</div>
+                        </thead>
+                        <tbody>
+                            ${this.cart.map(item => `
+                                <tr>
+                                    <td class="border border-gray-300 p-3">${item.nombre}</td>
+                                    <td class="border border-gray-300 p-3 text-center">${item.cantidad} ${item.unidad_medida}</td>
+                                    <td class="border border-gray-300 p-3 text-center">${item.tasa_iva}%</td>
+                                    <td class="border border-gray-300 p-3 text-right">
+                                        <div>Bs. ${item.precio_bs.toFixed(2)}</div>
+                                        <div class="text-sm text-green-600">$ ${item.precio_usd.toFixed(2)}</div>
+                                    </td>
+                                    <td class="border border-gray-300 p-3 text-right">
+                                        <div>Bs. ${item.subtotal_bs}</div>
+                                        <div class="text-sm text-green-600">$ ${item.subtotal_usd.toFixed(2)}</div>
+                                    </td>
+                                </tr>
                             `).join('')}
-                        </div>
-                    ` : ''}
-                    <p class="text-sm text-purple-600 mt-2">Tasa de cambio: ${this.tasaCambio.toFixed(2)} Bs/$</p>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="p-4 bg-gray-50 rounded-lg">
-                    <h4 class="font-bold text-gray-800 mb-2">RESUMEN</h4>
-                    <div class="flex justify-between mb-1">
-                        <span>Subtotal:</span>
-                        <div class="text-right">
-                            <div>Bs. ${subtotal_bs.toFixed(2)}</div>
-                            <div class="text-sm text-green-600">$ ${subtotal_usd.toFixed(2)}</div>
+
+                <!-- Resumen -->
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="p-4 bg-purple-50 rounded-lg">
+                        <h4 class="font-bold text-purple-800 mb-2">MÉTODO DE PAGO</h4>
+                        <p class="text-purple-700 font-semibold">${this.selectedPaymentMethod.toUpperCase()}</p>
+                        ${this.paymentDetails.method === 'mixto' ? `
+                            <div class="mt-2 text-sm">
+                                ${this.paymentDetails.payments.map(p => `
+                                    <div>${p.method}: Bs. ${p.amount.toFixed(2)}</div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        <p class="text-sm text-purple-600 mt-2">Tasa de cambio: ${this.tasaCambio.toFixed(2)} Bs/$</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <h4 class="font-bold text-gray-800 mb-2">RESUMEN</h4>
+                        <div class="flex justify-between mb-1">
+                            <span>Subtotal:</span>
+                            <div class="text-right">
+                                <div>Bs. ${subtotal_bs.toFixed(2)}</div>
+                                <div class="text-sm text-green-600">$ ${subtotal_usd.toFixed(2)}</div>
+                            </div>
+                        </div>
+                        ${desgloseIvaHTML}
+                        <div class="flex justify-between font-bold text-lg border-t border-gray-300 pt-2 mt-2">
+                            <span>TOTAL:</span>
+                            <div class="text-right">
+                                <div class="text-purple-600">Bs. ${total_bs.toFixed(2)}</div>
+                                <div class="text-green-600 text-sm">$ ${total_usd.toFixed(2)}</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="flex justify-between mb-1">
-                        <span>IVA (${(this.ivaRate * 100).toFixed(0)}%):</span> <!-- ✅ % DINÁMICO -->
-                        <div class="text-right">
-                            <div>Bs. ${tax_bs.toFixed(2)}</div>
-                            <div class="text-sm text-green-600">$ ${tax_usd.toFixed(2)}</div>
-                        </div>
-                    </div>
-                    <div class="flex justify-between font-bold text-lg border-t border-gray-300 pt-2 mt-2">
-                        <span>TOTAL:</span>
-                        <div class="text-right">
-                            <div class="text-purple-600">Bs. ${total_bs.toFixed(2)}</div>
-                            <div class="text-green-600 text-sm">$ ${total_usd.toFixed(2)}</div>
-                        </div>
-                    </div>
+                </div>
+
+                <!-- Pie de página -->
+                <div class="mt-8 text-center text-gray-500 text-sm">
+                    <p>${empresa.mensaje_factura}</p>
+                    <p>${empresa.nombre_empresa} - Sistema de Venta Rápida</p>
+                    <p>Factura generada el ${new Date().toLocaleString('es-ES')}</p>
                 </div>
             </div>
+        `;
 
-            <!-- Pie de página -->
-            <div class="mt-8 text-center text-gray-500 text-sm">
-                <p>${empresa.mensaje_factura}</p>
-                <p>${empresa.nombre_empresa} - Sistema de Venta Rápida</p>
-                <p>Factura generada el ${new Date().toLocaleString('es-ES')}</p>
-            </div>
-        </div>
-    `;
+        invoiceContent.innerHTML = invoiceHTML;
+    }
 
-    invoiceContent.innerHTML = invoiceHTML;
-}
     
 
 
@@ -1944,7 +2111,7 @@ async getCurrentUserId() {
         console.log('✅ Modal de cierre de caja abierto');
 
     } catch (error) {
-        console.error('❌ Error abriendo cierre de caja:', error);
+        console.error(' Error abriendo cierre de caja:', error);
         this.showAlert(`Error: ${error.message}`);
     }
 }
@@ -2093,6 +2260,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.ventasManager = new VentasManager();
         console.log('✅ Módulo de ventas inicializado correctamente');
     } catch (error) {
-        console.error('❌ Error inicializando módulo de ventas:', error);
+        console.error(' Error inicializando módulo de ventas:', error);
     }
 });

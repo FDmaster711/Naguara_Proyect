@@ -20,11 +20,38 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
       payment_details 
     });
 
-    // Calcular total de la venta
-    const total_venta = detalles.reduce((sum, detalle) => 
-      sum + (parseFloat(detalle.cantidad) * parseFloat(detalle.precio_unitario)), 0);
+    let total_venta = 0;
+    let subtotal = 0;
+    let iva_total = 0;
 
-    // Insertar venta principal con nuevos campos
+    // Verificar stock y calcular totales
+    for (const detalle of detalles) {
+      const productoResult = await client.query(
+        `SELECT p.stock, p.nombre, p.precio_venta, ti.tasa as tasa_iva
+         FROM productos p 
+         LEFT JOIN tasas_iva ti ON p.id_tasa_iva = ti.id 
+         WHERE p.id = $1`,
+        [detalle.id_producto]
+      );
+      
+      if (productoResult.rows.length === 0) {
+        throw new Error(`Producto con ID ${detalle.id_producto} no encontrado`);
+      }
+      
+      const producto = productoResult.rows[0];
+      if (producto.stock < detalle.cantidad) {
+        throw new Error(`Stock insuficiente para "${producto.nombre}". Disponible: ${producto.stock}, Solicitado: ${detalle.cantidad}`);
+      }
+
+      const tasa_iva = parseFloat(producto.tasa_iva) / 100;
+      const precio_sin_iva = parseFloat(detalle.precio_unitario) / (1 + tasa_iva);
+      const iva_linea = precio_sin_iva * tasa_iva * parseFloat(detalle.cantidad);
+      
+      subtotal += precio_sin_iva * parseFloat(detalle.cantidad);
+      iva_total += iva_linea;
+      total_venta += parseFloat(detalle.cantidad) * parseFloat(detalle.precio_unitario);
+    }
+
     const ventaResult = await client.query(
       `INSERT INTO ventas (
         id_usuario, id_cliente, metodo_pago, estado, 
@@ -45,23 +72,18 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
     const venta = ventaResult.rows[0];
     console.log('✅ Venta creada:', venta.id);
 
-    // Procesar detalles de la venta (productos)
     for (const detalle of detalles) {
       console.log('📝 Procesando detalle:', detalle);
       
       const productoResult = await client.query(
-        'SELECT stock, nombre FROM productos WHERE id = $1',
+        `SELECT p.stock, p.nombre, ti.tasa as tasa_iva
+         FROM productos p 
+         LEFT JOIN tasas_iva ti ON p.id_tasa_iva = ti.id 
+         WHERE p.id = $1`,
         [detalle.id_producto]
       );
       
-      if (productoResult.rows.length === 0) {
-        throw new Error(`Producto con ID ${detalle.id_producto} no encontrado`);
-      }
-      
       const producto = productoResult.rows[0];
-      if (producto.stock < detalle.cantidad) {
-        throw new Error(`Stock insuficiente para "${producto.nombre}". Disponible: ${producto.stock}, Solicitado: ${detalle.cantidad}`);
-      }
 
       await client.query(
         `INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario) 
@@ -69,12 +91,10 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
         [venta.id, detalle.id_producto, detalle.cantidad, detalle.precio_unitario]
       );
 
-      const updateResult = await client.query(
-        'UPDATE productos SET stock = stock - $1 WHERE id = $2 RETURNING stock, nombre',
+      await client.query(
+        'UPDATE productos SET stock = stock - $1 WHERE id = $2',
         [detalle.cantidad, detalle.id_producto]
       );
-      
-      console.log('📊 Stock actualizado:', updateResult.rows[0]);
     }
 
     await client.query('COMMIT');
@@ -86,6 +106,8 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
       venta: {
         id: venta.id,
         fecha_venta: venta.fecha_venta,
+        subtotal: subtotal,
+        iva: iva_total,
         total: total_venta,
         metodo_pago: venta.metodo_pago,
         payment_details: payment_details
@@ -96,19 +118,6 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
     await client.query('ROLLBACK');
     console.error('❌ Error en venta:', error);
     
-    let errorMessage = 'Error al procesar la venta';
-    if (error.code === '23505') {
-      errorMessage = 'Error de duplicado en la base de datos';
-    } else if (error.code === '23503') {
-      errorMessage = 'Error de referencia (cliente o producto no existe)';
-    } else if (error.message.includes('Stock insuficiente')) {
-      errorMessage = error.message;
-    }
-    
-    res.status(500).json({ 
-      error: errorMessage, 
-      details: error.message 
-    });
   } finally {
     client.release();
   }
@@ -693,6 +702,7 @@ router.get('/api/ventas/top-productos', requireAuth, async (req, res) => {
   }
 });
 
+
 router.get('/api/ventas/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -714,31 +724,45 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
 
     const venta = ventaResult.rows[0];
 
+    // ✅ NUEVO: Incluir tasa_iva en la consulta de detalles
     const detallesResult = await pool.query(`
-      SELECT dv.*, p.nombre as producto_nombre, p.unidad_medida
+      SELECT dv.*, p.nombre as producto_nombre, p.unidad_medida, ti.tasa as tasa_iva
       FROM detalle_venta dv
       LEFT JOIN productos p ON dv.id_producto = p.id
+      LEFT JOIN tasas_iva ti ON p.id_tasa_iva = ti.id
       WHERE dv.id_venta = $1
     `, [id]);
 
     const detalles = detallesResult.rows;
     
-    const subtotal = detalles.reduce((sum, detalle) => 
-      sum + (parseFloat(detalle.cantidad) * parseFloat(detalle.precio_unitario)), 0);
-    const iva = subtotal * 0.16;
-    const total = subtotal + iva;
+    // ✅ NUEVO: Calcular subtotal e IVA por producto
+    let subtotal = 0;
+    let iva_total = 0;
+
+    detalles.forEach(detalle => {
+      const cantidad = parseFloat(detalle.cantidad);
+      const precio_unitario = parseFloat(detalle.precio_unitario);
+      const tasa_iva = parseFloat(detalle.tasa_iva) / 100; // Convertir porcentaje a decimal
+      
+      const precio_sin_iva = precio_unitario / (1 + tasa_iva);
+      const iva_linea = precio_sin_iva * tasa_iva * cantidad;
+      
+      subtotal += precio_sin_iva * cantidad;
+      iva_total += iva_linea;
+    });
+
+    const total = subtotal + iva_total;
 
     console.log('✅ Datos de venta obtenidos:', { 
       id, 
       items: detalles.length,
-      metodo_pago: venta.metodo_pago,
-      detalles_pago_type: typeof venta.detalles_pago
+      subtotal,
+      iva_total,
+      total
     });
 
-    // Manejar detalles_pago de forma segura
+    // Manejar detalles_pago (código existente)
     let detallesPago = venta.detalles_pago;
-    
-    // Si es string, parsear; si ya es objeto, usar directamente
     if (detallesPago && typeof detallesPago === 'string') {
       try {
         detallesPago = JSON.parse(detallesPago);
@@ -766,7 +790,7 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
       cambio: venta.cambio,
       detalles: detalles,
       subtotal: subtotal,
-      iva: iva,
+      iva: iva_total,
       total: total
     });
 
@@ -776,6 +800,8 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
   }
 });
 
+
+
 // Ruta para reimprimir factura (obtener datos completos para impresión)
 router.get('/api/facturas-venta/:id/reimprimir', requireAuth, async (req, res) => {
   try {
@@ -783,7 +809,6 @@ router.get('/api/facturas-venta/:id/reimprimir', requireAuth, async (req, res) =
     
     console.log('🖨️ Solicitando reimpresión de factura:', id);
     
-    // Reutilizar la lógica de la ruta /api/ventas/:id pero con más datos para impresión
     const ventaResult = await pool.query(`
       SELECT v.*, c.nombre as cliente_nombre, c.cedula_rif, c.telefono, c.direccion,
              u.nombre as vendedor_nombre
@@ -799,20 +824,34 @@ router.get('/api/facturas-venta/:id/reimprimir', requireAuth, async (req, res) =
 
     const venta = ventaResult.rows[0];
 
-    // CORREGIDO: Eliminar p.codigo ya que no existe en la tabla productos
+    // ✅ NUEVO: Incluir tasa_iva en la consulta
     const detallesResult = await pool.query(`
-      SELECT dv.*, p.nombre as producto_nombre, p.unidad_medida
+      SELECT dv.*, p.nombre as producto_nombre, p.unidad_medida, ti.tasa as tasa_iva
       FROM detalle_venta dv
       LEFT JOIN productos p ON dv.id_producto = p.id
+      LEFT JOIN tasas_iva ti ON p.id_tasa_iva = ti.id
       WHERE dv.id_venta = $1
     `, [id]);
 
     const detalles = detallesResult.rows;
     
-    const subtotal = detalles.reduce((sum, detalle) => 
-      sum + (parseFloat(detalle.cantidad) * parseFloat(detalle.precio_unitario)), 0);
-    const iva = subtotal * 0.16;
-    const total = subtotal + iva;
+    // ✅ NUEVO: Calcular subtotal e IVA por producto
+    let subtotal = 0;
+    let iva_total = 0;
+
+    detalles.forEach(detalle => {
+      const cantidad = parseFloat(detalle.cantidad);
+      const precio_unitario = parseFloat(detalle.precio_unitario);
+      const tasa_iva = parseFloat(detalle.tasa_iva) / 100;
+      
+      const precio_sin_iva = precio_unitario / (1 + tasa_iva);
+      const iva_linea = precio_sin_iva * tasa_iva * cantidad;
+      
+      subtotal += precio_sin_iva * cantidad;
+      iva_total += iva_linea;
+    });
+
+    const total = subtotal + iva_total;
 
     // Obtener información de la empresa
     const empresaResult = await pool.query('SELECT * FROM configuracion_empresa WHERE id = 1');
@@ -824,7 +863,7 @@ router.get('/api/facturas-venta/:id/reimprimir', requireAuth, async (req, res) =
       mensaje_factura: "¡Gracias por su compra!"
     };
 
-    // Manejar detalles_pago de forma segura
+    // Manejar detalles_pago (código existente)
     let detallesPago = venta.detalles_pago;
     if (detallesPago && typeof detallesPago === 'string') {
       try {
@@ -838,7 +877,9 @@ router.get('/api/facturas-venta/:id/reimprimir', requireAuth, async (req, res) =
     console.log('✅ Datos para reimpresión obtenidos:', { 
       id, 
       items: detalles.length,
-      total: total
+      subtotal,
+      iva_total,
+      total
     });
 
     res.json({
@@ -862,7 +903,7 @@ router.get('/api/facturas-venta/:id/reimprimir', requireAuth, async (req, res) =
       banco_pago: venta.banco_pago,
       items: detalles,
       subtotal: subtotal,
-      iva: iva,
+      iva: iva_total,
       total: total,
       fecha_reimpresion: new Date().toISOString()
     });
@@ -872,7 +913,6 @@ router.get('/api/facturas-venta/:id/reimprimir', requireAuth, async (req, res) =
     res.status(500).json({ error: 'Error al reimprimir la factura' });
   }
 });
-
 
 
 export default router;

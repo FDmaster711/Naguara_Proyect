@@ -1,6 +1,6 @@
 // facturas-ventas.js - Módulo de gestión de facturas
 class FacturasManager {
-     constructor() {
+    constructor() {
         this.API_BASE = 'http://localhost:3000/api';
         this.facturaSeleccionada = null;
         this.paginacionActual = {};
@@ -9,9 +9,9 @@ class FacturasManager {
         this.init();
     }
 
-   async init() {
+    async init() {
         this.setupEventListeners();
-        await this.applyUrlFilters(); // Esperar a que se apliquen los filtros
+        await this.applyUrlFilters();
         this.cargarFacturas();
     }
 
@@ -36,8 +36,7 @@ class FacturasManager {
         });
     }
 
-  initializeDates() {
-        // Solo inicializar si no hay valores ya establecidos
+    initializeDates() {
         const fechaInicio = document.getElementById('fechaInicio').value;
         const fechaFin = document.getElementById('fechaFin').value;
         
@@ -51,156 +50,133 @@ class FacturasManager {
         }
     }
 
-
-
- applyUrlFilters() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const fechaParam = urlParams.get('fecha');
-    
-    if (fechaParam && this.isValidDate(fechaParam)) {
-        // Aplicar filtro de fecha única
-        document.getElementById('fechaInicio').value = fechaParam;
-        document.getElementById('fechaFin').value = fechaParam;
+    applyUrlFilters() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fechaParam = urlParams.get('fecha');
         
-        // ✅ CAMBIO: No forzar estado, dejar el valor por defecto o vacío para mostrar TODAS
-        // document.getElementById('estadoFilter').value = 'completada'; // ← ELIMINAR ESTA LÍNEA
-        
-        this.mostrarIndicadorFecha(fechaParam);
-        
-        console.log('✅ Filtro de fecha aplicado desde URL:', fechaParam);
-    } else {
-        // Si no hay filtro de URL, usar fechas por defecto
-        this.initializeDates();
-    }
-}
-
-isValidDate(dateString) {
-    const regex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!regex.test(dateString)) return false;
-    
-    const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date);
-}
-
-mostrarIndicadorFecha(fecha) {
-    const fechaFormateada = new Date(fecha).toLocaleDateString('es-ES', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-    
-    // Crear o actualizar el indicador
-    let indicador = document.getElementById('filtro-fecha-activo');
-    if (!indicador) {
-        indicador = document.createElement('div');
-        indicador.id = 'filtro-fecha-activo';
-        indicador.className = 'filtro-activo';
-        
-        const cardHeader = document.querySelector('.card-header');
-        if (cardHeader) {
-            cardHeader.parentNode.insertBefore(indicador, cardHeader.nextSibling);
+        if (fechaParam && this.isValidDate(fechaParam)) {
+            document.getElementById('fechaInicio').value = fechaParam;
+            document.getElementById('fechaFin').value = fechaParam;
+            this.mostrarIndicadorFecha(fechaParam);
+            console.log('✅ Filtro de fecha aplicado desde URL:', fechaParam);
+        } else {
+            this.initializeDates();
         }
     }
-    
-    indicador.innerHTML = `
-        <div style="background: #d1fae5; border: 1px solid #10b981; border-radius: 8px; padding: 12px; margin: 10px 0;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-calendar-check" style="color: #10b981;"></i>
-                <strong style="color: #065f46;">Filtro activo:</strong>
-                <span style="color: #065f46;">Mostrando ventas del ${fechaFormateada}</span>
-            </div>
-            <button onclick="facturasManager.quitarFiltroFecha()" 
-                    style="margin-top: 8px; background: #10b981; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                <i class="fas fa-times"></i> Quitar filtro
-            </button>
-        </div>
-    `;
-}
 
-quitarFiltroFecha() {
-    // Remover parámetros de la URL sin recargar la página
-    const url = new URL(window.location);
-    url.searchParams.delete('fecha');
-    window.history.replaceState({}, '', url);
-    
-    // Remover indicador
-    const indicador = document.getElementById('filtro-fecha-activo');
-    if (indicador) indicador.remove();
-    
-    // Restablecer fechas por defecto
-    this.initializeDates();
-    
-    // Recargar facturas sin filtro de fecha
-    this.cargarFacturas();
-}
-
-    
-async cargarFacturas(pagina = 1) {
-    try {
-        this.mostrarLoading(true);
+    isValidDate(dateString) {
+        const regex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!regex.test(dateString)) return false;
         
-        const fechaInicio = document.getElementById('fechaInicio').value;
-        const fechaFin = document.getElementById('fechaFin').value;
-        const cliente = document.getElementById('clienteFilter').value;
-        const metodoPago = document.getElementById('metodoPagoFilter').value;
-        const estado = document.getElementById('estadoFilter').value;
+        const date = new Date(dateString);
+        return date instanceof Date && !isNaN(date);
+    }
 
-        // Construir parámetros de forma más controlada
-        const params = new URLSearchParams({
-            page: pagina,
-            limit: 20
+    mostrarIndicadorFecha(fecha) {
+        const fechaFormateada = new Date(fecha).toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
-
-        // Solo agregar estado si tiene valor (no enviar vacío)
-        if (estado) {
-            params.append('estado', estado);
-        }
-
-        // Manejar fechas - si son iguales, buscar solo ese día
-        if (fechaInicio && fechaFin) {
-            if (fechaInicio === fechaFin) {
-                // Buscar solo el día específico
-                params.append('fecha_inicio', fechaInicio);
-                params.append('fecha_fin', fechaInicio);
-            } else {
-                // Buscar en el rango
-                params.append('fecha_inicio', fechaInicio);
-                params.append('fecha_fin', fechaFin);
+        
+        let indicador = document.getElementById('filtro-fecha-activo');
+        if (!indicador) {
+            indicador = document.createElement('div');
+            indicador.id = 'filtro-fecha-activo';
+            indicador.className = 'filtro-activo';
+            
+            const cardHeader = document.querySelector('.card-header');
+            if (cardHeader) {
+                cardHeader.parentNode.insertBefore(indicador, cardHeader.nextSibling);
             }
         }
-
-        // Agregar otros filtros solo si tienen valor
-        if (cliente) {
-            params.append('cliente', cliente);
-        }
-        if (metodoPago) {
-            params.append('metodo_pago', metodoPago);
-        }
-
-        console.log('🔍 Buscando facturas con parámetros:', Object.fromEntries(params));
-
-        const response = await fetch(`${this.API_BASE}/facturas-venta?${params}`, {
-            credentials: 'include'
-        });
-
-        if (!response.ok) throw new Error('Error al cargar facturas');
-
-        const data = await response.json();
-        this.mostrarFacturas(data.facturas);
-        this.mostrarPaginacion(data.paginacion);
-        this.paginacionActual = data.paginacion;
-
-        // Cargar estadísticas con los mismos filtros
-        await this.cargarEstadisticas();
-
-    } catch (error) {
-        console.error('Error:', error);
-        this.mostrarError('Error al cargar las facturas');
-    } finally {
-        this.mostrarLoading(false);
+        
+        indicador.innerHTML = `
+            <div style="background: #d1fae5; border: 1px solid #10b981; border-radius: 8px; padding: 12px; margin: 10px 0;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-calendar-check" style="color: #10b981;"></i>
+                    <strong style="color: #065f46;">Filtro activo:</strong>
+                    <span style="color: #065f46;">Mostrando ventas del ${fechaFormateada}</span>
+                </div>
+                <button onclick="facturasManager.quitarFiltroFecha()" 
+                        style="margin-top: 8px; background: #10b981; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    <i class="fas fa-times"></i> Quitar filtro
+                </button>
+            </div>
+        `;
     }
-}    
+
+    quitarFiltroFecha() {
+        const url = new URL(window.location);
+        url.searchParams.delete('fecha');
+        window.history.replaceState({}, '', url);
+        
+        const indicador = document.getElementById('filtro-fecha-activo');
+        if (indicador) indicador.remove();
+        
+        this.initializeDates();
+        this.cargarFacturas();
+    }
+    
+    async cargarFacturas(pagina = 1) {
+        try {
+            this.mostrarLoading(true);
+            
+            const fechaInicio = document.getElementById('fechaInicio').value;
+            const fechaFin = document.getElementById('fechaFin').value;
+            const cliente = document.getElementById('clienteFilter').value;
+            const metodoPago = document.getElementById('metodoPagoFilter').value;
+            const estado = document.getElementById('estadoFilter').value;
+
+            const params = new URLSearchParams({
+                page: pagina,
+                limit: 20
+            });
+
+            if (estado) {
+                params.append('estado', estado);
+            }
+
+            if (fechaInicio && fechaFin) {
+                if (fechaInicio === fechaFin) {
+                    params.append('fecha_inicio', fechaInicio);
+                    params.append('fecha_fin', fechaInicio);
+                } else {
+                    params.append('fecha_inicio', fechaInicio);
+                    params.append('fecha_fin', fechaFin);
+                }
+            }
+
+            if (cliente) {
+                params.append('cliente', cliente);
+            }
+            if (metodoPago) {
+                params.append('metodo_pago', metodoPago);
+            }
+
+            console.log('🔍 Buscando facturas con parámetros:', Object.fromEntries(params));
+
+            const response = await fetch(`${this.API_BASE}/facturas-venta?${params}`, {
+                credentials: 'include'
+            });
+
+            if (!response.ok) throw new Error('Error al cargar facturas');
+
+            const data = await response.json();
+            this.mostrarFacturas(data.facturas);
+            this.mostrarPaginacion(data.paginacion);
+            this.paginacionActual = data.paginacion;
+
+            await this.cargarEstadisticas();
+
+        } catch (error) {
+            console.error('Error:', error);
+            this.mostrarError('Error al cargar las facturas');
+        } finally {
+            this.mostrarLoading(false);
+        }
+    }    
 
     mostrarFacturas(facturas) {
         const tbody = document.getElementById('facturasBody');
@@ -220,73 +196,69 @@ async cargarFacturas(pagina = 1) {
     }
 
     crearFilaFactura(factura) {
-    const total = parseFloat(factura.total) || 0;
-    const fecha = new Date(factura.fecha_venta).toLocaleDateString();
-    
-    // Determinar clase del badge según estado
-    const estadoClass = factura.estado === 'completada' ? 'badge-success' : 'badge-danger';
-    const estadoTexto = factura.estado === 'completada' ? 'Completada' : 'Anulada';
-    
-    // Determinar si mostrar botones de acción
-    const mostrarAcciones = factura.estado === 'completada';
-    
-    const tr = document.createElement('tr');
-    
-    // Agregar estilo diferente para facturas anuladas
-    if (factura.estado === 'anulada') {
-        tr.style.opacity = '0.7';
-        tr.style.backgroundColor = '#fef2f2';
+        const total = parseFloat(factura.total) || 0;
+        const fecha = new Date(factura.fecha_venta).toLocaleDateString();
+        
+        const estadoClass = factura.estado === 'completada' ? 'badge-success' : 'badge-danger';
+        const estadoTexto = factura.estado === 'completada' ? 'Completada' : 'Anulada';
+        
+        const mostrarAcciones = factura.estado === 'completada';
+        
+        const tr = document.createElement('tr');
+        
+        if (factura.estado === 'anulada') {
+            tr.style.opacity = '0.7';
+            tr.style.backgroundColor = '#fef2f2';
+        }
+        
+        tr.innerHTML = `
+            <td>
+                <strong>F-${factura.id.toString().padStart(6, '0')}</strong>
+                ${factura.estado === 'anulada' ? '<br><small class="text-red-600">ANULADA</small>' : ''}
+            </td>
+            <td>${fecha}</td>
+            <td>${factura.cliente_nombre || 'N/A'}</td>
+            <td>${factura.vendedor_nombre || 'N/A'}</td>
+            <td>
+                <span class="badge ${this.getBadgeClass(factura.metodo_pago)}">
+                    ${this.formatearMetodoPago(factura.metodo_pago)}
+                </span>
+            </td>
+            <td>
+                <strong>$${total.toFixed(2)}</strong>
+                ${factura.estado === 'anulada' ? '<br><small class="text-red-600">(Anulada)</small>' : ''}
+            </td>
+            <td>
+                <span class="badge ${estadoClass}">
+                    ${estadoTexto}
+                </span>
+                ${factura.motivo_anulacion ? `<br><small title="${factura.motivo_anulacion}">${this.truncarTexto(factura.motivo_anulacion, 20)}</small>` : ''}
+            </td>
+            <td>
+                <button class="btn-sm btn-primary" onclick="facturasManager.verDetalles(${factura.id})" title="Ver detalles">
+                    <i class="fas fa-eye"></i>
+                </button>
+                ${mostrarAcciones ? `
+                <button class="btn-sm btn-warning" onclick="facturasManager.reimprimirFactura(${factura.id})" title="Reimprimir">
+                    <i class="fas fa-print"></i>
+                </button>
+                <button class="btn-sm btn-danger" onclick="facturasManager.solicitarAnulacion(${factura.id})" title="Anular">
+                    <i class="fas fa-ban"></i>
+                </button>
+                ` : `
+                <button class="btn-sm btn-secondary" onclick="facturasManager.verDetalles(${factura.id})" title="Ver detalles de anulación">
+                    <i class="fas fa-info-circle"></i>
+                </button>
+                `}
+            </td>
+        `;
+        return tr;
     }
-    
-    tr.innerHTML = `
-        <td>
-            <strong>F-${factura.id.toString().padStart(6, '0')}</strong>
-            ${factura.estado === 'anulada' ? '<br><small class="text-red-600">ANULADA</small>' : ''}
-        </td>
-        <td>${fecha}</td>
-        <td>${factura.cliente_nombre || 'N/A'}</td>
-        <td>${factura.vendedor_nombre || 'N/A'}</td>
-        <td>
-            <span class="badge ${this.getBadgeClass(factura.metodo_pago)}">
-                ${this.formatearMetodoPago(factura.metodo_pago)}
-            </span>
-        </td>
-<td>
-    <strong>$${total.toFixed(2)}</strong>
-    ${factura.estado === 'anulada' ? '<br><small class="text-red-600">(Anulada)</small>' : ''}
-</td>
-        <td>
-            <span class="badge ${estadoClass}">
-                ${estadoTexto}
-            </span>
-            ${factura.motivo_anulacion ? `<br><small title="${factura.motivo_anulacion}">${this.truncarTexto(factura.motivo_anulacion, 20)}</small>` : ''}
-        </td>
-        <td>
-            <button class="btn-sm btn-primary" onclick="facturasManager.verDetalles(${factura.id})" title="Ver detalles">
-                <i class="fas fa-eye"></i>
-            </button>
-            ${mostrarAcciones ? `
-            <button class="btn-sm btn-warning" onclick="facturasManager.reimprimirFactura(${factura.id})" title="Reimprimir">
-                <i class="fas fa-print"></i>
-            </button>
-            <button class="btn-sm btn-danger" onclick="facturasManager.solicitarAnulacion(${factura.id})" title="Anular">
-                <i class="fas fa-ban"></i>
-            </button>
-            ` : `
-            <button class="btn-sm btn-secondary" onclick="facturasManager.verDetalles(${factura.id})" title="Ver detalles de anulación">
-                <i class="fas fa-info-circle"></i>
-            </button>
-            `}
-        </td>
-    `;
-    return tr;
-}
 
-// Agregar función auxiliar para truncar texto
-truncarTexto(texto, longitud) {
-    if (texto.length <= longitud) return texto;
-    return texto.substring(0, longitud) + '...';
-}
+    truncarTexto(texto, longitud) {
+        if (texto.length <= longitud) return texto;
+        return texto.substring(0, longitud) + '...';
+    }
 
     mostrarPaginacion(paginacion) {
         const container = document.getElementById('paginacion');
@@ -296,7 +268,6 @@ truncarTexto(texto, longitud) {
 
         const { pagina_actual, total_paginas } = paginacion;
 
-        // Botón anterior
         if (pagina_actual > 1) {
             container.innerHTML += `
                 <button class="btn-pagination" onclick="facturasManager.cargarFacturas(${pagina_actual - 1})">
@@ -305,7 +276,6 @@ truncarTexto(texto, longitud) {
             `;
         }
 
-        // Números de página
         for (let i = 1; i <= total_paginas; i++) {
             if (i === pagina_actual) {
                 container.innerHTML += `<span class="page-current">${i}</span>`;
@@ -316,7 +286,6 @@ truncarTexto(texto, longitud) {
             }
         }
 
-        // Botón siguiente
         if (pagina_actual < total_paginas) {
             container.innerHTML += `
                 <button class="btn-pagination" onclick="facturasManager.cargarFacturas(${pagina_actual + 1})">
@@ -327,39 +296,37 @@ truncarTexto(texto, longitud) {
     }
 
     async cargarEstadisticas() {
-    try {
-        const params = new URLSearchParams({
-            fecha_inicio: document.getElementById('fechaInicio').value,
-            fecha_fin: document.getElementById('fechaFin').value
-        });
+        try {
+            const params = new URLSearchParams({
+                fecha_inicio: document.getElementById('fechaInicio').value,
+                fecha_fin: document.getElementById('fechaFin').value
+            });
 
-        const response = await fetch(`${this.API_BASE}/facturas-venta/estadisticas?${params}`, {
-            credentials: 'include'
-        });
+            const response = await fetch(`${this.API_BASE}/facturas-venta/estadisticas?${params}`, {
+                credentials: 'include'
+            });
 
-        if (!response.ok) {
-            throw new Error('Error al cargar estadísticas');
+            if (!response.ok) {
+                throw new Error('Error al cargar estadísticas');
+            }
+
+            const data = await response.json();
+            this.mostrarEstadisticas(data);
+
+        } catch (error) {
+            console.error('Error cargando estadísticas:', error);
+            this.mostrarEstadisticas({
+                total_facturas: 0,
+                total_ventas: 0,
+                promedio_venta: 0,
+                facturas_anuladas: 0
+            });
         }
-
-        const data = await response.json();
-        this.mostrarEstadisticas(data);
-
-    } catch (error) {
-        console.error('Error cargando estadísticas:', error);
-        // Mostrar estadísticas vacías en caso de error
-        this.mostrarEstadisticas({
-            total_facturas: 0,
-            total_ventas: 0,
-            promedio_venta: 0,
-            facturas_anuladas: 0
-        });
     }
-}
 
     mostrarEstadisticas(data) {
         const container = document.getElementById('estadisticasContainer');
         
-        // Manejar diferentes estructuras posibles de datos
         let estadisticas;
         
         if (data && data.estadisticas) {
@@ -370,7 +337,6 @@ truncarTexto(texto, longitud) {
             estadisticas = {};
         }
         
-        // Función segura para obtener números
         const getSafeNumber = (value) => {
             if (value === null || value === undefined) return 0;
             const num = parseFloat(value);
@@ -451,12 +417,9 @@ truncarTexto(texto, longitud) {
         }
     }
 
-    
-
     mostrarModalDetalles(factura) {
         const modalBody = document.getElementById('detallesFacturaBody');
         
-        // Información de la empresa
         const empresa = {
             nombre_empresa: "Pollera Na'Guara",
             rif: "J-123456789",
@@ -465,7 +428,42 @@ truncarTexto(texto, longitud) {
             mensaje_factura: "¡Gracias por su compra!"
         };
 
-        // Construir HTML de la factura
+        // ✅ CALCULAR IVA POR PRODUCTO
+        let subtotal_bs = 0;
+        let tax_bs = 0;
+        const desgloseIva = {};
+
+        (factura.detalles || []).forEach(detalle => {
+            const cantidad = parseFloat(detalle.cantidad) || 0;
+            const precio_unitario = parseFloat(detalle.precio_unitario) || 0;
+            const tasa_iva = parseFloat(detalle.tasa_iva) || 16;
+            
+            const precio_sin_iva = precio_unitario / (1 + (tasa_iva / 100));
+            const iva_linea = precio_sin_iva * (tasa_iva / 100) * cantidad;
+            
+            subtotal_bs += precio_sin_iva * cantidad;
+            tax_bs += iva_linea;
+            
+            const claveIva = `${tasa_iva}%`;
+            if (!desgloseIva[claveIva]) {
+                desgloseIva[claveIva] = 0;
+            }
+            desgloseIva[claveIva] += iva_linea;
+        });
+
+        const total_bs = subtotal_bs + tax_bs;
+
+        // ✅ GENERAR DESGLOSE DE IVA
+        let desgloseIvaHTML = '';
+        Object.keys(desgloseIva).forEach(tipo => {
+            desgloseIvaHTML += `
+                <div class="flex justify-between text-sm">
+                    <span>IVA ${tipo}:</span>
+                    <span>$${desgloseIva[tipo].toFixed(2)}</span>
+                </div>
+            `;
+        });
+
         const invoiceHTML = `
             <div class="invoice-container" style="max-width: 100%;">
                 <!-- Encabezado -->
@@ -481,7 +479,6 @@ truncarTexto(texto, longitud) {
                         <h3 class="text-xl font-bold text-purple-600">FACTURA #${factura.id.toString().padStart(6, '0')}</h3>
                         <p class="text-gray-600 text-sm">Fecha: ${new Date(factura.fecha_venta).toLocaleDateString('es-ES')}</p>
                         <p class="text-gray-600 text-sm">Hora: ${new Date(factura.fecha_venta).toLocaleTimeString('es-ES')}</p>
-                        <p class="text-gray-600 text-sm">IVA: 16%</p>
                     </div>
                 </div>
 
@@ -508,19 +505,32 @@ truncarTexto(texto, longitud) {
                             <tr>
                                 <th class="border border-gray-300 p-2 text-left">Producto</th>
                                 <th class="border border-gray-300 p-2 text-center">Cantidad</th>
+                                <th class="border border-gray-300 p-2 text-center">IVA</th>
                                 <th class="border border-gray-300 p-2 text-right">Precio Unit.</th>
                                 <th class="border border-gray-300 p-2 text-right">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${(factura.detalles || []).map(detalle => `
-                                <tr>
-                                    <td class="border border-gray-300 p-2">${detalle.producto_nombre || 'N/A'}</td>
-                                    <td class="border border-gray-300 p-2 text-center">${parseFloat(detalle.cantidad) || 0} ${detalle.unidad_medida || 'unidad'}</td>
-                                    <td class="border border-gray-300 p-2 text-right">$${parseFloat(detalle.precio_unitario || 0).toFixed(2)}</td>
-                                    <td class="border border-gray-300 p-2 text-right">$${(parseFloat(detalle.cantidad || 0) * parseFloat(detalle.precio_unitario || 0)).toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
+                            ${(factura.detalles || []).map(detalle => {
+                                const cantidad = parseFloat(detalle.cantidad) || 0;
+                                const precio_unitario = parseFloat(detalle.precio_unitario) || 0;
+                                const tasa_iva = parseFloat(detalle.tasa_iva) || 16;
+                                const subtotal = cantidad * precio_unitario;
+                                
+                                return `
+                                    <tr>
+                                        <td class="border border-gray-300 p-2">${detalle.producto_nombre || 'N/A'}</td>
+                                        <td class="border border-gray-300 p-2 text-center">${cantidad} ${detalle.unidad_medida || 'unidad'}</td>
+                                        <td class="border border-gray-300 p-2 text-center">
+                                            ${tasa_iva === 0 ? 
+                                              '<span class="text-green-600 text-xs">EXENTO</span>' : 
+                                              `${tasa_iva}%`}
+                                        </td>
+                                        <td class="border border-gray-300 p-2 text-right">$${precio_unitario.toFixed(2)}</td>
+                                        <td class="border border-gray-300 p-2 text-right">$${subtotal.toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -540,15 +550,12 @@ truncarTexto(texto, longitud) {
                         <div class="space-y-1 text-sm">
                             <div class="flex justify-between">
                                 <span>Subtotal:</span>
-                                <span>$${parseFloat(factura.subtotal || 0).toFixed(2)}</span>
+                                <span>$${subtotal_bs.toFixed(2)}</span>
                             </div>
-                            <div class="flex justify-between">
-                                <span>IVA (16%):</span>
-                                <span>$${parseFloat(factura.iva || 0).toFixed(2)}</span>
-                            </div>
+                            ${desgloseIvaHTML}
                             <div class="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
                                 <span>TOTAL:</span>
-                                <span class="text-purple-600">$${parseFloat(factura.total || 0).toFixed(2)}</span>
+                                <span class="text-purple-600">$${total_bs.toFixed(2)}</span>
                             </div>
                         </div>
                     </div>
@@ -572,7 +579,6 @@ truncarTexto(texto, longitud) {
         if (!detallesPago) return '';
         
         let detalles = detallesPago;
-        // Si es string, parsear
         if (typeof detallesPago === 'string') {
             try {
                 detalles = JSON.parse(detallesPago);
@@ -639,51 +645,48 @@ truncarTexto(texto, longitud) {
     }
 
     async confirmarAnulacion() {
-    const motivo = document.getElementById('motivoAnulacion').value.trim();
-    
-    if (!motivo) {
-        this.mostrarError('Por favor ingrese el motivo de la anulación');
-        return;
-    }
-
-    try {
-        this.mostrarLoading(true);
+        const motivo = document.getElementById('motivoAnulacion').value.trim();
         
-        const response = await fetch(`${this.API_BASE}/facturas-venta/${this.facturaSeleccionada}/anular`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ motivo }),
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error);
+        if (!motivo) {
+            this.mostrarError('Por favor ingrese el motivo de la anulación');
+            return;
         }
 
-        this.mostrarExito('Factura anulada exitosamente');
-        this.cerrarModal('modalAnular');
-        
-        // Recargar manteniendo el filtro actual
-        const estadoFiltro = document.getElementById('estadoFilter').value;
-        if (!estadoFiltro) {
-            // Si el filtro está en "Todas", recargar en la misma página
-            this.cargarFacturas(this.paginacionActual.pagina_actual);
-        } else {
-            // Si está filtrando por "Completadas", cambiar a "Todas" para ver la anulada
-            document.getElementById('estadoFilter').value = '';
-            this.cargarFacturas(1);
-        }
+        try {
+            this.mostrarLoading(true);
+            
+            const response = await fetch(`${this.API_BASE}/facturas-venta/${this.facturaSeleccionada}/anular`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ motivo }),
+                credentials: 'include'
+            });
 
-    } catch (error) {
-        console.error('Error:', error);
-        this.mostrarError('Error al anular la factura: ' + error.message);
-    } finally {
-        this.mostrarLoading(false);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error);
+            }
+
+            this.mostrarExito('Factura anulada exitosamente');
+            this.cerrarModal('modalAnular');
+            
+            const estadoFiltro = document.getElementById('estadoFilter').value;
+            if (!estadoFiltro) {
+                this.cargarFacturas(this.paginacionActual.pagina_actual);
+            } else {
+                document.getElementById('estadoFilter').value = '';
+                this.cargarFacturas(1);
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            this.mostrarError('Error al anular la factura: ' + error.message);
+        } finally {
+            this.mostrarLoading(false);
+        }
     }
-}
 
     async reimprimirFactura(id) {
         try {
@@ -707,7 +710,6 @@ truncarTexto(texto, longitud) {
     }
 
     mostrarVentanaImpresion(facturaData) {
-        // Crear una ventana nueva para la impresión
         const ventanaImpresion = window.open('', '_blank', 'width=800,height=600');
         
         if (!ventanaImpresion) {
@@ -715,7 +717,43 @@ truncarTexto(texto, longitud) {
             return;
         }
 
-        const { factura, empresa, cliente, vendedor, items, subtotal, iva, total, detalles_pago } = facturaData;
+        const { factura, empresa, cliente, vendedor, items, detalles_pago } = facturaData;
+
+        // ✅ CALCULAR IVA POR PRODUCTO
+        let subtotal_bs = 0;
+        let tax_bs = 0;
+        const desgloseIva = {};
+
+        (items || []).forEach(item => {
+            const cantidad = parseFloat(item.cantidad) || 0;
+            const precio_unitario = parseFloat(item.precio_unitario) || 0;
+            const tasa_iva = parseFloat(item.tasa_iva) || 16;
+            
+            const precio_sin_iva = precio_unitario / (1 + (tasa_iva / 100));
+            const iva_linea = precio_sin_iva * (tasa_iva / 100) * cantidad;
+            
+            subtotal_bs += precio_sin_iva * cantidad;
+            tax_bs += iva_linea;
+            
+            const claveIva = `${tasa_iva}%`;
+            if (!desgloseIva[claveIva]) {
+                desgloseIva[claveIva] = 0;
+            }
+            desgloseIva[claveIva] += iva_linea;
+        });
+
+        const total_bs = subtotal_bs + tax_bs;
+
+        // ✅ GENERAR DESGLOSE DE IVA
+        let desgloseIvaHTML = '';
+        Object.keys(desgloseIva).forEach(tipo => {
+            desgloseIvaHTML += `
+                <div class="flex justify-between text-sm">
+                    <span>IVA ${tipo}:</span>
+                    <span>$${desgloseIva[tipo].toFixed(2)}</span>
+                </div>
+            `;
+        });
 
         const htmlImpresion = `
             <!DOCTYPE html>
@@ -784,19 +822,32 @@ truncarTexto(texto, longitud) {
                                 <tr>
                                     <th class="border border-gray-300 p-2 text-left">Producto</th>
                                     <th class="border border-gray-300 p-2 text-center">Cantidad</th>
+                                    <th class="border border-gray-300 p-2 text-center">IVA</th>
                                     <th class="border border-gray-300 p-2 text-right">Precio Unit.</th>
                                     <th class="border border-gray-300 p-2 text-right">Subtotal</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${(items || []).map(item => `
-                                    <tr>
-                                        <td class="border border-gray-300 p-2">${item.producto_nombre || 'N/A'}</td>
-                                        <td class="border border-gray-300 p-2 text-center">${parseFloat(item.cantidad) || 0} ${item.unidad_medida || 'unidad'}</td>
-                                        <td class="border border-gray-300 p-2 text-right">$${parseFloat(item.precio_unitario || 0).toFixed(2)}</td>
-                                        <td class="border border-gray-300 p-2 text-right">$${(parseFloat(item.cantidad || 0) * parseFloat(item.precio_unitario || 0)).toFixed(2)}</td>
-                                    </tr>
-                                `).join('')}
+                                ${(items || []).map(item => {
+                                    const cantidad = parseFloat(item.cantidad) || 0;
+                                    const precio_unitario = parseFloat(item.precio_unitario) || 0;
+                                    const tasa_iva = parseFloat(item.tasa_iva) || 16;
+                                    const subtotal = cantidad * precio_unitario;
+                                    
+                                    return `
+                                        <tr>
+                                            <td class="border border-gray-300 p-2">${item.producto_nombre || 'N/A'}</td>
+                                            <td class="border border-gray-300 p-2 text-center">${cantidad} ${item.unidad_medida || 'unidad'}</td>
+                                            <td class="border border-gray-300 p-2 text-center">
+                                                ${tasa_iva === 0 ? 
+                                                  '<span class="text-green-600 text-xs">EXENTO</span>' : 
+                                                  `${tasa_iva}%`}
+                                            </td>
+                                            <td class="border border-gray-300 p-2 text-right">$${precio_unitario.toFixed(2)}</td>
+                                            <td class="border border-gray-300 p-2 text-right">$${subtotal.toFixed(2)}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -816,15 +867,12 @@ truncarTexto(texto, longitud) {
                             <div class="space-y-1 text-sm">
                                 <div class="flex justify-between">
                                     <span>Subtotal:</span>
-                                    <span>$${parseFloat(subtotal || 0).toFixed(2)}</span>
+                                    <span>$${subtotal_bs.toFixed(2)}</span>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span>IVA (16%):</span>
-                                    <span>$${parseFloat(iva || 0).toFixed(2)}</span>
-                                </div>
+                                ${desgloseIvaHTML}
                                 <div class="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
                                     <span>TOTAL:</span>
-                                    <span class="text-purple-600">$${parseFloat(total || 0).toFixed(2)}</span>
+                                    <span class="text-purple-600">$${total_bs.toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
@@ -850,7 +898,6 @@ truncarTexto(texto, longitud) {
                 </div>
 
                 <script>
-                    // Auto-impresión después de cargar (opcional)
                     setTimeout(() => {
                         if (window.location.search.includes('autoprint')) {
                             window.print();
@@ -864,72 +911,61 @@ truncarTexto(texto, longitud) {
         ventanaImpresion.document.write(htmlImpresion);
         ventanaImpresion.document.close();
 
-        // Enfocar la ventana para impresión
         setTimeout(() => {
             ventanaImpresion.focus();
         }, 500);
     }
 
-    
+    exportarFacturas() {
+        try {
+            if (!this.facturasActuales || this.facturasActuales.length === 0) {
+                this.mostrarError('No hay facturas para exportar. Primero realice una búsqueda.');
+                return;
+            }
 
-  exportarFacturas() {
-    try {
-        // Verificar que hay facturas para exportar
-        if (!this.facturasActuales || this.facturasActuales.length === 0) {
-            this.mostrarError('No hay facturas para exportar. Primero realice una búsqueda.');
-            return;
-        }
+            console.log('Exportando:', this.facturasActuales.length, 'facturas');
 
-        console.log('Exportando:', this.facturasActuales.length, 'facturas');
-
-        // Crear libro de Excel
-        const wb = XLSX.utils.book_new();
-        
-        // Preparar datos para exportación
-        const datosExportar = this.facturasActuales.map(factura => {
-            const total = parseFloat(factura.total) || 0;
-            const fecha = new Date(factura.fecha_venta);
+            const wb = XLSX.utils.book_new();
             
-            return {
-                'N° Factura': `F-${factura.id.toString().padStart(6, '0')}`,
-                'Fecha': fecha.toLocaleDateString('es-ES'),
-                'Hora': fecha.toLocaleTimeString('es-ES'),
-                'Cliente': factura.cliente_nombre || 'N/A',
-                'Cédula/RIF': factura.cliente_cedula || 'N/A',
-                'Vendedor': factura.vendedor_nombre || 'N/A',
-                'Método de Pago': this.formatearMetodoPago(factura.metodo_pago),
-                'Estado': factura.estado === 'completada' ? 'Completada' : 'Anulada',
-                'Total ($)': total,
-                'Referencia Pago': factura.referencia_pago || 'N/A',
-                'Banco': factura.banco_pago || 'N/A',
-                'Motivo Anulación': factura.motivo_anulacion || 'N/A'
-            };
-        });
-        
-        // Crear hoja de trabajo
-        const ws = XLSX.utils.json_to_sheet(datosExportar);
-        
-        // Agregar hoja al libro
-        XLSX.utils.book_append_sheet(wb, ws, 'Facturas');
-        
-        // Generar nombre del archivo con fecha
-        const fecha = new Date().toISOString().split('T')[0];
-        const nombreArchivo = `Facturas_NaGuara_${fecha}.xlsx`;
-        
-        // Descargar archivo
-        XLSX.writeFile(wb, nombreArchivo);
-        
-        this.mostrarExito(`Archivo "${nombreArchivo}" descargado correctamente (${this.facturasActuales.length} facturas)`);
+            const datosExportar = this.facturasActuales.map(factura => {
+                const total = parseFloat(factura.total) || 0;
+                const fecha = new Date(factura.fecha_venta);
+                
+                return {
+                    'N° Factura': `F-${factura.id.toString().padStart(6, '0')}`,
+                    'Fecha': fecha.toLocaleDateString('es-ES'),
+                    'Hora': fecha.toLocaleTimeString('es-ES'),
+                    'Cliente': factura.cliente_nombre || 'N/A',
+                    'Cédula/RIF': factura.cliente_cedula || 'N/A',
+                    'Vendedor': factura.vendedor_nombre || 'N/A',
+                    'Método de Pago': this.formatearMetodoPago(factura.metodo_pago),
+                    'Estado': factura.estado === 'completada' ? 'Completada' : 'Anulada',
+                    'Total ($)': total,
+                    'Referencia Pago': factura.referencia_pago || 'N/A',
+                    'Banco': factura.banco_pago || 'N/A',
+                    'Motivo Anulación': factura.motivo_anulacion || 'N/A'
+                };
+            });
+            
+            const ws = XLSX.utils.json_to_sheet(datosExportar);
+            XLSX.utils.book_append_sheet(wb, ws, 'Facturas');
+            
+            const fecha = new Date().toISOString().split('T')[0];
+            const nombreArchivo = `Facturas_NaGuara_${fecha}.xlsx`;
+            
+            XLSX.writeFile(wb, nombreArchivo);
+            
+            this.mostrarExito(`Archivo "${nombreArchivo}" descargado correctamente (${this.facturasActuales.length} facturas)`);
 
-    } catch (error) {
-        console.error('Error exportando:', error);
-        this.mostrarError('Error al exportar los datos: ' + error.message);
+        } catch (error) {
+            console.error('Error exportando:', error);
+            this.mostrarError('Error al exportar los datos: ' + error.message);
+        }
     }
-}
 
-contarFacturasPorEstado(estado) {
-    return this.facturasActuales.filter(factura => factura.estado === estado).length;
-}
+    contarFacturasPorEstado(estado) {
+        return this.facturasActuales.filter(factura => factura.estado === estado).length;
+    }
 
     // Utilidades
     formatearMetodoPago(metodo) {

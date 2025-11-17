@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict PIMUZ6aqO7MLWZLa9tKeZo6zBOQ4MQ5RnbccFlrEw78Gg8CSYmFFFkYOOHC5kZv
+\restrict SMh74fMxNqmUwrOfGgQPFnSucglpdM78F8d7ftnqHphcTjkVQeiRv5pyq9NfNv1
 
 -- Dumped from database version 18.0
 -- Dumped by pg_dump version 18.0
@@ -227,42 +227,6 @@ ALTER SEQUENCE public.configuracion_empresa_id_seq OWNED BY public.configuracion
 
 
 --
--- Name: configuracion_negocio; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.configuracion_negocio (
-    id integer NOT NULL,
-    iva_rate numeric(5,2) DEFAULT 16.00,
-    stock_minimo integer DEFAULT 10,
-    fecha_actualizacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
-ALTER TABLE public.configuracion_negocio OWNER TO postgres;
-
---
--- Name: configuracion_negocio_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
---
-
-CREATE SEQUENCE public.configuracion_negocio_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.configuracion_negocio_id_seq OWNER TO postgres;
-
---
--- Name: configuracion_negocio_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
---
-
-ALTER SEQUENCE public.configuracion_negocio_id_seq OWNED BY public.configuracion_negocio.id;
-
-
---
 -- Name: detalle_compra; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -390,7 +354,9 @@ CREATE TABLE public.productos (
     categoria_id integer NOT NULL,
     nombre character varying(100),
     precio_dolares numeric(10,2),
-    id_provedores integer
+    id_provedores integer,
+    stock_minimo numeric(10,2) DEFAULT 10,
+    id_tasa_iva integer DEFAULT 1
 );
 
 
@@ -492,6 +458,46 @@ ALTER SEQUENCE public.tasa_cambio_id_seq OWNED BY public.tasa_cambio.id;
 
 
 --
+-- Name: tasas_iva; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tasas_iva (
+    id integer NOT NULL,
+    tasa numeric(5,2) NOT NULL,
+    descripcion character varying(100) NOT NULL,
+    tipo character varying(20) NOT NULL,
+    estado character varying(10) DEFAULT 'Activa'::character varying NOT NULL,
+    fecha_creacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT tasas_iva_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['general'::character varying, 'reducido'::character varying, 'exento'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.tasas_iva OWNER TO postgres;
+
+--
+-- Name: tasas_iva_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tasas_iva_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tasas_iva_id_seq OWNER TO postgres;
+
+--
+-- Name: tasas_iva_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tasas_iva_id_seq OWNED BY public.tasas_iva.id;
+
+
+--
 -- Name: transformacion_producto; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -590,7 +596,8 @@ CREATE TABLE public.ventas (
     banco_pago character varying(50),
     monto_recibido numeric(10,2),
     cambio numeric(10,2),
-    CONSTRAINT ventas_estado_check CHECK (((estado)::text = ANY ((ARRAY['completada'::character varying, 'cancelada'::character varying, 'pendiente'::character varying])::text[]))),
+    motivo_anulacion text,
+    CONSTRAINT ventas_estado_check CHECK (((estado)::text = ANY ((ARRAY['completada'::character varying, 'cancelada'::character varying, 'pendiente'::character varying, 'anulada'::character varying])::text[]))),
     CONSTRAINT ventas_metodo_pago_check CHECK (((metodo_pago)::text = ANY (ARRAY[('efectivo'::character varying)::text, ('tarjeta'::character varying)::text, ('transferencia'::character varying)::text, ('pago_movil'::character varying)::text, ('efectivo_bs'::character varying)::text, ('efectivo_usd'::character varying)::text, ('punto_venta'::character varying)::text, ('mixto'::character varying)::text])))
 );
 
@@ -655,13 +662,6 @@ ALTER TABLE ONLY public.configuracion_empresa ALTER COLUMN id SET DEFAULT nextva
 
 
 --
--- Name: configuracion_negocio id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.configuracion_negocio ALTER COLUMN id SET DEFAULT nextval('public.configuracion_negocio_id_seq'::regclass);
-
-
---
 -- Name: detalle_compra id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -701,6 +701,13 @@ ALTER TABLE ONLY public.proveedores ALTER COLUMN id SET DEFAULT nextval('public.
 --
 
 ALTER TABLE ONLY public.tasa_cambio ALTER COLUMN id SET DEFAULT nextval('public.tasa_cambio_id_seq'::regclass);
+
+
+--
+-- Name: tasas_iva id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tasas_iva ALTER COLUMN id SET DEFAULT nextval('public.tasas_iva_id_seq'::regclass);
 
 
 --
@@ -755,7 +762,7 @@ COPY public.clientes (id, cedula_rif, nombre, telefono, direccion, estado, fecha
 2	V-87654321	María García	0414-7654321	Valencia, Venezuela	Activo	2025-10-23 20:17:38.768564
 3	J-123456789	Empresa ABC C.A.	0212-9876543	Caracas, Venezuela	Activo	2025-10-23 20:17:38.768564
 4	V-12345677	Fabian da cal	04125566894	calle 13	Activo	2025-10-25 20:51:43.352716
-5	V-12345674	jesus	04125566897	sss	Inactivo	2025-11-05 10:46:32.318949
+5	V-12345674	jesus	04125566897	sss	Activo	2025-11-05 10:46:32.318949
 \.
 
 
@@ -773,27 +780,6 @@ COPY public.compras (id, fecha_compra, id_proveedor, id_usuario, num_factura, es
 
 COPY public.configuracion_empresa (id, nombre_empresa, rif, telefono, direccion, mensaje_factura, email) FROM stdin;
 1	Na'Guara	J-123456789	(0412) 123-4567	Barquisimeto, Venezuela	¡Gracias por su compra!	PollosNaguara@gmail.com
-\.
-
-
---
--- Data for Name: configuracion_negocio; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.configuracion_negocio (id, iva_rate, stock_minimo, fecha_actualizacion) FROM stdin;
-1	16.00	10	2025-10-27 10:48:33.693327
-2	16.00	5	2025-10-27 11:22:40.699715
-3	16.00	10	2025-10-27 11:23:16.030464
-4	16.00	10	2025-10-27 13:49:40.452185
-5	16.00	10	2025-10-27 13:50:19.96529
-6	20.00	10	2025-11-03 13:59:47.89759
-7	100.00	10	2025-11-03 14:03:35.310115
-8	16.00	10	2025-11-03 14:04:12.644763
-9	16.00	10	2025-11-03 14:30:47.278698
-10	16.00	10	2025-11-03 14:37:54.110868
-11	16.00	10	2025-11-03 14:39:47.863148
-12	16.00	10	2025-11-05 10:45:16.095012
-13	16.00	10	2025-11-05 10:45:16.702341
 \.
 
 
@@ -839,6 +825,11 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 38	33	14	10.00	6.80
 39	34	16	3.00	3.50
 40	35	13	1.00	5.50
+41	36	13	1.00	5.50
+42	37	13	1.00	5.50
+43	38	16	1.00	3.50
+44	39	10	1.10	25.00
+45	40	14	4.00	6.80
 \.
 
 
@@ -850,7 +841,7 @@ COPY public.metodos_pago_config (id, metodo_id, nombre, habilitado, fecha_actual
 1	efectivo	Efectivo	t	2025-11-03 14:34:31.087937
 2	tarjeta	Tarjeta	t	2025-11-03 14:34:31.087937
 4	pago_movil	Pago Móvil	t	2025-11-03 14:34:31.087937
-3	transferencia	Transferencia	f	2025-11-03 14:39:46.28377
+3	transferencia	Transferencia	t	2025-11-12 10:51:13.511702
 \.
 
 
@@ -858,16 +849,16 @@ COPY public.metodos_pago_config (id, metodo_id, nombre, habilitado, fecha_actual
 -- Data for Name: productos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, fecha_actualizacion, categoria_id, nombre, precio_dolares, id_provedores) FROM stdin;
-10	25.00	18.50	49.00	kg	2025-10-24 18:53:42.73315	1	Pollo Entero Premium	0.12	1
-11	45.00	32.00	0.00	kg	2025-10-24 18:53:42.73315	1	Pecho de Pollo	0.22	1
-12	15.00	10.00	38.00	kg	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07	1
-15	8.20	5.00	100.00	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04	2
-14	6.80	4.20	20.50	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial	0.03	2
-17	4.20	2.10	249.00	unidad	2025-10-24 18:53:42.73315	3	Sazonador con Especias	0.02	3
-18	5.80	2.90	177.00	unidad	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03	3
-16	3.50	1.80	195.00	unidad	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02	3
-13	5.50	3.50	41.40	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03	2
+COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, fecha_actualizacion, categoria_id, nombre, precio_dolares, id_provedores, stock_minimo, id_tasa_iva) FROM stdin;
+11	45.00	32.00	0.00	kg	2025-10-24 18:53:42.73315	1	Pecho de Pollo	0.22	1	10.00	1
+12	15.00	10.00	38.00	kg	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07	1	10.00	1
+15	8.20	5.00	100.00	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04	2	10.00	1
+17	4.20	2.10	249.00	unidad	2025-10-24 18:53:42.73315	3	Sazonador con Especias	0.02	3	10.00	1
+18	5.80	2.90	177.00	unidad	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03	3	10.00	1
+13	5.50	3.50	42.40	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03	2	10.00	1
+16	3.50	1.80	195.00	unidad	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02	3	10.00	1
+14	6.80	4.20	16.50	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial	0.03	2	10.00	1
+10	25.00	18.50	49.00	kg	2025-10-24 18:53:42.73315	1	Pollo Entero Premium	0.12	1	10.00	1
 \.
 
 
@@ -898,6 +889,20 @@ COPY public.tasa_cambio (id, tasa_bs, fecha_actualizacion, fuente, activo) FROM 
 9	223.96	2025-11-03 12:58:55.135478	api	t
 10	226.13	2025-11-05 10:44:58.103153	api	t
 11	228.48	2025-11-08 09:32:19.570451	api	t
+12	231.09	2025-11-11 09:38:58.67725	api	t
+13	233.05	2025-11-12 10:50:00.271878	api	t
+14	236.46	2025-11-16 13:18:37.716717	api	t
+\.
+
+
+--
+-- Data for Name: tasas_iva; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tasas_iva (id, tasa, descripcion, tipo, estado, fecha_creacion, fecha_actualizacion) FROM stdin;
+1	16.00	IVA General	general	Activa	2025-11-15 20:47:15.542161	2025-11-15 20:47:15.542161
+2	0.00	Exento de IVA	exento	Activa	2025-11-15 20:47:15.542161	2025-11-15 20:47:15.542161
+3	8.00	IVA Reducido	reducido	Activa	2025-11-15 20:47:15.542161	2025-11-15 20:47:15.542161
 \.
 
 
@@ -914,11 +919,11 @@ COPY public.transformacion_producto (id, fecha_transformacion, usuario_id, produ
 --
 
 COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado, fecha_creacion, ultimo_acceso) FROM stdin;
+1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Super Admin	Activo	2025-11-02 12:55:48.732599	2025-11-16 17:15:38.854582
+2	Fabian dacal	Dacal7	$2b$10$sLrW6I2cogVZUFyhUqrY2e5lJyE21RwGBiizoIQmoH4cSSJRE0Ydq	Administrador	Activo	2025-11-02 12:55:48.732599	2025-11-09 13:56:14.005874
+7	mauricioo	varela	$2b$10$AG9TYxnUFeWyUlGM4jO4FezGq2abxxINwbOyZeQYMoV59NAs1zKjK	Vendedor	Activo	2025-11-02 12:55:48.732599	2025-11-09 17:59:33.503432
 8	francisco	velazco	$2b$10$afUaXHy9l/wTgSYrCxAN3OKPr9/FpoleSBQlqKuHsCsALoCs2Sweq	Super Admin	Activo	2025-11-08 11:43:17.74226	\N
 3	Enrique	Perez	$2b$10$GB6VRiHdl7ONeuO.GSsLYeZe6tb6rfm6LoNGcML.AoUuZZueDELh6	Administrador	Activo	2025-11-02 12:55:48.732599	\N
-2	Fabian dacal	Dacal7	$2b$10$sLrW6I2cogVZUFyhUqrY2e5lJyE21RwGBiizoIQmoH4cSSJRE0Ydq	Administrador	Activo	2025-11-02 12:55:48.732599	2025-11-08 12:06:04.441498
-7	mauricioo	varela	$2b$10$AG9TYxnUFeWyUlGM4jO4FezGq2abxxINwbOyZeQYMoV59NAs1zKjK	Vendedor	Activo	2025-11-02 12:55:48.732599	2025-11-08 12:06:28.303617
-1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Super Admin	Activo	2025-11-02 12:55:48.732599	2025-11-09 09:26:22.605085
 \.
 
 
@@ -926,29 +931,34 @@ COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado, fecha_c
 -- Data for Name: ventas; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente, detalles_pago, referencia_pago, banco_pago, monto_recibido, cambio) FROM stdin;
-5	2025-10-26 10:04:56.701545	1	tarjeta	completada	1	\N	\N	\N	\N	\N
-7	2025-10-26 10:13:43.783921	1	efectivo	completada	4	\N	\N	\N	\N	\N
-8	2025-10-26 11:04:31.861996	1	efectivo	completada	3	\N	\N	\N	\N	\N
-9	2025-10-26 11:25:58.424656	1	efectivo	completada	1	\N	\N	\N	\N	\N
-10	2025-10-26 17:56:14.19122	1	efectivo	completada	1	\N	\N	\N	\N	\N
-11	2025-10-26 17:57:19.494139	1	efectivo	completada	4	\N	\N	\N	\N	\N
-12	2025-10-27 08:28:49.77247	1	pago_movil	completada	1	\N	\N	\N	\N	\N
-13	2025-10-27 09:05:06.081386	1	efectivo	completada	4	\N	\N	\N	\N	\N
-15	2025-10-27 09:37:19.515523	1	transferencia	completada	1	\N	\N	\N	\N	\N
-23	2025-10-27 09:45:57.973156	1	efectivo	completada	1	\N	\N	\N	\N	\N
-24	2025-10-27 12:54:04.414553	1	tarjeta	completada	1	\N	\N	\N	\N	\N
-25	2025-10-27 13:49:56.696027	2	transferencia	completada	1	\N	\N	\N	\N	\N
-26	2025-10-28 15:06:51.55373	1	transferencia	completada	1	\N	\N	\N	\N	\N
-27	2025-11-01 11:19:57.317312	1	efectivo_usd	completada	1	{"tasa": 223.9622, "total": 0.26, "change": 0.74, "method": "efectivo_usd", "received": 1}	\N	\N	1.00	0.74
-28	2025-11-01 11:23:45.058256	1	efectivo_usd	completada	1	{"tasa": 223.9622, "total": 0.21, "change": 4.79, "method": "efectivo_usd", "received": 5}	\N	\N	5.00	4.79
-29	2025-11-01 11:26:14.208204	1	transferencia	completada	4	{"bank": "Banesco", "total": 17.4, "amount": 17.4, "method": "transferencia", "holderId": "V-12345677", "reference": "123456789"}	123456789	Banesco	\N	\N
-30	2025-11-01 11:30:13.379898	1	mixto	completada	4	{"total": 39.44, "method": "mixto", "payments": [{"amount": 15, "method": "efectivo_bs"}, {"amount": 24.44, "method": "punto_venta"}]}	\N	\N	\N	\N
-31	2025-11-01 12:09:04.830358	1	punto_venta	completada	4	{"total": 788.8, "amount": 788.8, "method": "punto_venta", "reference": "7788"}	7788	\N	\N	\N
-32	2025-11-01 12:13:25.226615	1	pago_movil	completada	4	{"bank": "Banesco", "total": 406, "amount": 406, "method": "pago_movil", "holderId": "V-12345677", "reference": "123456789"}	123456789	Banesco	\N	\N
-33	2025-11-01 12:15:43.717679	1	efectivo_usd	completada	4	{"tasa": 223.9622, "total": 0.35, "change": 0.65, "method": "efectivo_usd", "received": 1}	\N	\N	1.00	0.65
-34	2025-11-01 12:34:28.409911	1	efectivo_bs	completada	1	{"total": 12.18, "change": 0, "method": "efectivo_bs", "received": 12.18}	\N	\N	12.18	\N
-35	2025-11-08 09:42:57.251864	1	efectivo_usd	completada	4	{"tasa": 228.4796, "total": 0.03, "change": 1.97, "method": "efectivo_usd", "received": 2}	\N	\N	2.00	1.97
+COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente, detalles_pago, referencia_pago, banco_pago, monto_recibido, cambio, motivo_anulacion) FROM stdin;
+5	2025-10-26 10:04:56.701545	1	tarjeta	completada	1	\N	\N	\N	\N	\N	\N
+7	2025-10-26 10:13:43.783921	1	efectivo	completada	4	\N	\N	\N	\N	\N	\N
+8	2025-10-26 11:04:31.861996	1	efectivo	completada	3	\N	\N	\N	\N	\N	\N
+9	2025-10-26 11:25:58.424656	1	efectivo	completada	1	\N	\N	\N	\N	\N	\N
+10	2025-10-26 17:56:14.19122	1	efectivo	completada	1	\N	\N	\N	\N	\N	\N
+11	2025-10-26 17:57:19.494139	1	efectivo	completada	4	\N	\N	\N	\N	\N	\N
+12	2025-10-27 08:28:49.77247	1	pago_movil	completada	1	\N	\N	\N	\N	\N	\N
+13	2025-10-27 09:05:06.081386	1	efectivo	completada	4	\N	\N	\N	\N	\N	\N
+15	2025-10-27 09:37:19.515523	1	transferencia	completada	1	\N	\N	\N	\N	\N	\N
+23	2025-10-27 09:45:57.973156	1	efectivo	completada	1	\N	\N	\N	\N	\N	\N
+24	2025-10-27 12:54:04.414553	1	tarjeta	completada	1	\N	\N	\N	\N	\N	\N
+25	2025-10-27 13:49:56.696027	2	transferencia	completada	1	\N	\N	\N	\N	\N	\N
+26	2025-10-28 15:06:51.55373	1	transferencia	completada	1	\N	\N	\N	\N	\N	\N
+27	2025-11-01 11:19:57.317312	1	efectivo_usd	completada	1	{"tasa": 223.9622, "total": 0.26, "change": 0.74, "method": "efectivo_usd", "received": 1}	\N	\N	1.00	0.74	\N
+28	2025-11-01 11:23:45.058256	1	efectivo_usd	completada	1	{"tasa": 223.9622, "total": 0.21, "change": 4.79, "method": "efectivo_usd", "received": 5}	\N	\N	5.00	4.79	\N
+29	2025-11-01 11:26:14.208204	1	transferencia	completada	4	{"bank": "Banesco", "total": 17.4, "amount": 17.4, "method": "transferencia", "holderId": "V-12345677", "reference": "123456789"}	123456789	Banesco	\N	\N	\N
+30	2025-11-01 11:30:13.379898	1	mixto	completada	4	{"total": 39.44, "method": "mixto", "payments": [{"amount": 15, "method": "efectivo_bs"}, {"amount": 24.44, "method": "punto_venta"}]}	\N	\N	\N	\N	\N
+31	2025-11-01 12:09:04.830358	1	punto_venta	completada	4	{"total": 788.8, "amount": 788.8, "method": "punto_venta", "reference": "7788"}	7788	\N	\N	\N	\N
+32	2025-11-01 12:13:25.226615	1	pago_movil	completada	4	{"bank": "Banesco", "total": 406, "amount": 406, "method": "pago_movil", "holderId": "V-12345677", "reference": "123456789"}	123456789	Banesco	\N	\N	\N
+33	2025-11-01 12:15:43.717679	1	efectivo_usd	completada	4	{"tasa": 223.9622, "total": 0.35, "change": 0.65, "method": "efectivo_usd", "received": 1}	\N	\N	1.00	0.65	\N
+34	2025-11-01 12:34:28.409911	1	efectivo_bs	completada	1	{"total": 12.18, "change": 0, "method": "efectivo_bs", "received": 12.18}	\N	\N	12.18	\N	\N
+37	2025-11-09 14:07:28.630746	1	pago_movil	anulada	4	{"bank": "Banesco", "total": 6.38, "amount": 6.38, "method": "pago_movil", "holderId": "V-12345677", "reference": "123456789"}	123456789	Banesco	\N	\N	duplicada
+36	2025-11-09 14:07:13.869783	1	pago_movil	anulada	4	{"bank": "Banesco", "total": 6.38, "amount": 6.38, "method": "pago_movil", "holderId": "V-12345677", "reference": "123456789"}	123456789	Banesco	\N	\N	plicadadu
+35	2025-11-08 09:42:57.251864	1	efectivo_usd	anulada	4	{"tasa": 228.4796, "total": 0.03, "change": 1.97, "method": "efectivo_usd", "received": 2}	\N	\N	2.00	1.97	test
+38	2025-11-11 09:53:13.03235	1	mixto	anulada	1	{"total": 4.06, "method": "mixto", "payments": [{"amount": 2, "method": "efectivo_bs"}, {"amount": 2.06, "method": "efectivo_usd"}]}	\N	\N	\N	\N	ghuvflerifbuyughfuwp3eofhipqruhbvreifhunwñeifhuñwaeriufhwpo3fhupwufobhñ4fgb
+39	2025-11-11 11:20:05.451608	1	transferencia	anulada	4	{"bank": "Mercantil", "total": 31.9, "amount": 31.9, "method": "transferencia", "holderId": "V-12345677", "reference": "987654321"}	987654321	Mercantil	\N	\N	rtrtgrg
+40	2025-11-16 16:51:12.841242	1	efectivo_bs	completada	1	{"total": 31.55, "change": 0, "method": "efectivo_bs", "received": 31.55}	\N	\N	31.55	\N	\N
 \.
 
 
@@ -988,13 +998,6 @@ SELECT pg_catalog.setval('public.configuracion_empresa_id_seq', 1, true);
 
 
 --
--- Name: configuracion_negocio_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
-SELECT pg_catalog.setval('public.configuracion_negocio_id_seq', 13, true);
-
-
---
 -- Name: detalle_compra_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1005,7 +1008,7 @@ SELECT pg_catalog.setval('public.detalle_compra_id_seq', 1, false);
 -- Name: detalle_venta_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.detalle_venta_id_seq', 40, true);
+SELECT pg_catalog.setval('public.detalle_venta_id_seq', 45, true);
 
 
 --
@@ -1033,7 +1036,14 @@ SELECT pg_catalog.setval('public.proovedores_id_seq', 1, false);
 -- Name: tasa_cambio_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 11, true);
+SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 14, true);
+
+
+--
+-- Name: tasas_iva_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.tasas_iva_id_seq', 3, true);
 
 
 --
@@ -1054,7 +1064,7 @@ SELECT pg_catalog.setval('public.usuarios_id_seq', 8, true);
 -- Name: ventas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ventas_id_seq', 35, true);
+SELECT pg_catalog.setval('public.ventas_id_seq', 40, true);
 
 
 --
@@ -1122,14 +1132,6 @@ ALTER TABLE ONLY public.configuracion_empresa
 
 
 --
--- Name: configuracion_negocio configuracion_negocio_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.configuracion_negocio
-    ADD CONSTRAINT configuracion_negocio_pkey PRIMARY KEY (id);
-
-
---
 -- Name: detalle_compra detalle_compra_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1183,6 +1185,14 @@ ALTER TABLE ONLY public.proveedores
 
 ALTER TABLE ONLY public.tasa_cambio
     ADD CONSTRAINT tasa_cambio_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tasas_iva tasas_iva_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tasas_iva
+    ADD CONSTRAINT tasas_iva_pkey PRIMARY KEY (id);
 
 
 --
@@ -1289,6 +1299,14 @@ ALTER TABLE ONLY public.productos
 
 
 --
+-- Name: productos fk_producto_tasa_iva; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.productos
+    ADD CONSTRAINT fk_producto_tasa_iva FOREIGN KEY (id_tasa_iva) REFERENCES public.tasas_iva(id);
+
+
+--
 -- Name: productos productos_id_provedores_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1340,5 +1358,5 @@ ALTER TABLE ONLY public.ventas
 -- PostgreSQL database dump complete
 --
 
-\unrestrict PIMUZ6aqO7MLWZLa9tKeZo6zBOQ4MQ5RnbccFlrEw78Gg8CSYmFFFkYOOHC5kZv
+\unrestrict SMh74fMxNqmUwrOfGgQPFnSucglpdM78F8d7ftnqHphcTjkVQeiRv5pyq9NfNv1
 
