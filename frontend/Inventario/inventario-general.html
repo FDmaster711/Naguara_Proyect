@@ -1,115 +1,474 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario General</title>
-<link rel="stylesheet" href="estilos.css">
-<link rel="stylesheet" href="./inventario.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <title>Inventario General | Pollo Na'Guara</title>
+    <link rel="stylesheet" href="inventario.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
+
 <body>
-    <section class="header-section">
-    <h1><i class="fa-solid fa-boxes-stacked"></i> Inventario General</h1>
-    <p>Resumen de existencias y control de stock general de productos de Pollo Na'Guara.</p>
-</section>
+    <div class="inventario-container">
+        <!-- Header Section -->
+        <section class="header-section">
+            <h1><i class="fa-solid fa-boxes-stacked"></i> Inventario General</h1>
+            <p>Resumen de existencias y control de stock general de productos de Pollo Na'Guara.</p>
+        </section>
 
-<!-- Tarjetas de resumen -->
-<section class="cards">
-    <div class="card">
-        <i class="fa-solid fa-drumstick-bite"></i>
-        <div>
-            <h3>1,250</h3>
-            <p>Pollos en stock</p>
-        </div>
+        <!-- Cards de Resumen -->
+        <section class="cards">
+            <div class="card">
+                <i class="fa-solid fa-drumstick-bite"></i>
+                <div class="card-content">
+                    <h3>1,250</h3>
+                    <p>Pollos en stock</p>
+                </div>
+            </div>
+            <div class="card">
+                <i class="fa-solid fa-bacon"></i>
+                <div class="card-content">
+                    <h3>820</h3>
+                    <p>Milanesas disponibles</p>
+                </div>
+            </div>
+            <div class="card">
+                <i class="fa-solid fa-seedling"></i>
+                <div class="card-content">
+                    <h3>430</h3>
+                    <p>Aliños y especias</p>
+                </div>
+            </div>
+            <div class="card">
+                <i class="fa-solid fa-warehouse"></i>
+                <div class="card-content">
+                    <h3>5</h3>
+                    <p>Sucursales activas</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Controles Rápidos -->
+        <section class="quick-controls">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <h3><i class="fa-solid fa-filter"></i> Filtros</h3>
+                    <div class="filter-options">
+                        <select class="form-control">
+                            <option value="">Todas las categorías</option>
+                            <option value="pollos">Pollos</option>
+                            <option value="milanesas">Milanesas</option>
+                            <option value="aliños">Aliños</option>
+                            <option value="especias">Especias</option>
+                        </select>
+                        <select class="form-control">
+                            <option value="">Todos los estados</option>
+                            <option value="disponible">Disponible</option>
+                            <option value="bajo-stock">Bajo Stock</option>
+                            <option value="agotado">Agotado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h3><i class="fa-solid fa-chart-line"></i> Acciones Rápidas</h3>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary">
+                            <i class="fa-solid fa-file-export"></i> Exportar
+                        </button>
+                        <button class="btn btn-success">
+                            <i class="fa-solid fa-sync"></i> Actualizar
+                        </button>
+                        <button class="btn btn-warning">
+                            <i class="fa-solid fa-bell"></i> Alertas Stock
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tabla de Inventario -->
+        <section class="table-section">
+            <div class="table-header">
+                <h2><i class="fa-solid fa-list"></i> Detalle de Inventario</h2>
+                <div class="table-actions">
+                    <div class="search-box">
+                        <i class="fa-solid fa-search"></i>
+                        <input type="text" placeholder="Buscar producto...">
+                    </div>
+                    <button class="btn btn-primary">
+                        <i class="fa-solid fa-plus"></i> Nuevo Producto
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th>Stock Actual</th>
+                            <th>Stock Mínimo</th>
+                            <th>Unidad</th>
+                            <th>Precio (Bs)</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>P001</td>
+                            <td>
+                                <div class="product-info">
+                                    <i class="fa-solid fa-drumstick-bite product-icon"></i>
+                                    <div>
+                                        <strong>Pollo Entero Fresco</strong>
+                                        <small>Ref: FR-001</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Pollos</td>
+                            <td>350</td>
+                            <td>50</td>
+                            <td>Unidad</td>
+                            <td>95.00</td>
+                            <td><span class="badge badge-success">Disponible</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
+                                        <i class="fa-solid fa-boxes-stacked"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>P002</td>
+                            <td>
+                                <div class="product-info">
+                                    <i class="fa-solid fa-drumstick-bite product-icon"></i>
+                                    <div>
+                                        <strong>Pechuga Fileteada</strong>
+                                        <small>Ref: FR-002</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Pollos</td>
+                            <td>220</td>
+                            <td>30</td>
+                            <td>Kg</td>
+                            <td>110.00</td>
+                            <td><span class="badge badge-success">Disponible</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
+                                        <i class="fa-solid fa-boxes-stacked"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>P010</td>
+                            <td>
+                                <div class="product-info">
+                                    <i class="fa-solid fa-bacon product-icon"></i>
+                                    <div>
+                                        <strong>Milanesa Empanizada</strong>
+                                        <small>Ref: ML-001</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Milanesas</td>
+                            <td>120</td>
+                            <td>100</td>
+                            <td>Kg</td>
+                            <td>130.00</td>
+                            <td><span class="badge badge-warning">Bajo Stock</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
+                                        <i class="fa-solid fa-boxes-stacked"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>P015</td>
+                            <td>
+                                <div class="product-info">
+                                    <i class="fa-solid fa-seedling product-icon"></i>
+                                    <div>
+                                        <strong>Aliño Verde Natural</strong>
+                                        <small>Ref: AL-001</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Aliños</td>
+                            <td>60</td>
+                            <td>80</td>
+                            <td>Frascos</td>
+                            <td>30.00</td>
+                            <td><span class="badge badge-warning">Bajo Stock</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
+                                        <i class="fa-solid fa-boxes-stacked"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>P021</td>
+                            <td>
+                                <div class="product-info">
+                                    <i class="fa-solid fa-mortar-pestle product-icon"></i>
+                                    <div>
+                                        <strong>Ajo Triturado 250g</strong>
+                                        <small>Ref: AL-005</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Aliños</td>
+                            <td>0</td>
+                            <td>20</td>
+                            <td>Unidades</td>
+                            <td>18.00</td>
+                            <td><span class="badge badge-danger">Agotado</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
+                                        <i class="fa-solid fa-boxes-stacked"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>P025</td>
+                            <td>
+                                <div class="product-info">
+                                    <i class="fa-solid fa-drumstick-bite product-icon"></i>
+                                    <div>
+                                        <strong>Piernas de Pollo</strong>
+                                        <small>Ref: FR-015</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Pollos</td>
+                            <td>180</td>
+                            <td>40</td>
+                            <td>Kg</td>
+                            <td>85.00</td>
+                            <td><span class="badge badge-success">Disponible</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
+                                        <i class="fa-solid fa-boxes-stacked"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="pagination">
+                <button class="btn btn-sm">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <span class="page-active">1</span>
+                <button class="btn btn-sm">2</button>
+                <button class="btn btn-sm">3</button>
+                <button class="btn btn-sm">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Resumen de Alertas -->
+        <!-- Sección de Alertas Mejorada -->
+<section class="alerts-section">
+    <div class="section-header">
+        <h2><i class="fa-solid fa-bell"></i> Alertas de Stock</h2>
+        <span class="alert-count">7 Alertas Activas</span>
     </div>
-    <div class="card">
-        <i class="fa-solid fa-bacon"></i>
-        <div>
-            <h3>820</h3>
-            <p>Milanesas disponibles</p>
+    <div class="alerts-grid">
+        <!-- Alerta Stock Crítico -->
+        <div class="alert-card critical">
+            <div class="alert-header">
+                <div class="alert-icon">
+                    <i class="fa-solid fa-fire"></i>
+                </div>
+                <div class="alert-badge">Crítico</div>
+            </div>
+            <div class="alert-content">
+                <h3>Stock Crítico</h3>
+                <p>3 productos están por agotarse</p>
+                <div class="alert-items">
+                    <div class="alert-item">
+                        <span class="product-name">Ajo Triturado 250g</span>
+                        <span class="stock-level">0 unidades</span>
+                    </div>
+                    <div class="alert-item">
+                        <span class="product-name">Pimentón Dulce</span>
+                        <span class="stock-level">2 unidades</span>
+                    </div>
+                </div>
+            </div>
+            <div class="alert-actions">
+                <button class="btn btn-sm btn-danger">
+                    <i class="fa-solid fa-truck"></i> Ordenar
+                </button>
+            </div>
         </div>
-    </div>
-    <div class="card">
-        <i class="fa-solid fa-seedling"></i>
-        <div>
-            <h3>430</h3>
-            <p>Aliños y especias</p>
+
+        <!-- Alerta Stock Bajo -->
+        <div class="alert-card warning">
+            <div class="alert-header">
+                <div class="alert-icon">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                </div>
+                <div class="alert-badge">Bajo Stock</div>
+            </div>
+            <div class="alert-content">
+                <h3>Stock Bajo</h3>
+                <p>4 productos necesitan reposición</p>
+                <div class="progress-container">
+                    <div class="progress-info">
+                        <span>Nivel de stock</span>
+                        <span>35%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill warning"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="alert-actions">
+                <button class="btn btn-sm btn-warning">
+                    <i class="fa-solid fa-box"></i> Reponer
+                </button>
+            </div>
         </div>
-    </div>
-    <div class="card">
-        <i class="fa-solid fa-truck"></i>
-        <div>
-            <h3>5</h3>
-            <p>Sucursales activas</p>
+
+        <!-- Alerta de Rotación -->
+        <div class="alert-card info">
+            <div class="alert-header">
+                <div class="alert-icon">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div class="alert-badge">Análisis</div>
+            </div>
+            <div class="alert-content">
+                <h3>Rotación de Productos</h3>
+                <p>Productos más vendidos esta semana</p>
+                <div class="rotation-list">
+                    <div class="rotation-item">
+                        <span class="product-name">Pollo Entero Fresco</span>
+                        <span class="sales-count">45 ventas</span>
+                    </div>
+                    <div class="rotation-item">
+                        <span class="product-name">Milanesa Empanizada</span>
+                        <span class="sales-count">32 ventas</span>
+                    </div>
+                </div>
+            </div>
+            <div class="alert-actions">
+                <button class="btn btn-sm btn-primary">
+                    <i class="fa-solid fa-chart-bar"></i> Ver Reporte
+                </button>
+            </div>
+        </div>
+
+        <!-- Alerta de Vencimientos -->
+        <div class="alert-card secondary">
+            <div class="alert-header">
+                <div class="alert-icon">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+                <div class="alert-badge">Próximos</div>
+            </div>
+            <div class="alert-content">
+                <h3>Vencimientos Próximos</h3>
+                <p>2 productos vencen en 7 días</p>
+                <div class="expiry-list">
+                    <div class="expiry-item">
+                        <span class="product-name">Aliño Verde Natural</span>
+                        <span class="expiry-date">15 Dic 2024</span>
+                    </div>
+                    <div class="expiry-item">
+                        <span class="product-name">Salsa BBQ</span>
+                        <span class="expiry-date">18 Dic 2024</span>
+                    </div>
+                </div>
+            </div>
+            <div class="alert-actions">
+                <button class="btn btn-sm btn-secondary">
+                    <i class="fa-solid fa-eye"></i> Revisar
+                </button>
+            </div>
         </div>
     </div>
 </section>
+    </div>
 
-<!-- Tabla de inventario -->
-<section class="table-section">
-    <h2><i class="fa-solid fa-list"></i> Detalle de Inventario</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Código</th>
-                <th>Producto</th>
-                <th>Categoría</th>
-                <th>Stock Actual</th>
-                <th>Unidad</th>
-                <th>Precio (Bs)</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>P001</td>
-                <td>Pollo Entero Fresco</td>
-                <td>Pollos</td>
-                <td>350</td>
-                <td>Unidad</td>
-                <td>95.00</td>
-                <td><span class="estado ok">Disponible</span></td>
-            </tr>
-            <tr>
-                <td>P002</td>
-                <td>Pechuga Fileteada</td>
-                <td>Pollos</td>
-                <td>220</td>
-                <td>Kg</td>
-                <td>110.00</td>
-                <td><span class="estado ok">Disponible</span></td>
-            </tr>
-            <tr>
-                <td>P010</td>
-                <td>Milanesa Empanizada</td>
-                <td>Milanesas</td>
-                <td>120</td>
-                <td>Kg</td>
-                <td>130.00</td>
-                <td><span class="estado medio">Bajo Stock</span></td>
-            </tr>
-            <tr>
-                <td>P015</td>
-                <td>Aliño Verde Natural</td>
-                <td>Aliños</td>
-                <td>60</td>
-                <td>Frascos</td>
-                <td>30.00</td>
-                <td><span class="estado medio">Bajo Stock</span></td>
-            </tr>
-            <tr>
-                <td>P021</td>
-                <td>Ajo Triturado 250g</td>
-                <td>Aliños</td>
-                <td>0</td>
-                <td>Unidades</td>
-                <td>18.00</td>
-                <td><span class="estado no">Agotado</span></td>
-            </tr>
-        </tbody>
-    </table>
-</section>
+    <script>
+        // Simulación de funcionalidad básica
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', function () {
+                this.style.transform = 'translateY(-5px)';
+            });
+            card.addEventListener('mouseleave', function () {
+                this.style.transform = 'translateY(0)';
+            });
+        });
 
+        // Efecto de alertas
+        document.querySelectorAll('.alert-card').forEach(alert => {
+            alert.addEventListener('click', function () {
+                this.style.transform = 'scale(1.02)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 150);
+            });
+        });
+    </script>
 </body>
+
 </html>
