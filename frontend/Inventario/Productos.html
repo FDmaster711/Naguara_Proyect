@@ -6,10 +6,206 @@
     <title>Gestión de Productos | Pollo Na'Guara</title>
     <link rel="stylesheet" href="inventario.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+            max-width: 300px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-left: 4px solid;
+        }
+        
+        .toast-success {
+            background: #28a745;
+            border-left-color: #1e7e34;
+        }
+        
+        .toast-error {
+            background: #dc3545;
+            border-left-color: #c82333;
+        }
+        
+        .toast-info {
+            background: #17a2b8;
+            border-left-color: #138496;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        .stock-bar {
+            width: 60px;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        
+        .stock-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .stock-fill.high { background: #28a745; width: 100%; }
+        .stock-fill.medium { background: #ffc107; width: 65%; }
+        .stock-fill.low { background: #fd7e14; width: 30%; }
+        .stock-fill.empty { background: #dc3545; width: 5%; }
+        
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        
+        .category-tag {
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .product-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .product-image {
+            width: 32px;
+            height: 32px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pagination .btn {
+            min-width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #dee2e6;
+            background: white;
+            color: #495057;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .pagination .btn:hover:not(.disabled) {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .pagination .btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .pagination .btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            margin-left: auto;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .pagination-ellipsis {
+            padding: 8px 12px;
+            color: #6c757d;
+        }
+
+        .items-per-page {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .items-per-page select {
+            width: auto;
+            padding: 4px 8px;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .pagination {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .pagination-info {
+                margin-left: 0;
+                order: -1;
+            }
+            
+            .table-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="inventario-container">
         <!-- Header Section -->
+        <div class="breadcrumb">
+            <a href="../index.html">Dashboard</a> / 
+            <span>Inventario</span>
+        </div>
         <section class="header-section">
             <h1><i class="fa-solid fa-drumstick-bite"></i> Gestión de Productos</h1>
             <p>Administra los productos del inventario: pollos, milanesas, aliños y otros derivados.</p>
@@ -20,28 +216,28 @@
             <div class="card">
                 <i class="fa-solid fa-boxes-stacked"></i>
                 <div class="card-content">
-                    <h3>156</h3>
+                    <h3>0</h3>
                     <p>Total Productos</p>
                 </div>
             </div>
             <div class="card">
                 <i class="fa-solid fa-check-circle"></i>
                 <div class="card-content">
-                    <h3>142</h3>
+                    <h3>0</h3>
                     <p>Productos Activos</p>
                 </div>
             </div>
             <div class="card">
                 <i class="fa-solid fa-pause-circle"></i>
                 <div class="card-content">
-                    <h3>14</h3>
+                    <h3>0</h3>
                     <p>Productos Inactivos</p>
                 </div>
             </div>
             <div class="card">
                 <i class="fa-solid fa-tags"></i>
                 <div class="card-content">
-                    <h3>8</h3>
+                    <h3>0</h3>
                     <p>Categorías</p>
                 </div>
             </div>
@@ -53,20 +249,10 @@
                 <div class="control-group">
                     <h3><i class="fa-solid fa-filter"></i> Filtros Avanzados</h3>
                     <div class="filter-options">
-                        <select class="form-control">
+                        <select id="filtro-categoria" class="form-control">
                             <option value="">Todas las categorías</option>
-                            <option value="pollos">Pollos</option>
-                            <option value="milanesas">Milanesas</option>
-                            <option value="aliños">Aliños</option>
-                            <option value="especias">Especias</option>
-                            <option value="salsas">Salsas</option>
                         </select>
-                        <select class="form-control">
-                            <option value="">Todos los estados</option>
-                            <option value="activo">Activo</option>
-                            <option value="inactivo">Inactivo</option>
-                        </select>
-                        <select class="form-control">
+                        <select id="filtro-stock" class="form-control">
                             <option value="">Todo el stock</option>
                             <option value="disponible">Stock Disponible</option>
                             <option value="bajo">Stock Bajo</option>
@@ -77,13 +263,10 @@
                 <div class="control-group">
                     <h3><i class="fa-solid fa-bolt"></i> Acciones Rápidas</h3>
                     <div class="action-buttons">
-                        <button class="btn btn-primary">
+                        <button class="btn btn-primary btn-nuevo-producto">
                             <i class="fa-solid fa-plus"></i> Nuevo Producto
                         </button>
-                        <button class="btn btn-success">
-                            <i class="fa-solid fa-file-export"></i> Exportar
-                        </button>
-                        <button class="btn btn-info">
+                        <button class="btn btn-info btn-actualizar">
                             <i class="fa-solid fa-sync"></i> Actualizar
                         </button>
                     </div>
@@ -98,15 +281,15 @@
                 <div class="table-actions">
                     <div class="search-box">
                         <i class="fa-solid fa-search"></i>
-                        <input type="text" placeholder="Buscar producto...">
+                        <input type="text" placeholder="Buscar producto..." id="search-input">
                     </div>
-                    <div class="view-options">
-                        <button class="btn btn-sm active" title="Vista de tabla">
-                            <i class="fa-solid fa-table"></i>
-                        </button>
-                        <button class="btn btn-sm" title="Vista de tarjetas">
-                            <i class="fa-solid fa-grip"></i>
-                        </button>
+                    <div class="items-per-page">
+                        <label>Mostrar:</label>
+                        <select id="items-per-page" class="form-control-sm">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -128,284 +311,10 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td><span class="product-code">P001</span></td>
-                            <td>
-                                <div class="product-info">
-                                    <div class="product-image">
-                                        <i class="fa-solid fa-drumstick-bite"></i>
-                                    </div>
-                                    <div class="product-details">
-                                        <strong>Pollo Entero Fresco</strong>
-                                        <small>Producto estrella - Alta demanda</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="category-tag">Pollos</span>
-                            </td>
-                            <td>
-                                <span class="price">95.00</span>
-                            </td>
-                            <td>
-                                <div class="stock-info">
-                                    <span class="stock-value">350</span>
-                                    <div class="stock-bar">
-                                        <div class="stock-fill high"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>50</td>
-                            <td>Unidad</td>
-                            <td><span class="badge badge-success">Activo</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
-                                        <i class="fa-solid fa-boxes-stacked"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-info" title="Ver Detalles">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><span class="product-code">P002</span></td>
-                            <td>
-                                <div class="product-info">
-                                    <div class="product-image">
-                                        <i class="fa-solid fa-drumstick-bite"></i>
-                                    </div>
-                                    <div class="product-details">
-                                        <strong>Pechuga Fileteada</strong>
-                                        <small>Cortes premium</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="category-tag">Pollos</span>
-                            </td>
-                            <td>
-                                <span class="price">110.00</span>
-                            </td>
-                            <td>
-                                <div class="stock-info">
-                                    <span class="stock-value">220</span>
-                                    <div class="stock-bar">
-                                        <div class="stock-fill medium"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>30</td>
-                            <td>Kg</td>
-                            <td><span class="badge badge-success">Activo</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
-                                        <i class="fa-solid fa-boxes-stacked"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-info" title="Ver Detalles">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><span class="product-code">P010</span></td>
-                            <td>
-                                <div class="product-info">
-                                    <div class="product-image">
-                                        <i class="fa-solid fa-bacon"></i>
-                                    </div>
-                                    <div class="product-details">
-                                        <strong>Milanesa Empanizada</strong>
-                                        <small>Especialidad de la casa</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="category-tag">Milanesas</span>
-                            </td>
-                            <td>
-                                <span class="price">130.00</span>
-                            </td>
-                            <td>
-                                <div class="stock-info">
-                                    <span class="stock-value">45</span>
-                                    <div class="stock-bar">
-                                        <div class="stock-fill low"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>100</td>
-                            <td>Kg</td>
-                            <td><span class="badge badge-warning">Bajo Stock</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
-                                        <i class="fa-solid fa-boxes-stacked"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-info" title="Ver Detalles">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><span class="product-code">P015</span></td>
-                            <td>
-                                <div class="product-info">
-                                    <div class="product-image">
-                                        <i class="fa-solid fa-seedling"></i>
-                                    </div>
-                                    <div class="product-details">
-                                        <strong>Aliño Verde Natural</strong>
-                                        <small>100% natural</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="category-tag">Aliños</span>
-                            </td>
-                            <td>
-                                <span class="price">30.00</span>
-                            </td>
-                            <td>
-                                <div class="stock-info">
-                                    <span class="stock-value">28</span>
-                                    <div class="stock-bar">
-                                        <div class="stock-fill low"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>80</td>
-                            <td>Frasco</td>
-                            <td><span class="badge badge-warning">Bajo Stock</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
-                                        <i class="fa-solid fa-boxes-stacked"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-info" title="Ver Detalles">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><span class="product-code">P021</span></td>
-                            <td>
-                                <div class="product-info">
-                                    <div class="product-image">
-                                        <i class="fa-solid fa-mortar-pestle"></i>
-                                    </div>
-                                    <div class="product-details">
-                                        <strong>Ajo Triturado 250g</strong>
-                                        <small>Próxima reposición: 2 días</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="category-tag">Aliños</span>
-                            </td>
-                            <td>
-                                <span class="price">18.00</span>
-                            </td>
-                            <td>
-                                <div class="stock-info">
-                                    <span class="stock-value">0</span>
-                                    <div class="stock-bar">
-                                        <div class="stock-fill empty"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>20</td>
-                            <td>Unidad</td>
-                            <td><span class="badge badge-danger">Agotado</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
-                                        <i class="fa-solid fa-boxes-stacked"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-info" title="Ver Detalles">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><span class="product-code">P025</span></td>
-                            <td>
-                                <div class="product-info">
-                                    <div class="product-image">
-                                        <i class="fa-solid fa-drumstick-bite"></i>
-                                    </div>
-                                    <div class="product-details">
-                                        <strong>Piernas de Pollo</strong>
-                                        <small>Cortes populares</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="category-tag">Pollos</span>
-                            </td>
-                            <td>
-                                <span class="price">85.00</span>
-                            </td>
-                            <td>
-                                <div class="stock-info">
-                                    <span class="stock-value">180</span>
-                                    <div class="stock-bar">
-                                        <div class="stock-fill high"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>40</td>
-                            <td>Kg</td>
-                            <td><span class="badge badge-success">Activo</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" title="Ajustar Stock">
-                                        <i class="fa-solid fa-boxes-stacked"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-info" title="Ver Detalles">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
+                            <td colspan="9" style="text-align: center; padding: 20px;">
+                                <div class="loading-spinner">
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                    Cargando productos...
                                 </div>
                             </td>
                         </tr>
@@ -415,28 +324,16 @@
 
             <!-- Paginación -->
             <div class="pagination">
-                <button class="btn btn-sm">
-                    <i class="fa-solid fa-chevron-left"></i>
-                </button>
-                <span class="page-active">1</span>
-                <button class="btn btn-sm">2</button>
-                <button class="btn btn-sm">3</button>
-                <button class="btn btn-sm">4</button>
-                <button class="btn btn-sm">
-                    <i class="fa-solid fa-chevron-right"></i>
-                </button>
+                <!-- La paginación se generará dinámicamente aquí -->
             </div>
         </section>
 
         <!-- Formulario para Nuevo Producto -->
         <section class="form-section">
             <h2><i class="fa-solid fa-plus-circle"></i> Registrar Nuevo Producto</h2>
-            <form class="product-form">
+            <form class="product-form" id="product-form">
+                <input type="hidden" id="product-id">
                 <div class="form-grid">
-                    <div class="form-group">
-                        <label for="product-code">Código del Producto *</label>
-                        <input type="text" id="product-code" class="form-control" required placeholder="Ej: P001">
-                    </div>
                     <div class="form-group">
                         <label for="product-name">Nombre del Producto *</label>
                         <input type="text" id="product-name" class="form-control" required placeholder="Ej: Pollo Entero Fresco">
@@ -445,24 +342,23 @@
                         <label for="product-category">Categoría *</label>
                         <select id="product-category" class="form-control" required>
                             <option value="">Seleccionar categoría</option>
-                            <option value="pollos">Pollos</option>
-                            <option value="milanesas">Milanesas</option>
-                            <option value="aliños">Aliños</option>
-                            <option value="especias">Especias</option>
-                            <option value="salsas">Salsas</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="product-price">Precio (Bs) *</label>
-                        <input type="number" id="product-price" class="form-control" required step="0.01" placeholder="0.00">
+                        <input type="number" id="product-price" class="form-control" required step="0.01" placeholder="0.00" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="product-cost">Costo de Compra (Bs)</label>
+                        <input type="number" id="product-cost" class="form-control" step="0.01" placeholder="0.00" min="0">
                     </div>
                     <div class="form-group">
                         <label for="product-stock">Stock Inicial</label>
-                        <input type="number" id="product-stock" class="form-control" placeholder="0">
+                        <input type="number" id="product-stock" class="form-control" placeholder="0" min="0" value="0">
                     </div>
                     <div class="form-group">
                         <label for="product-min-stock">Stock Mínimo</label>
-                        <input type="number" id="product-min-stock" class="form-control" placeholder="0">
+                        <input type="number" id="product-min-stock" class="form-control" placeholder="0" min="0" value="10">
                     </div>
                     <div class="form-group">
                         <label for="product-unit">Unidad de Medida *</label>
@@ -470,31 +366,18 @@
                             <option value="">Seleccionar unidad</option>
                             <option value="unidad">Unidad</option>
                             <option value="kg">Kilogramo (Kg)</option>
-                            <option value="gr">Gramo (gr)</option>
-                            <option value="frasco">Frasco</option>
-                            <option value="botella">Botella</option>
-                            <option value="paquete">Paquete</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="product-status">Estado</label>
-                        <select id="product-status" class="form-control">
-                            <option value="activo">Activo</option>
-                            <option value="inactivo">Inactivo</option>
+                        <label for="product-tasa-iva">Tasa de IVA *</label>
+                        <select id="product-tasa-iva" class="form-control" required>
+                            <option value="">Seleccionar tasa IVA</option>
                         </select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="product-description">Descripción del Producto</label>
-                    <textarea id="product-description" class="form-control" rows="3" placeholder="Descripción detallada del producto..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="product-notes">Notas Adicionales</label>
-                    <textarea id="product-notes" class="form-control" rows="2" placeholder="Información adicional..."></textarea>
-                </div>
                 <div class="form-actions">
-                    <button type="reset" class="btn">
-                        <i class="fa-solid fa-times"></i> Limpiar
+                    <button type="button" class="btn btn-secondary btn-cancelar">
+                        <i class="fa-solid fa-times"></i> Cancelar
                     </button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fa-solid fa-save"></i> Guardar Producto
@@ -502,76 +385,8 @@
                 </div>
             </form>
         </section>
-
-        <!-- Estadísticas Rápidas -->
-        <section class="stats-section">
-            <h2><i class="fa-solid fa-chart-bar"></i> Resumen de Productos</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-box-open"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3>45%</h3>
-                        <p>Productos en Pollos</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-chart-pie"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3>28%</h3>
-                        <p>Productos en Aliños</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-percentage"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3>91%</h3>
-                        <p>Productos Activos</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-exclamation-triangle"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3>12</h3>
-                        <p>Productos con Stock Bajo</p>
-                    </div>
-                </div>
-            </div>
-        </section>
     </div>
 
-    <script>
-        // Simulación de funcionalidad básica
-        document.querySelector('.product-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('Producto guardado correctamente');
-            this.reset();
-        });
-
-        // Efectos hover en las tarjetas
-        document.querySelectorAll('.card').forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-5px)';
-            });
-            card.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
-            });
-        });
-
-        // Alternar vista de tabla/tarjetas
-        document.querySelectorAll('.view-options .btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.view-options .btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
-    </script>
+    <script src="productos.js"></script>
 </body>
 </html>

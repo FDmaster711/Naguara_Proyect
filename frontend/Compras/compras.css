@@ -60,6 +60,22 @@ body {
     margin: 0;
 }
 
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .breadcrumb a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+
 /* Cards Section */
 .cards {
     display: grid;

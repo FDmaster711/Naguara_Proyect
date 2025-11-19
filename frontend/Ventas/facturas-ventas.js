@@ -428,30 +428,19 @@ class FacturasManager {
             mensaje_factura: "¡Gracias por su compra!"
         };
 
-        // ✅ CALCULAR IVA POR PRODUCTO
-        let subtotal_bs = 0;
-        let tax_bs = 0;
-        const desgloseIva = {};
+        // ✅ USAR LOS VALORES CALCULADOS DEL BACKEND
+        const subtotal_bs = parseFloat(factura.subtotal) || 0;
+        const tax_bs = parseFloat(factura.iva) || 0;
+        const total_bs = parseFloat(factura.total) || 0;
 
-        (factura.detalles || []).forEach(detalle => {
-            const cantidad = parseFloat(detalle.cantidad) || 0;
-            const precio_unitario = parseFloat(detalle.precio_unitario) || 0;
-            const tasa_iva = parseFloat(detalle.tasa_iva) || 16;
-            
-            const precio_sin_iva = precio_unitario / (1 + (tasa_iva / 100));
-            const iva_linea = precio_sin_iva * (tasa_iva / 100) * cantidad;
-            
-            subtotal_bs += precio_sin_iva * cantidad;
-            tax_bs += iva_linea;
-            
-            const claveIva = `${tasa_iva}%`;
-            if (!desgloseIva[claveIva]) {
-                desgloseIva[claveIva] = 0;
-            }
-            desgloseIva[claveIva] += iva_linea;
+        console.log('📊 Datos del backend en modal:', { 
+            subtotal: subtotal_bs, 
+            iva: tax_bs, 
+            total: total_bs 
         });
 
-        const total_bs = subtotal_bs + tax_bs;
+        // ✅ CALCULAR DESGLOSE DE IVA POR TASA
+        const desgloseIva = this.calcularDesgloseIva(factura.detalles || []);
 
         // ✅ GENERAR DESGLOSE DE IVA
         let desgloseIvaHTML = '';
@@ -573,6 +562,28 @@ class FacturasManager {
 
         modalBody.innerHTML = invoiceHTML;
         this.abrirModal('modalDetalles');
+    }
+
+    calcularDesgloseIva(detalles) {
+        const desgloseIva = {};
+        
+        detalles.forEach(detalle => {
+            const cantidad = parseFloat(detalle.cantidad) || 0;
+            const precio_unitario = parseFloat(detalle.precio_unitario) || 0;
+            const tasa_iva = parseFloat(detalle.tasa_iva) || 16;
+            
+            // ✅ CÁLCULO CORRECTO DEL IVA
+            const subtotal_linea = cantidad * precio_unitario;
+            const iva_linea = subtotal_linea * (tasa_iva / 100);
+            
+            const claveIva = `${tasa_iva}%`;
+            if (!desgloseIva[claveIva]) {
+                desgloseIva[claveIva] = 0;
+            }
+            desgloseIva[claveIva] += iva_linea;
+        });
+        
+        return desgloseIva;
     }
 
     mostrarDetallesPagoFormateados(detallesPago, metodoPago) {
@@ -710,6 +721,8 @@ class FacturasManager {
     }
 
     mostrarVentanaImpresion(facturaData) {
+        console.log('🔍 DATOS RECIBIDOS DEL BACKEND:', facturaData);
+        
         const ventanaImpresion = window.open('', '_blank', 'width=800,height=600');
         
         if (!ventanaImpresion) {
@@ -717,32 +730,21 @@ class FacturasManager {
             return;
         }
 
-        const { factura, empresa, cliente, vendedor, items, detalles_pago } = facturaData;
+        const { factura, empresa, cliente, vendedor, items, detalles_pago, subtotal, iva, total } = facturaData;
 
-        // ✅ CALCULAR IVA POR PRODUCTO
-        let subtotal_bs = 0;
-        let tax_bs = 0;
-        const desgloseIva = {};
+        // ✅ USAR LOS VALORES CALCULADOS DEL BACKEND
+        const subtotal_bs = parseFloat(subtotal) || 0;
+        const tax_bs = parseFloat(iva) || 0;
+        const total_bs = parseFloat(total) || 0;
 
-        (items || []).forEach(item => {
-            const cantidad = parseFloat(item.cantidad) || 0;
-            const precio_unitario = parseFloat(item.precio_unitario) || 0;
-            const tasa_iva = parseFloat(item.tasa_iva) || 16;
-            
-            const precio_sin_iva = precio_unitario / (1 + (tasa_iva / 100));
-            const iva_linea = precio_sin_iva * (tasa_iva / 100) * cantidad;
-            
-            subtotal_bs += precio_sin_iva * cantidad;
-            tax_bs += iva_linea;
-            
-            const claveIva = `${tasa_iva}%`;
-            if (!desgloseIva[claveIva]) {
-                desgloseIva[claveIva] = 0;
-            }
-            desgloseIva[claveIva] += iva_linea;
+        console.log('📊 Datos del backend en impresión:', { 
+            subtotal: subtotal_bs, 
+            iva: tax_bs, 
+            total: total_bs 
         });
 
-        const total_bs = subtotal_bs + tax_bs;
+        // ✅ CALCULAR DESGLOSE DE IVA POR TASA
+        const desgloseIva = this.calcularDesgloseIva(items || []);
 
         // ✅ GENERAR DESGLOSE DE IVA
         let desgloseIvaHTML = '';

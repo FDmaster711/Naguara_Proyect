@@ -1,4 +1,4 @@
-// Ventasss.js - Sistema de Ventas Paso a Paso Mejorado
+// Ventas.js - Sistema de Ventas Paso a Paso Mejorado
 class VentasManager {
     constructor() {
         this.currentCustomer = null;
@@ -16,23 +16,24 @@ class VentasManager {
         this.init();
     }
 
-    init() {
-        console.log('🚀 Inicializando módulo de ventas paso a paso...');
-        this.setCurrentDate();
-        this.setupEventListeners();
-        this.checkAuthentication();
-        this.loadTasaCambio();
-        this.loadProducts();
-        this.updateStepIndicator();
-        this.loadEmpresaData();
-         this.loadMetodosPagoConfig();
-         this.loadTasasIva();
-         this.setupAutocompleteClickHandler();
-    }
+   async init() {
+    console.log('🚀 Inicializando módulo de ventas paso a paso...');
+    this.setCurrentDate();
+    this.setupEventListeners();
+    this.checkAuthentication();
+    this.loadTasaCambio();
+    
+    // ✅ CARGA SECUENCIAL: Primero tasas IVA, luego productos
+    await this.loadTasasIva();
+    await this.loadProducts();
+    
+    this.updateStepIndicator();
+    this.loadEmpresaData();
+    this.loadMetodosPagoConfig();
+    this.setupAutocompleteClickHandler();
+}
 
-
-
-     async loadTasasIva() {
+    async loadTasasIva() {
         try {
             const response = await fetch('/api/tasas-iva', {
                 credentials: 'include'
@@ -71,11 +72,11 @@ class VentasManager {
         return tasa ? (parseFloat(tasa.tasa) / 100) : this.ivaRate;
     }
 
-     calcularPrecioConIva(precioSinIva, tasaIva) {
+    calcularPrecioConIva(precioSinIva, tasaIva) {
         return precioSinIva * (1 + tasaIva);
     }
 
-     calcularPrecioSinIva(precioConIva, tasaIva) {
+    calcularPrecioSinIva(precioConIva, tasaIva) {
         return precioConIva / (1 + tasaIva);
     }
 
@@ -88,79 +89,66 @@ class VentasManager {
         });
     }
 
-
-
-
-    
-
-    updateIvaDisplay() {
-        const ivaElements = document.querySelectorAll('[id*="iva"], [class*="iva"]');
-        ivaElements.forEach(element => {
-            if (element.textContent.includes('16%')) {
-                element.textContent = element.textContent.replace('16%', `${(this.ivaRate * 100).toFixed(0)}%`);
-            }
-        });
-    }
-
     async loadTasaCambio() {
-    // ✅ PASO 1: Verificar si hay tasa manual ACTIVA
-    const tasaManual = localStorage.getItem('tasaCambioManual');
-    const tasaTimestamp = localStorage.getItem('tasaCambioTimestamp');
-    
-    if (tasaManual && tasaTimestamp) {
-        const horasDesdeConfiguracion = (new Date() - new Date(tasaTimestamp)) / (1000 * 60 * 60);
+        // ✅ PASO 1: Verificar si hay tasa manual ACTIVA
+        const tasaManual = localStorage.getItem('tasaCambioManual');
+        const tasaTimestamp = localStorage.getItem('tasaCambioTimestamp');
         
-        // Usar tasa manual si tiene menos de 24 horas
-        if (horasDesdeConfiguracion < 24) {
-            this.tasaCambio = parseFloat(tasaManual);
-            this.updateTasaDisplay();
-            console.log('✅ Usando TASA MANUAL configurada:', this.tasaCambio);
-            return;
-        } else {
-            // Limpiar tasa manual vieja (más de 24 horas)
-            localStorage.removeItem('tasaCambioManual');
-            localStorage.removeItem('tasaCambioTimestamp');
-            console.log('🔄 Tasa manual expirada (más de 24 horas)');
+        if (tasaManual && tasaTimestamp) {
+            const horasDesdeConfiguracion = (new Date() - new Date(tasaTimestamp)) / (1000 * 60 * 60);
+            
+            // Usar tasa manual si tiene menos de 24 horas
+            if (horasDesdeConfiguracion < 24) {
+                this.tasaCambio = parseFloat(tasaManual);
+                this.updateTasaDisplay();
+                console.log('✅ Usando TASA MANUAL configurada:', this.tasaCambio);
+                return;
+            } else {
+                // Limpiar tasa manual vieja (más de 24 horas)
+                localStorage.removeItem('tasaCambioManual');
+                localStorage.removeItem('tasaCambioTimestamp');
+                console.log('🔄 Tasa manual expirada (más de 24 horas)');
+            }
         }
+
+        // ✅ PASO 2: Si no hay tasa manual, usar API
+        try {
+            console.log('💰 Cargando tasa de cambio desde API...');
+            const response = await fetch('/api/tasa-cambio/actual');
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            this.tasaCambio = parseFloat(data.tasa_bs);
+            
+            console.log('✅ Tasa de API cargada:', this.tasaCambio);
+            
+        } catch (error) {
+            console.error('❌ Error cargando tasa API:', error);
+            // Último fallback
+            this.tasaCambio = 36.50;
+        }
+        
+        this.updateTasaDisplay();
     }
 
-    // ✅ PASO 2: Si no hay tasa manual, usar API
-    try {
-        console.log('💰 Cargando tasa de cambio desde API...');
-        const response = await fetch('/api/tasa-cambio/actual');
+    updateTasaDisplay() {
+        // Intentar diferentes IDs posibles
+        const possibleIds = ['tasa-display', 'tasa-actual', 'exchange-rate'];
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        for (const id of possibleIds) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = this.tasaCambio.toFixed(2);
+                console.log(`✅ Tasa mostrada en elemento: #${id}`);
+                return;
+            }
         }
         
-        const data = await response.json();
-        this.tasaCambio = parseFloat(data.tasa_bs);
-        
-        console.log('✅ Tasa de API cargada:', this.tasaCambio);
-        
-    } catch (error) {
-        console.error(' Error cargando tasa API:', error);
-        // Último fallback
-        this.tasaCambio = 36.50;
+        console.warn('⚠️ No se encontró ningún elemento para mostrar la tasa de cambio');
     }
-    
-    this.updateTasaDisplay();
-}
-updateTasaDisplay() {
-    // Intentar diferentes IDs posibles
-    const possibleIds = ['tasa-display', 'tasa-actual', 'exchange-rate'];
-    
-    for (const id of possibleIds) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = this.tasaCambio.toFixed(2);
-            console.log(`✅ Tasa mostrada en elemento: #${id}`);
-            return;
-        }
-    }
-    
-    console.warn('⚠️ No se encontró ningún elemento para mostrar la tasa de cambio');
-}
 
     bsToUsd(amountBs) {
         return parseFloat((amountBs / this.tasaCambio).toFixed(2));
@@ -191,87 +179,87 @@ updateTasaDisplay() {
         }
     }
 
-  loadMetodosPagoConfig() {
-    try {
-        const metodosConfig = localStorage.getItem('metodosPagoConfig');
-        const timestamp = localStorage.getItem('metodosPagoTimestamp');
-        
-        if (metodosConfig && timestamp) {
-            const horasDesdeActualizacion = (new Date() - new Date(timestamp)) / (1000 * 60 * 60);
+    loadMetodosPagoConfig() {
+        try {
+            const metodosConfig = localStorage.getItem('metodosPagoConfig');
+            const timestamp = localStorage.getItem('metodosPagoTimestamp');
             
-            if (horasDesdeActualizacion < 1) {
-                this.metodosPagoConfig = JSON.parse(metodosConfig);
-                console.log('✅ Métodos de pago configurados cargados (cache):', this.metodosPagoConfig);
+            if (metodosConfig && timestamp) {
+                const horasDesdeActualizacion = (new Date() - new Date(timestamp)) / (1000 * 60 * 60);
+                
+                if (horasDesdeActualizacion < 1) {
+                    this.metodosPagoConfig = JSON.parse(metodosConfig);
+                    console.log('✅ Métodos de pago configurados cargados (cache):', this.metodosPagoConfig);
+                } else {
+                    localStorage.removeItem('metodosPagoConfig');
+                    localStorage.removeItem('metodosPagoTimestamp');
+                    this.metodosPagoConfig = null;
+                    console.log('🔄 Configuración de métodos muy vieja, se limpió');
+                }
             } else {
-                localStorage.removeItem('metodosPagoConfig');
-                localStorage.removeItem('metodosPagoTimestamp');
                 this.metodosPagoConfig = null;
-                console.log('🔄 Configuración de métodos muy vieja, se limpió');
             }
-        } else {
+            
+            this.updatePaymentMethodsUI();
+            
+        } catch (error) {
+            console.error('Error cargando métodos pago config:', error);
             this.metodosPagoConfig = null;
         }
-        
-        this.updatePaymentMethodsUI();
-        
-    } catch (error) {
-        console.error('Error cargando métodos pago config:', error);
-        this.metodosPagoConfig = null;
     }
-}
 
-updatePaymentMethodsUI() {
-    const paymentButtons = document.querySelectorAll('.payment-btn');
-    
-    paymentButtons.forEach(btn => {
-        const metodo = btn.dataset.method;
-        const metodoConfig = this.metodosPagoConfig?.find(m => m.id === metodo);
+    updatePaymentMethodsUI() {
+        const paymentButtons = document.querySelectorAll('.payment-btn');
         
-        if (metodoConfig && !metodoConfig.habilitado) {
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-            btn.disabled = true;
-            btn.title = `Método deshabilitado en configuración`;
+        paymentButtons.forEach(btn => {
+            const metodo = btn.dataset.method;
+            const metodoConfig = this.metodosPagoConfig?.find(m => m.id === metodo);
             
-            // Si este método estaba seleccionado, limpiar selección
-            if (this.selectedPaymentMethod === metodo) {
-                this.selectedPaymentMethod = null;
-                this.showPaymentDetails(null);
+            if (metodoConfig && !metodoConfig.habilitado) {
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                btn.disabled = true;
+                btn.title = `Método deshabilitado en configuración`;
                 
-                // Remover clases activas
-                btn.classList.remove('active', 'bg-purple-100', 'border-purple-300', 'ring-2', 'ring-purple-500');
+                // Si este método estaba seleccionado, limpiar selección
+                if (this.selectedPaymentMethod === metodo) {
+                    this.selectedPaymentMethod = null;
+                    this.showPaymentDetails(null);
+                    
+                    // Remover clases activas
+                    btn.classList.remove('active', 'bg-purple-100', 'border-purple-300', 'ring-2', 'ring-purple-500');
+                }
+            } else {
+                // ✅ MÉTODO HABILITADO
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.disabled = false;
+                btn.title = '';
             }
-        } else {
-            // ✅ MÉTODO HABILITADO
-            btn.classList.remove('opacity-50', 'cursor-not-allowed');
-            btn.disabled = false;
-            btn.title = '';
-        }
-    });
-    
-    // ✅ Mostrar mensaje si no hay métodos habilitados
-    this.checkMetodosHabilitados();
-}
-
-checkMetodosHabilitados() {
-    const metodosHabilitados = this.metodosPagoConfig?.filter(m => m.habilitado) || [];
-    const paymentDetails = document.getElementById('payment-details');
-    
-    if (metodosHabilitados.length === 0 && paymentDetails) {
-        paymentDetails.innerHTML = `
-            <div class="text-center p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <i class="fas fa-exclamation-triangle text-2xl text-yellow-600 mb-2"></i>
-                <h4 class="font-bold text-yellow-800">Métodos de Pago No Disponibles</h4>
-                <p class="text-yellow-600 text-sm mt-2">
-                    Todos los métodos de pago están deshabilitados en la configuración.
-                </p>
-                <button onclick="window.location.href='../configuracion/configuracion.html'" 
-                        class="mt-3 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-cog mr-2"></i>Ir a Configuración
-                </button>
-            </div>
-        `;
+        });
+        
+        // ✅ Mostrar mensaje si no hay métodos habilitados
+        this.checkMetodosHabilitados();
     }
-}
+
+    checkMetodosHabilitados() {
+        const metodosHabilitados = this.metodosPagoConfig?.filter(m => m.habilitado) || [];
+        const paymentDetails = document.getElementById('payment-details');
+        
+        if (metodosHabilitados.length === 0 && paymentDetails) {
+            paymentDetails.innerHTML = `
+                <div class="text-center p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <i class="fas fa-exclamation-triangle text-2xl text-yellow-600 mb-2"></i>
+                    <h4 class="font-bold text-yellow-800">Métodos de Pago No Disponibles</h4>
+                    <p class="text-yellow-600 text-sm mt-2">
+                        Todos los métodos de pago están deshabilitados en la configuración.
+                    </p>
+                    <button onclick="window.location.href='../configuracion/configuracion.html'" 
+                            class="mt-3 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-cog mr-2"></i>Ir a Configuración
+                    </button>
+                </div>
+            `;
+        }
+    }
 
     checkAuthentication() {
         fetch('/api/me')
@@ -349,14 +337,14 @@ checkMetodosHabilitados() {
         // Modales Generales
         this.setupModalEvents();
 
-          document.getElementById('close-cash-register')?.addEventListener('click', () => this.openCashClose());
-    document.getElementById('close-cash-register-modal')?.addEventListener('click', () => this.hideModal('cash-register-modal'));
-    document.getElementById('calculate-close')?.addEventListener('click', () => this.calculateCashClose());
-    document.getElementById('process-close')?.addEventListener('click', () => this.processCashClose());
-    
-    // Calcular diferencia en tiempo real
-    document.getElementById('initial-cash')?.addEventListener('input', () => this.calculateDifference());
-    document.getElementById('final-cash-counted')?.addEventListener('input', () => this.calculateDifference());
+        document.getElementById('close-cash-register')?.addEventListener('click', () => this.openCashClose());
+        document.getElementById('close-cash-register-modal')?.addEventListener('click', () => this.hideModal('cash-register-modal'));
+        document.getElementById('calculate-close')?.addEventListener('click', () => this.calculateCashClose());
+        document.getElementById('process-close')?.addEventListener('click', () => this.processCashClose());
+        
+        // Calcular diferencia en tiempo real
+        document.getElementById('initial-cash')?.addEventListener('input', () => this.calculateDifference());
+        document.getElementById('final-cash-counted')?.addEventListener('input', () => this.calculateDifference());
 
         console.log('✅ Event listeners configurados');
     }
@@ -371,13 +359,11 @@ checkMetodosHabilitados() {
     }
 
     selectPaymentMethod(method) {
-       
-       
-        const metodoConfig = this.metodosPagoConfig?.find(m => m.id === method);
-    if (metodoConfig && !metodoConfig.habilitado) {
-        this.showAlert(`El método de pago "${method}" está deshabilitado en la configuración`, 'error');
-        return;
-    }
+        const metodoConfig = this.metodosPagoConfig?.find(m => m.id === metodo);
+        if (metodoConfig && !metodoConfig.habilitado) {
+            this.showAlert(`El método de pago "${method}" está deshabilitado en la configuración`, 'error');
+            return;
+        }
 
         console.log('💳 Método de pago seleccionado:', method);
         this.selectedPaymentMethod = method;
@@ -403,112 +389,112 @@ checkMetodosHabilitados() {
     }
 
     calculateCashClose() {
-    this.updateCloseCashDisplay();
-    this.showAlert('Cálculo completado', 'success');
-}
-
-calculateDifference() {
-    const initialCash = parseFloat(document.getElementById('initial-cash').value) || 0;
-    const finalCashCounted = parseFloat(document.getElementById('final-cash-counted').value) || 0;
-    const expectedCash = initialCash + (this.dailySalesSummary?.efectivo || 0);
-    const difference = finalCashCounted - expectedCash;
-
-    const differenceElement = document.getElementById('close-difference');
-    const container = document.getElementById('close-difference-container');
-
-    differenceElement.textContent = `Bs. ${difference.toFixed(2)}`;
-
-    // Aplicar estilos según la diferencia
-    container.className = 'flex justify-between font-bold text-lg';
-    if (difference > 0) {
-        differenceElement.className = 'text-green-600';
-    } else if (difference < 0) {
-        differenceElement.className = 'text-red-600';
-    } else {
-        differenceElement.className = 'text-gray-600';
+        this.updateCloseCashDisplay();
+        this.showAlert('Cálculo completado', 'success');
     }
-}
 
-async processCashClose() {
-    try {
-        const initialCash = parseFloat(document.getElementById('initial-cash')?.value) || 0;
-        const finalCashCounted = parseFloat(document.getElementById('final-cash-counted')?.value) || 0;
-        const fecha = document.getElementById('close-date').value;
-
-        // Validaciones
-        if (!fecha) {
-            this.showAlert('Debe seleccionar una fecha');
-            return;
-        }
-
-        if (finalCashCounted === 0) {
-            this.showAlert('Debe ingresar el efectivo final contado');
-            return;
-        }
-
+    calculateDifference() {
+        const initialCash = parseFloat(document.getElementById('initial-cash').value) || 0;
+        const finalCashCounted = parseFloat(document.getElementById('final-cash-counted').value) || 0;
         const expectedCash = initialCash + (this.dailySalesSummary?.efectivo || 0);
-        const diferencia = finalCashCounted - expectedCash;
+        const difference = finalCashCounted - expectedCash;
 
-        console.log('💳 Procesando cierre de caja...');
+        const differenceElement = document.getElementById('close-difference');
+        const container = document.getElementById('close-difference-container');
 
-        const closeData = {
-            fecha: fecha,
-            usuario_id: await this.getCurrentUserId(),
-            efectivo_inicial: initialCash,
-            efectivo_final: finalCashCounted,
-            total_ventas: this.dailySalesSummary?.total || 0,
-            total_ventas_efectivo: this.dailySalesSummary?.efectivo || 0,
-            total_ventas_tarjeta: this.dailySalesSummary?.tarjeta || 0,
-            total_ventas_transferencia: this.dailySalesSummary?.transferencia || 0,
-            total_ventas_pago_movil: this.dailySalesSummary?.pago_movil || 0,
-            diferencia: diferencia
-        };
+        differenceElement.textContent = `Bs. ${difference.toFixed(2)}`;
 
-        const response = await fetch('/api/cierre-caja', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(closeData)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            this.showAlert('✅ Cierre de caja procesado exitosamente!', 'success');
-            this.hideModal('cash-register-modal');
-            
-            // Limpiar formulario
-            document.getElementById('initial-cash').value = '';
-            document.getElementById('final-cash-counted').value = '';
-            
-        } else if (response.status === 409) {
-            const error = await response.json();
-            this.showAlert(
-                ` Ya existe un cierre de caja para hoy.\n\n` +
-                `No puedes realizar más de un cierre por día.`,
-                'warning'
-            );
+        // Aplicar estilos según la diferencia
+        container.className = 'flex justify-between font-bold text-lg';
+        if (difference > 0) {
+            differenceElement.className = 'text-green-600';
+        } else if (difference < 0) {
+            differenceElement.className = 'text-red-600';
         } else {
-            const error = await response.json();
-            this.showAlert(error.error || 'Error al procesar el cierre de caja');
+            differenceElement.className = 'text-gray-600';
         }
-    } catch (error) {
-        console.error('Error procesando cierre de caja:', error);
-        this.showAlert('Error de conexión al procesar el cierre de caja');
     }
-}
 
-async getCurrentUserId() {
-    try {
-        const response = await fetch('/api/me', { credentials: 'include' });
-        if (response.ok) {
-            const user = await response.json();
-            return user.id;
+    async processCashClose() {
+        try {
+            const initialCash = parseFloat(document.getElementById('initial-cash')?.value) || 0;
+            const finalCashCounted = parseFloat(document.getElementById('final-cash-counted')?.value) || 0;
+            const fecha = document.getElementById('close-date').value;
+
+            // Validaciones
+            if (!fecha) {
+                this.showAlert('Debe seleccionar una fecha');
+                return;
+            }
+
+            if (finalCashCounted === 0) {
+                this.showAlert('Debe ingresar el efectivo final contado');
+                return;
+            }
+
+            const expectedCash = initialCash + (this.dailySalesSummary?.efectivo || 0);
+            const diferencia = finalCashCounted - expectedCash;
+
+            console.log('💳 Procesando cierre de caja...');
+
+            const closeData = {
+                fecha: fecha,
+                usuario_id: await this.getCurrentUserId(),
+                efectivo_inicial: initialCash,
+                efectivo_final: finalCashCounted,
+                total_ventas: this.dailySalesSummary?.total || 0,
+                total_ventas_efectivo: this.dailySalesSummary?.efectivo || 0,
+                total_ventas_tarjeta: this.dailySalesSummary?.tarjeta || 0,
+                total_ventas_transferencia: this.dailySalesSummary?.transferencia || 0,
+                total_ventas_pago_movil: this.dailySalesSummary?.pago_movil || 0,
+                diferencia: diferencia
+            };
+
+            const response = await fetch('/api/cierre-caja', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(closeData)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                this.showAlert('✅ Cierre de caja procesado exitosamente!', 'success');
+                this.hideModal('cash-register-modal');
+                
+                // Limpiar formulario
+                document.getElementById('initial-cash').value = '';
+                document.getElementById('final-cash-counted').value = '';
+                
+            } else if (response.status === 409) {
+                const error = await response.json();
+                this.showAlert(
+                    `Ya existe un cierre de caja para hoy.\n\n` +
+                    `No puedes realizar más de un cierre por día.`,
+                    'warning'
+                );
+            } else {
+                const error = await response.json();
+                this.showAlert(error.error || 'Error al procesar el cierre de caja');
+            }
+        } catch (error) {
+            console.error('Error procesando cierre de caja:', error);
+            this.showAlert('Error de conexión al procesar el cierre de caja');
         }
-    } catch (error) {
-        console.error('Error obteniendo usuario:', error);
     }
-    return 1; // Fallback
-}
+
+    async getCurrentUserId() {
+        try {
+            const response = await fetch('/api/me', { credentials: 'include' });
+            if (response.ok) {
+                const user = await response.json();
+                return user.id;
+            }
+        } catch (error) {
+            console.error('Error obteniendo usuario:', error);
+        }
+        return 1; // Fallback
+    }
 
     showPaymentDetails(method) {
         const paymentDetails = document.getElementById('payment-details');
@@ -722,7 +708,7 @@ async getCurrentUserId() {
         }
     }
 
-    // ==================== GESTIÓN DE CLIENTES (Mismo código que antes) ====================
+    // ==================== GESTIÓN DE CLIENTES ====================
 
     validateCedulaFormat(cedula) {
         if (!cedula || cedula.trim() === '') {
@@ -873,8 +859,7 @@ async getCurrentUserId() {
         }
     }
 
-
-    async loadProducts() {
+   async loadProducts() {
     try {
         console.log('📦 Cargando productos...');
         const response = await fetch('/api/productos', { 
@@ -885,23 +870,43 @@ async getCurrentUserId() {
         });
         
         if (response.ok) {
-            const rawProducts = await response.json();
+            const responseData = await response.json();
+            const rawProducts = responseData.productos;
+            
+            if (!Array.isArray(rawProducts)) {
+                console.error('❌ La respuesta no contiene un array de productos:', responseData);
+                this.showAlert('Error: Formato de productos no válido');
+                return;
+            }
+            
             console.log('📊 Productos recibidos (primeros 3):', rawProducts.slice(0, 3));
             
             this.products = rawProducts.map(product => {
                 const precioBs = parseFloat(product.precio_venta) || 0;
                 const precioUsd = parseFloat(product.precio_dolares) || this.bsToUsd(precioBs);
                 
+                // ✅ DEBUG: Mostrar productos con precios
+                if (product.id_tasa_iva === 2) {
+                    console.log(`✅ Producto exento: ${product.nombre}`, {
+                        id: product.id,
+                        precio_venta: product.precio_venta,
+                        precio_dolares: product.precio_dolares,
+                        tasa_iva: product.tasa_iva
+                    });
+                }
+                
                 return {
                     id: product.id,
                     nombre: product.nombre,
-                    precio_bs: precioBs,
-                    precio_usd: precioUsd,
+                    precio_venta: precioBs,  // ✅ Mantener precio_venta original
+                    precio_dolares: precioUsd, // ✅ Mantener precio_dolares original
+                    precio_bs: precioBs,      // ✅ También incluir precio_bs para compatibilidad
+                    precio_usd: precioUsd,    // ✅ También incluir precio_usd para compatibilidad
                     stock: parseFloat(product.stock) || 0,
                     unidad_medida: product.unidad_medida || 'unidad',
                     categoria: product.categoria || 'Sin categoría',
                     id_tasa_iva: product.id_tasa_iva || 1,
-                    tasa_iva: parseFloat(product.tasa_iva) || 16,
+                    tasa_iva: parseFloat(product.tasa_iva) || 0,
                     tipo_iva: product.tipo_iva || 'general',
                     stock_minimo: parseFloat(product.stock_minimo) || 10
                 };
@@ -909,101 +914,92 @@ async getCurrentUserId() {
             
             console.log(`✅ ${this.products.length} productos formateados correctamente`);
             
-            const productosSinPrecio = this.products.filter(p => !p.precio_bs);
-            if (productosSinPrecio.length > 0) {
-                console.warn('⚠️ Productos sin precio:', productosSinPrecio);
-            }
-            
         } else {
-            console.error(' Error cargando productos:', response.status, response.statusText);
+            console.error('❌ Error cargando productos:', response.status, response.statusText);
             this.showAlert('Error al cargar productos del servidor');
         }
     } catch (error) {
-        console.error(' Error cargando productos:', error);
+        console.error('❌ Error cargando productos:', error);
         this.showAlert('Error de conexión al cargar productos');
     }
-
-    
 }
 
 
-
- searchProducts(query) {
-    console.log('🔍 Buscando productos con:', query);
-    
-    if (!query || query.trim() === '') {
-        document.getElementById('product-suggestions').classList.add('hidden');
-        return;
-    }
-
-    if (!this.products || this.products.length === 0) {
-        console.log('No hay productos cargados');
-        return;
-    }
-    
-    const suggestions = document.getElementById('product-suggestions');
-    suggestions.innerHTML = '';
-    
-    const searchTerm = query.toLowerCase().trim();
-    
-    const filteredProducts = this.products.filter(product => {
-        const nombreMatch = product.nombre && product.nombre.toLowerCase().includes(searchTerm);
-        const idMatch = product.id && product.id.toString().includes(searchTerm);
-        const categoriaMatch = product.categoria && product.categoria.toLowerCase().includes(searchTerm);
+    searchProducts(query) {
+        console.log('🔍 Buscando productos con:', query);
         
-        return nombreMatch || idMatch || categoriaMatch;
-    }).slice(0, 5);
-
-    if (filteredProducts.length > 0) {
-        filteredProducts.forEach(product => {
-            const div = document.createElement('div');
-            div.className = 'autocomplete-item';
-            div.dataset.productId = product.id; 
-            
-            const precioBs = product.precio_bs || 0;
-            const precioUsd = product.precio_usd || 0;
-            const stock = product.stock || 0;
-            
-            div.innerHTML = `
-                <div class="font-semibold text-gray-800">${product.nombre}</div>
-                <div class="text-sm text-gray-600">
-                    Código: ${product.id} | 
-                    <span class="text-purple-600">Bs. ${precioBs.toFixed(2)}</span> | 
-                    <span class="text-green-600">$ ${precioUsd.toFixed(2)}</span> | 
-                    Stock: ${stock}
-                </div>
-            `;
-            suggestions.appendChild(div);
-        });
-        suggestions.classList.remove('hidden');
-    } else {
-        suggestions.classList.add('hidden');
-    }
-}
-
-
-setupAutocompleteClickHandler() {
-    const suggestionsContainer = document.getElementById('product-suggestions');
-    
-    // ✅ USAR EVENT DELEGATION - MÁS EFICIENTE Y EVITA MÚLTIPLES LISTENERS
-    suggestionsContainer.addEventListener('click', (e) => {
-        const autocompleteItem = e.target.closest('.autocomplete-item');
-        
-        if (autocompleteItem) {
-            const productId = parseInt(autocompleteItem.dataset.productId);
-            const product = this.products.find(p => p.id === productId);
-            
-            if (product) {
-                console.log('🛒 Producto seleccionado desde autocomplete:', product.nombre);
-                this.addProductToCart(product);
-                
-                // Ocultar sugerencias después de seleccionar
-                suggestionsContainer.classList.add('hidden');
-                document.getElementById('product-search').value = '';
-            }
+        if (!query || query.trim() === '') {
+            document.getElementById('product-suggestions').classList.add('hidden');
+            return;
         }
-    });
-}
+
+        if (!this.products || this.products.length === 0) {
+            console.log('No hay productos cargados');
+            return;
+        }
+        
+        const suggestions = document.getElementById('product-suggestions');
+        suggestions.innerHTML = '';
+        
+        const searchTerm = query.toLowerCase().trim();
+        
+        const filteredProducts = this.products.filter(product => {
+            const nombreMatch = product.nombre && product.nombre.toLowerCase().includes(searchTerm);
+            const idMatch = product.id && product.id.toString().includes(searchTerm);
+            const categoriaMatch = product.categoria && product.categoria.toLowerCase().includes(searchTerm);
+            
+            return nombreMatch || idMatch || categoriaMatch;
+        }).slice(0, 5);
+
+        if (filteredProducts.length > 0) {
+            filteredProducts.forEach(product => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+                div.dataset.productId = product.id; 
+                
+                const precioBs = product.precio_bs || 0;
+                const precioUsd = product.precio_usd || 0;
+                const stock = product.stock || 0;
+                
+                div.innerHTML = `
+                    <div class="font-semibold text-gray-800">${product.nombre}</div>
+                    <div class="text-sm text-gray-600">
+                        Código: ${product.id} | 
+                        <span class="text-purple-600">Bs. ${precioBs.toFixed(2)}</span> | 
+                        <span class="text-green-600">$ ${precioUsd.toFixed(2)}</span> | 
+                        Stock: ${stock}
+                    </div>
+                `;
+                suggestions.appendChild(div);
+            });
+            suggestions.classList.remove('hidden');
+        } else {
+            suggestions.classList.add('hidden');
+        }
+    }
+
+    setupAutocompleteClickHandler() {
+        const suggestionsContainer = document.getElementById('product-suggestions');
+        
+        // ✅ USAR EVENT DELEGATION - MÁS EFICIENTE Y EVITA MÚLTIPLES LISTENERS
+        suggestionsContainer.addEventListener('click', (e) => {
+            const autocompleteItem = e.target.closest('.autocomplete-item');
+            
+            if (autocompleteItem) {
+                const productId = parseInt(autocompleteItem.dataset.productId);
+                const product = this.products.find(p => p.id === productId);
+                
+                if (product) {
+                    console.log('🛒 Producto seleccionado desde autocomplete:', product.nombre);
+                    this.addProductToCart(product);
+                    
+                    // Ocultar sugerencias después de seleccionar
+                    suggestionsContainer.classList.add('hidden');
+                    document.getElementById('product-search').value = '';
+                }
+            }
+        });
+    }
 
     handleProductSearch(query) {
         if (!query.trim()) return;
@@ -1032,7 +1028,7 @@ setupAutocompleteClickHandler() {
         }
     }
 
-  addProductToCart(product) {
+ addProductToCart(product) {
     console.log('🛒 Agregando producto al carrito:', product);
     
     document.getElementById('product-suggestions').classList.add('hidden');
@@ -1062,21 +1058,26 @@ setupAutocompleteClickHandler() {
         this.cart[existingItemIndex].subtotal_bs = (this.cart[existingItemIndex].cantidad * this.cart[existingItemIndex].precio_bs).toFixed(2);
         this.cart[existingItemIndex].subtotal_usd = this.bsToUsd(parseFloat(this.cart[existingItemIndex].subtotal_bs));
     } else {
-        // ✅ CORREGIDO: Usar las propiedades correctas del producto
+        // ✅ CORREGIDO: Usar precio_venta en lugar de precio_bs
+        const precioBs = parseFloat(product.precio_venta) || 0;
+        const precioUsd = parseFloat(product.precio_dolares) || this.bsToUsd(precioBs);
+        
+        console.log(`💰 Precios del producto ${product.id}: Bs. ${precioBs}, USD: ${precioUsd}`);
+        
         this.cart.push({
             id: product.id,
             nombre: product.nombre,
-            precio_bs: parseFloat(product.precio_bs) || 0,  
-            precio_usd: parseFloat(product.precio_usd) || 0, 
+            precio_bs: precioBs,  // ✅ Usar precio_venta convertido
+            precio_usd: precioUsd, // ✅ Usar precio_dolares
             categoria: product.categoria || 'Sin categoría',
             unidad_medida: product.unidad_medida || 'unidad',
             stock: product.stock || 0,
-            id_tasa_iva: product.id_tasa_iva || 1, 
-            tasa_iva: parseFloat(product.tasa_iva) || 16, 
-            tipo_iva: product.tipo_iva || 'general', 
+            id_tasa_iva: product.id_tasa_iva || 1,
+            tasa_iva: parseFloat(product.tasa_iva) || 0,
+            tipo_iva: product.tipo_iva || 'exento', 
             cantidad: 1,
-            subtotal_bs: (parseFloat(product.precio_bs) || 0).toFixed(2), 
-            subtotal_usd: parseFloat(product.precio_usd) || 0 
+            subtotal_bs: precioBs.toFixed(2),  // ✅ Usar precioBs calculado
+            subtotal_usd: precioUsd  // ✅ Usar precioUsd calculado
         });
     }
 
@@ -1089,12 +1090,35 @@ setupAutocompleteClickHandler() {
     }
 }
 
+
+debugCartIVA() {
+    console.log('🔍 DEBUG - Estado del carrito:');
+    this.cart.forEach((item, index) => {
+        console.log(`Producto ${index + 1}:`, {
+            nombre: item.nombre,
+            id_tasa_iva: item.id_tasa_iva,
+            tasa_iva: item.tasa_iva,
+            tipo_iva: item.tipo_iva,
+            subtotal_bs: item.subtotal_bs,
+            precio_bs: item.precio_bs
+        });
+    });
+    
+    // Calcular IVA manualmente para verificar
+    let ivaCalculado = 0;
+    this.cart.forEach(item => {
+        const ivaItem = parseFloat(item.subtotal_bs) * (item.tasa_iva / 100);
+        ivaCalculado += ivaItem;
+        console.log(`IVA para ${item.nombre}: ${ivaItem} (${item.tasa_iva}% de ${item.subtotal_bs})`);
+    });
+    console.log('💰 IVA total calculado:', ivaCalculado);
+}
     updateCart() {
         const cartItems = document.getElementById('cart-items');
         let emptyCart = document.getElementById('empty-cart');
 
         if (!cartItems) {
-            console.error(' No se encontró #cart-items en el DOM.');
+            console.error('❌ No se encontró #cart-items en el DOM.');
             return;
         }
 
@@ -1169,6 +1193,7 @@ setupAutocompleteClickHandler() {
         this.setupCartEventListeners();
         this.updateTotals();
         this.updateSaleSummary();
+          this.debugCartIVA();
     }
 
     setupCartEventListeners() {
@@ -1270,17 +1295,26 @@ setupAutocompleteClickHandler() {
         }
     }
 
-updateTotals() {
+    // ✅ CORREGIDO: Calcular IVA usando la tasa específica de cada producto
+    updateTotals() {
         let subtotal_bs = 0;
         let tax_bs = 0;
+        const desgloseIva = {};
 
         this.cart.forEach(item => {
             const itemSubtotal = parseFloat(item.subtotal_bs);
             subtotal_bs += itemSubtotal;
             
-            // Calcular IVA específico para este producto
+            // ✅ CORREGIDO: Calcular IVA específico para este producto usando su tasa_iva
             const itemTax = itemSubtotal * (item.tasa_iva / 100);
             tax_bs += itemTax;
+            
+            // Acumular para desglose
+            const claveIva = `${item.tasa_iva}%`;
+            if (!desgloseIva[claveIva]) {
+                desgloseIva[claveIva] = 0;
+            }
+            desgloseIva[claveIva] += itemTax;
         });
 
         const total_bs = subtotal_bs + tax_bs;
@@ -1290,51 +1324,43 @@ updateTotals() {
         const total_usd = this.bsToUsd(total_bs);
 
         document.getElementById('subtotal-amount').textContent = `Bs. ${subtotal_bs.toFixed(2)}`;
-        document.getElementById('tax-amount').textContent = `Bs. ${tax_bs.toFixed(2)}`; // Ya no mostramos % fijo
+        document.getElementById('tax-amount').textContent = `Bs. ${tax_bs.toFixed(2)}`;
         document.getElementById('total-bs').textContent = `Bs. ${total_bs.toFixed(2)}`;
         document.getElementById('total-usd').textContent = `$ ${total_usd.toFixed(2)}`;
 
         // Mostrar desglose de IVA si hay múltiples tasas
-        this.mostrarDesgloseIva();
+        this.mostrarDesgloseIva(desgloseIva);
     }
 
-
-     mostrarDesgloseIva() {
+    mostrarDesgloseIva(desgloseIva) {
         const taxElement = document.getElementById('tax-amount');
-        const tasasUtilizadas = {};
+        const tasasUnicas = Object.keys(desgloseIva);
         
-        this.cart.forEach(item => {
-            const tasaKey = `${item.tasa_iva}% (${item.tipo_iva})`;
-            if (!tasasUtilizadas[tasaKey]) {
-                tasasUtilizadas[tasaKey] = 0;
-            }
-            tasasUtilizadas[tasaKey] += parseFloat(item.subtotal_bs) * (item.tasa_iva / 100);
-        });
-
-        const tasasUnicas = Object.keys(tasasUtilizadas);
         if (tasasUnicas.length > 1) {
-            let desgloseHTML = 'Bs. ';
+            let desgloseHTML = '';
             tasasUnicas.forEach((tasa, index) => {
                 if (index > 0) desgloseHTML += ' + ';
-                desgloseHTML += `${tasasUtilizadas[tasa].toFixed(2)} ${tasa}`;
+                desgloseHTML += `Bs. ${desgloseIva[tasa].toFixed(2)} (${tasa})`;
             });
             taxElement.innerHTML = desgloseHTML;
         }
     }
 
-     getTotalBs() {
+    // ✅ CORREGIDO: Calcular total usando tasas específicas de cada producto
+    getTotalBs() {
         let subtotal = 0;
         let tax = 0;
 
         this.cart.forEach(item => {
             const itemSubtotal = parseFloat(item.subtotal_bs);
             subtotal += itemSubtotal;
-            tax += itemSubtotal * (item.tasa_iva / 100);
+            // ✅ CORREGIDO: Usar tasa específica del producto
+            const tasaProducto = item.tasa_iva / 100;
+            tax += itemSubtotal * tasaProducto;
         });
 
         return (subtotal + tax).toFixed(2);
     }
-
 
     updateSaleSummary() {
         const summaryElement = document.getElementById('current-sale-summary');
@@ -1350,13 +1376,6 @@ updateTotals() {
             summaryElement.style.display = 'none';
         }
     }
-
-    getTotalBs() {
-        const subtotal = this.cart.reduce((sum, item) => sum + parseFloat(item.subtotal_bs), 0);
-        const tax = subtotal * this.ivaRate; 
-        return (subtotal + tax).toFixed(2);
-    }
-
 
     // ==================== MÉTODOS DE PAGO ====================
 
@@ -1651,7 +1670,7 @@ updateTotals() {
 
     // ==================== PROCESAR VENTA ====================
 
-   async processSale() {
+    async processSale() {
         if (this.cart.length === 0) {
             this.showAlert('El carrito está vacío');
             return;
@@ -1710,8 +1729,7 @@ updateTotals() {
         }
     }
 
-
-    // ==================== FACTURA (Mismo código que antes) ====================
+    // ==================== FACTURA ====================
 
     async viewInvoice() {
         if (!this.lastSaleId) {
@@ -1738,10 +1756,10 @@ updateTotals() {
         }
     }
 
-       generateInvoiceHTML(ventaData) {
+    generateInvoiceHTML(ventaData) {
         const invoiceContent = document.getElementById('invoice-content');
         
-        // ✅ ACTUALIZADO: Calcular con IVA por producto
+        // ✅ CORREGIDO: Calcular con IVA específico por producto
         let subtotal_bs = 0;
         let tax_bs = 0;
         const desgloseIva = {};
@@ -1750,11 +1768,12 @@ updateTotals() {
             const itemSubtotal = parseFloat(item.subtotal_bs);
             subtotal_bs += itemSubtotal;
             
+            // ✅ CORREGIDO: Usar tasa específica del producto
             const itemTax = itemSubtotal * (item.tasa_iva / 100);
             tax_bs += itemTax;
             
             // Acumular por tipo de IVA
-            const claveIva = `${item.tasa_iva}% (${item.tipo_iva})`;
+            const claveIva = `${item.tasa_iva}%`;
             if (!desgloseIva[claveIva]) {
                 desgloseIva[claveIva] = 0;
             }
@@ -1892,9 +1911,6 @@ updateTotals() {
 
         invoiceContent.innerHTML = invoiceHTML;
     }
-
-    
-
 
     printInvoice() {
         const invoiceContent = document.getElementById('invoice-content').innerHTML;
@@ -2066,192 +2082,187 @@ updateTotals() {
         this.hideModal('confirm-modal');
     }
 
-    // ==================== CIERRE DE CAJA (Implementación básica) ====================
+    // ==================== CIERRE DE CAJA ====================
 
     async openCashClose() {
-    try {
-        console.log('💰 Verificando cierre de caja...');
-        
-        const today = new Date().toISOString().split('T')[0];
-        const usuarioId = await this.getCurrentUserId();
-
-        // ✅ PRIMERO: Verificar si ya existe cierre de caja para hoy
-        const verifyResponse = await fetch(`/api/cierre-caja/verificar?fecha=${today}&usuario_id=${usuarioId}`);
-        
-        if (verifyResponse.status === 409) {
-            const errorData = await verifyResponse.json();
-            this.showAlert(
-                `Ya realizaste el cierre de caja hoy.\n\n` +
-                `Fecha: ${today}\n` +
-                `No puedes realizar más de un cierre por día.`,
-                'warning'
-            );
-            return;
-        }
-
-        if (!verifyResponse.ok) {
-            throw new Error('Error al verificar cierre de caja');
-        }
-
-        // ✅ SEGUNDO: Cargar resumen del día
-        console.log('📊 Cargando resumen del día...');
-        const resumenResponse = await fetch(`/api/ventas/resumen-diario?fecha=${today}`);
-        
-        if (!resumenResponse.ok) {
-            throw new Error('Error al cargar resumen de ventas');
-        }
-        
-        const resumen = await resumenResponse.json();
-        console.log('📈 Resumen del día:', resumen);
-        
-        // ✅ TERCERO: Actualizar y mostrar modal
-        this.updateCashCloseModal(resumen);
-        this.showModal('cash-register-modal');
-        
-        console.log('✅ Modal de cierre de caja abierto');
-
-    } catch (error) {
-        console.error(' Error abriendo cierre de caja:', error);
-        this.showAlert(`Error: ${error.message}`);
-    }
-}
-
-
-updateCashCloseModal(resumen) {
-    console.log('📊 Actualizando modal con resumen REAL del USUARIO:', resumen);
-    
-    // Calcular totales
-    const totalVentas = resumen.total || 0;
-    const efectivoTotal = (resumen.efectivo || 0) + (resumen.efectivo_bs || 0);
-    const tarjetaPunto = (resumen.punto_venta || 0) + (resumen.tarjeta || 0);
-    const transferencia = resumen.transferencia || 0;
-    const pagoMovil = resumen.pago_movil || 0;
-
-    // Función helper para actualizar elementos
-    const updateElement = (id, text) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = text;
-        }
-    };
-
-    // RESUMEN PRINCIPAL
-    updateElement('close-total-sales', `Bs. ${totalVentas.toFixed(2)}`);
-    updateElement('close-cash-sales', `Bs. ${efectivoTotal.toFixed(2)}`);
-    updateElement('close-card-sales', `Bs. ${tarjetaPunto.toFixed(2)}`);
-    updateElement('close-transfer-sales', `Bs. ${transferencia.toFixed(2)}`);
-    updateElement('close-mobile-sales', `Bs. ${pagoMovil.toFixed(2)}`);
-    updateElement('close-expected-cash', `Bs. ${efectivoTotal.toFixed(2)}`);
-
-    // DETALLES POR MÉTODO DE PAGO
-    updateElement('detail-cash-bs', `Bs. ${(resumen.efectivo_bs || 0).toFixed(2)}`);
-    updateElement('detail-cash-usd', `Bs. ${(resumen.efectivo_usd || 0).toFixed(2)}`);
-    updateElement('detail-punto-venta', `Bs. ${(resumen.punto_venta || 0).toFixed(2)}`);
-    updateElement('detail-transferencia', `Bs. ${(resumen.transferencia || 0).toFixed(2)}`);
-    updateElement('detail-pago-movil', `Bs. ${(resumen.pago_movil || 0).toFixed(2)}`);
-    updateElement('detail-mixto', `${resumen.mixto || 0} ventas`); // Cambiado a cantidad de ventas
-    updateElement('detail-tarjeta', `Bs. ${(resumen.tarjeta || 0).toFixed(2)}`);
-    updateElement('detail-efectivo', `Bs. ${(resumen.efectivo || 0).toFixed(2)}`);
-
-    // RESUMEN DE TRANSACCIONES - CON DATOS REALES
-    const totalTransacciones = resumen.total_ventas_count || 0;
-    const montoPromedio = totalTransacciones > 0 ? (totalVentas / totalTransacciones) : 0;
-    
-    // Formatear horas
-    const formatHora = (fecha) => {
-        if (!fecha) return '--:--';
-        return new Date(fecha).toLocaleTimeString('es-ES', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
-    };
-
-    updateElement('total-transacciones', totalTransacciones);
-    updateElement('monto-promedio', `Bs. ${montoPromedio.toFixed(2)}`);
-    updateElement('primera-venta', formatHora(resumen.primera_venta));
-    updateElement('ultima-venta', formatHora(resumen.ultima_venta));
-
-    // ACTUALIZAR INFORMACIÓN DEL USUARIO
-    this.updateUserInfo().catch(error => {
-        console.warn('No se pudo cargar información del usuario:', error);
-    });
-
-    // FECHA ACTUAL
-    const dateInput = document.getElementById('close-date');
-    if (dateInput) {
-        dateInput.value = new Date().toISOString().split('T')[0];
-    }
-
-    // LIMPIAR CAMPOS
-    const initialCash = document.getElementById('initial-cash');
-    const finalCash = document.getElementById('final-cash-counted');
-    if (initialCash) initialCash.value = '';
-    if (finalCash) finalCash.value = '';
-
-    // RESETEAR DIFERENCIA
-    const differenceElement = document.getElementById('close-difference');
-    const container = document.getElementById('close-difference-container');
-    if (differenceElement) {
-        differenceElement.textContent = 'Bs. 0.00';
-        differenceElement.className = 'text-gray-600';
-    }
-    if (container) {
-        container.className = 'flex justify-between font-bold text-lg';
-    }
-
-    // GUARDAR RESUMEN
-    this.dailySalesSummary = {
-        total: totalVentas,
-        efectivo: efectivoTotal,
-        tarjeta: tarjetaPunto,
-        transferencia: transferencia,
-        pago_movil: pagoMovil,
-        mixto: resumen.mixto || 0,
-        efectivo_usd: resumen.efectivo_usd || 0,
-        usuario: resumen.usuario
-    };
-
-    console.log('✅ Modal actualizado con datos REALES del usuario:', {
-        usuario: resumen.usuario,
-        transacciones: totalTransacciones,
-        totalVentas: totalVentas,
-        montoPromedio: montoPromedio,
-        primeraVenta: formatHora(resumen.primera_venta),
-        ultimaVenta: formatHora(resumen.ultima_venta)
-    });
-}
-
-// Método auxiliar para actualizar información del usuario
-async updateUserInfo() {
-    try {
-        const response = await fetch('/api/me', { credentials: 'include' });
-        if (response.ok) {
-            const user = await response.json();
+        try {
+            console.log('💰 Verificando cierre de caja...');
             
-            // Actualizar información del usuario en el modal
-            const usuarioInfo = document.getElementById('usuario-cierre-info');
-            if (usuarioInfo) {
-                usuarioInfo.textContent = `Vendedor: ${user.nombre || 'Usuario'}`;
+            const today = new Date().toISOString().split('T')[0];
+            const usuarioId = await this.getCurrentUserId();
+
+            // ✅ PRIMERO: Verificar si ya existe cierre de caja para hoy
+            const verifyResponse = await fetch(`/api/cierre-caja/verificar?fecha=${today}&usuario_id=${usuarioId}`);
+            
+            if (verifyResponse.status === 409) {
+                const errorData = await verifyResponse.json();
+                this.showAlert(
+                    `Ya realizaste el cierre de caja hoy.\n\n` +
+                    `Fecha: ${today}\n` +
+                    `No puedes realizar más de un cierre por día.`,
+                    'warning'
+                );
+                return;
             }
 
-            // Actualizar título si es necesario
-            const titulo = document.querySelector('#cash-register-modal h2');
-            if (titulo) {
-                titulo.innerHTML = `
-                    <i class="fas fa-calculator mr-2"></i>
-                    Cierre de Caja - ${user.nombre || 'Usuario'}
-                `;
+            if (!verifyResponse.ok) {
+                throw new Error('Error al verificar cierre de caja');
             }
+
+            // ✅ SEGUNDO: Cargar resumen del día
+            console.log('📊 Cargando resumen del día...');
+            const resumenResponse = await fetch(`/api/ventas/resumen-diario?fecha=${today}`);
+            
+            if (!resumenResponse.ok) {
+                throw new Error('Error al cargar resumen de ventas');
+            }
+            
+            const resumen = await resumenResponse.json();
+            console.log('📈 Resumen del día:', resumen);
+            
+            // ✅ TERCERO: Actualizar y mostrar modal
+            this.updateCashCloseModal(resumen);
+            this.showModal('cash-register-modal');
+            
+            console.log('✅ Modal de cierre de caja abierto');
+
+        } catch (error) {
+            console.error('❌ Error abriendo cierre de caja:', error);
+            this.showAlert(`Error: ${error.message}`);
         }
-    } catch (error) {
-        console.error('Error obteniendo información del usuario:', error);
+    }
+
+    updateCashCloseModal(resumen) {
+        console.log('📊 Actualizando modal con resumen REAL del USUARIO:', resumen);
+        
+        // Calcular totales
+        const totalVentas = resumen.total || 0;
+        const efectivoTotal = (resumen.efectivo || 0) + (resumen.efectivo_bs || 0);
+        const tarjetaPunto = (resumen.punto_venta || 0) + (resumen.tarjeta || 0);
+        const transferencia = resumen.transferencia || 0;
+        const pagoMovil = resumen.pago_movil || 0;
+
+        // Función helper para actualizar elementos
+        const updateElement = (id, text) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = text;
+            }
+        };
+
+        // RESUMEN PRINCIPAL
+        updateElement('close-total-sales', `Bs. ${totalVentas.toFixed(2)}`);
+        updateElement('close-cash-sales', `Bs. ${efectivoTotal.toFixed(2)}`);
+        updateElement('close-card-sales', `Bs. ${tarjetaPunto.toFixed(2)}`);
+        updateElement('close-transfer-sales', `Bs. ${transferencia.toFixed(2)}`);
+        updateElement('close-mobile-sales', `Bs. ${pagoMovil.toFixed(2)}`);
+        updateElement('close-expected-cash', `Bs. ${efectivoTotal.toFixed(2)}`);
+
+        // DETALLES POR MÉTODO DE PAGO
+        updateElement('detail-cash-bs', `Bs. ${(resumen.efectivo_bs || 0).toFixed(2)}`);
+        updateElement('detail-cash-usd', `Bs. ${(resumen.efectivo_usd || 0).toFixed(2)}`);
+        updateElement('detail-punto-venta', `Bs. ${(resumen.punto_venta || 0).toFixed(2)}`);
+        updateElement('detail-transferencia', `Bs. ${(resumen.transferencia || 0).toFixed(2)}`);
+        updateElement('detail-pago-movil', `Bs. ${(resumen.pago_movil || 0).toFixed(2)}`);
+        updateElement('detail-mixto', `${resumen.mixto || 0} ventas`);
+        updateElement('detail-tarjeta', `Bs. ${(resumen.tarjeta || 0).toFixed(2)}`);
+        updateElement('detail-efectivo', `Bs. ${(resumen.efectivo || 0).toFixed(2)}`);
+
+        // RESUMEN DE TRANSACCIONES - CON DATOS REALES
+        const totalTransacciones = resumen.total_ventas_count || 0;
+        const montoPromedio = totalTransacciones > 0 ? (totalVentas / totalTransacciones) : 0;
+        
+        // Formatear horas
+        const formatHora = (fecha) => {
+            if (!fecha) return '--:--';
+            return new Date(fecha).toLocaleTimeString('es-ES', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        };
+
+        updateElement('total-transacciones', totalTransacciones);
+        updateElement('monto-promedio', `Bs. ${montoPromedio.toFixed(2)}`);
+        updateElement('primera-venta', formatHora(resumen.primera_venta));
+        updateElement('ultima-venta', formatHora(resumen.ultima_venta));
+
+        // ACTUALIZAR INFORMACIÓN DEL USUARIO
+        this.updateUserInfo().catch(error => {
+            console.warn('No se pudo cargar información del usuario:', error);
+        });
+
+        // FECHA ACTUAL
+        const dateInput = document.getElementById('close-date');
+        if (dateInput) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+
+        // LIMPIAR CAMPOS
+        const initialCash = document.getElementById('initial-cash');
+        const finalCash = document.getElementById('final-cash-counted');
+        if (initialCash) initialCash.value = '';
+        if (finalCash) finalCash.value = '';
+
+        // RESETEAR DIFERENCIA
+        const differenceElement = document.getElementById('close-difference');
+        const container = document.getElementById('close-difference-container');
+        if (differenceElement) {
+            differenceElement.textContent = 'Bs. 0.00';
+            differenceElement.className = 'text-gray-600';
+        }
+        if (container) {
+            container.className = 'flex justify-between font-bold text-lg';
+        }
+
+        // GUARDAR RESUMEN
+        this.dailySalesSummary = {
+            total: totalVentas,
+            efectivo: efectivoTotal,
+            tarjeta: tarjetaPunto,
+            transferencia: transferencia,
+            pago_movil: pagoMovil,
+            mixto: resumen.mixto || 0,
+            efectivo_usd: resumen.efectivo_usd || 0,
+            usuario: resumen.usuario
+        };
+
+        console.log('✅ Modal actualizado con datos REALES del usuario:', {
+            usuario: resumen.usuario,
+            transacciones: totalTransacciones,
+            totalVentas: totalVentas,
+            montoPromedio: montoPromedio,
+            primeraVenta: formatHora(resumen.primera_venta),
+            ultimaVenta: formatHora(resumen.ultima_venta)
+        });
+    }
+
+    // Método auxiliar para actualizar información del usuario
+    async updateUserInfo() {
+        try {
+            const response = await fetch('/api/me', { credentials: 'include' });
+            if (response.ok) {
+                const user = await response.json();
+                
+                // Actualizar información del usuario en el modal
+                const usuarioInfo = document.getElementById('usuario-cierre-info');
+                if (usuarioInfo) {
+                    usuarioInfo.textContent = `Vendedor: ${user.nombre || 'Usuario'}`;
+                }
+
+                // Actualizar título si es necesario
+                const titulo = document.querySelector('#cash-register-modal h2');
+                if (titulo) {
+                    titulo.innerHTML = `
+                        <i class="fas fa-calculator mr-2"></i>
+                        Cierre de Caja - ${user.nombre || 'Usuario'}
+                    `;
+                }
+            }
+        } catch (error) {
+            console.error('Error obteniendo información del usuario:', error);
+        }
     }
 }
-
-
-}
-
-
 
 // Inicializar el sistema
 console.log('🚀 INICIANDO MÓDULO DE VENTAS PASO A PASO...');
@@ -2260,6 +2271,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.ventasManager = new VentasManager();
         console.log('✅ Módulo de ventas inicializado correctamente');
     } catch (error) {
-        console.error(' Error inicializando módulo de ventas:', error);
+        console.error('❌ Error inicializando módulo de ventas:', error);
     }
 });

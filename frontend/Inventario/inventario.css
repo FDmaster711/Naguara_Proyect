@@ -60,6 +60,22 @@ body {
     margin: 0;
 }
 
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .breadcrumb a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+
 /* Cards Section */
 .cards {
     display: grid;
@@ -901,6 +917,78 @@ select.form-control {
     justify-content: flex-end;
     margin-top: 15px;
 }
+
+
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    z-index: 1000;
+    animation: slideIn 0.3s ease;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.toast-success {
+    background: #28a745;
+    border-left: 4px solid #1e7e34;
+}
+
+.toast-error {
+    background: #dc3545;
+    border-left: 4px solid #c82333;
+}
+
+.toast-info {
+    background: #17a2b8;
+    border-left: 4px solid #138496;
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Mejoras para la tabla */
+.stock-bar {
+    width: 60px;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.stock-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.stock-fill.high { background: #28a745; width: 100%; }
+.stock-fill.medium { background: #ffc107; width: 60%; }
+.stock-fill.low { background: #fd7e14; width: 30%; }
+.stock-fill.empty { background: #dc3545; width: 10%; }
+
+.text-muted {
+    color: #6c757d !important;
+    font-size: 0.8em;
+}
+
 
 /* Efectos de animación */
 @keyframes pulse {

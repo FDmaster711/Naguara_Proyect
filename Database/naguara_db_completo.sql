@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict SMh74fMxNqmUwrOfGgQPFnSucglpdM78F8d7ftnqHphcTjkVQeiRv5pyq9NfNv1
+\restrict AuDeNKFTKrtd6b4csJlQAZ0KexKB7Y6AmgXR7LPHm7eMB3IIE2dEsh5EO3gFgbW
 
 -- Dumped from database version 18.0
 -- Dumped by pg_dump version 18.0
@@ -892,6 +892,7 @@ COPY public.tasa_cambio (id, tasa_bs, fecha_actualizacion, fuente, activo) FROM 
 12	231.09	2025-11-11 09:38:58.67725	api	t
 13	233.05	2025-11-12 10:50:00.271878	api	t
 14	236.46	2025-11-16 13:18:37.716717	api	t
+15	236.84	2025-11-17 18:31:55.173452	api	t
 \.
 
 
@@ -919,8 +920,8 @@ COPY public.transformacion_producto (id, fecha_transformacion, usuario_id, produ
 --
 
 COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado, fecha_creacion, ultimo_acceso) FROM stdin;
-1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Super Admin	Activo	2025-11-02 12:55:48.732599	2025-11-16 17:15:38.854582
 2	Fabian dacal	Dacal7	$2b$10$sLrW6I2cogVZUFyhUqrY2e5lJyE21RwGBiizoIQmoH4cSSJRE0Ydq	Administrador	Activo	2025-11-02 12:55:48.732599	2025-11-09 13:56:14.005874
+1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Super Admin	Activo	2025-11-02 12:55:48.732599	2025-11-18 10:49:11.280759
 7	mauricioo	varela	$2b$10$AG9TYxnUFeWyUlGM4jO4FezGq2abxxINwbOyZeQYMoV59NAs1zKjK	Vendedor	Activo	2025-11-02 12:55:48.732599	2025-11-09 17:59:33.503432
 8	francisco	velazco	$2b$10$afUaXHy9l/wTgSYrCxAN3OKPr9/FpoleSBQlqKuHsCsALoCs2Sweq	Super Admin	Activo	2025-11-08 11:43:17.74226	\N
 3	Enrique	Perez	$2b$10$GB6VRiHdl7ONeuO.GSsLYeZe6tb6rfm6LoNGcML.AoUuZZueDELh6	Administrador	Activo	2025-11-02 12:55:48.732599	\N
@@ -1036,7 +1037,7 @@ SELECT pg_catalog.setval('public.proovedores_id_seq', 1, false);
 -- Name: tasa_cambio_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 14, true);
+SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 15, true);
 
 
 --
@@ -1358,5 +1359,5 @@ ALTER TABLE ONLY public.ventas
 -- PostgreSQL database dump complete
 --
 
-\unrestrict SMh74fMxNqmUwrOfGgQPFnSucglpdM78F8d7ftnqHphcTjkVQeiRv5pyq9NfNv1
+\unrestrict AuDeNKFTKrtd6b4csJlQAZ0KexKB7Y6AmgXR7LPHm7eMB3IIE2dEsh5EO3gFgbW
 
