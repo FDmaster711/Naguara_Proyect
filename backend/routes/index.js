@@ -8,6 +8,7 @@ import configuracionRoutes from './configuracion.js';
 import backupRoutes from './backup.js';
 import proveedoresRoutes from './proveedores.js'
 import comprasRoutes from './compras.js'; 
+import categoriasRoutes from './categorias.js';
 
 export {
   authRoutes,
@@ -19,5 +20,6 @@ export {
   configuracionRoutes,
   backupRoutes,
   proveedoresRoutes,
-  comprasRoutes
+  comprasRoutes,
+  categoriasRoutes
 };

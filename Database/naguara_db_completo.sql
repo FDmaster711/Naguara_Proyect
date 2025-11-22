@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict AuDeNKFTKrtd6b4csJlQAZ0KexKB7Y6AmgXR7LPHm7eMB3IIE2dEsh5EO3gFgbW
+\restrict Tcl2IHPNNZ4Q13Q6TzH3NctEmFCWBl4lFlH5cJOuIqwWGnyzWqSrZZe6asvsX3J
 
 -- Dumped from database version 18.0
 -- Dumped by pg_dump version 18.0
@@ -304,6 +304,46 @@ ALTER SEQUENCE public.detalle_venta_id_seq OWNED BY public.detalle_venta.id;
 
 
 --
+-- Name: historial_inventario; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.historial_inventario (
+    id integer NOT NULL,
+    producto_id integer,
+    usuario_id integer,
+    stock_anterior numeric(10,2),
+    stock_nuevo numeric(10,2),
+    motivo text,
+    tipo_movimiento character varying(20),
+    fecha_movimiento timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.historial_inventario OWNER TO postgres;
+
+--
+-- Name: historial_inventario_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.historial_inventario_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.historial_inventario_id_seq OWNER TO postgres;
+
+--
+-- Name: historial_inventario_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.historial_inventario_id_seq OWNED BY public.historial_inventario.id;
+
+
+--
 -- Name: metodos_pago_config; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -356,7 +396,8 @@ CREATE TABLE public.productos (
     precio_dolares numeric(10,2),
     id_provedores integer,
     stock_minimo numeric(10,2) DEFAULT 10,
-    id_tasa_iva integer DEFAULT 1
+    id_tasa_iva integer DEFAULT 1,
+    estado character varying(20) DEFAULT 'Activo'::character varying
 );
 
 
@@ -676,6 +717,13 @@ ALTER TABLE ONLY public.detalle_venta ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
+-- Name: historial_inventario id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.historial_inventario ALTER COLUMN id SET DEFAULT nextval('public.historial_inventario_id_seq'::regclass);
+
+
+--
 -- Name: metodos_pago_config id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -830,6 +878,22 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 43	38	16	1.00	3.50
 44	39	10	1.10	25.00
 45	40	14	4.00	6.80
+46	41	16	1.00	3.50
+47	41	20	1.00	1560.00
+48	42	14	16.50	6.80
+49	43	19	1.00	150.00
+50	43	13	1.00	5.50
+\.
+
+
+--
+-- Data for Name: historial_inventario; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.historial_inventario (id, producto_id, usuario_id, stock_anterior, stock_nuevo, motivo, tipo_movimiento, fecha_movimiento) FROM stdin;
+1	10	1	49.00	50.00	producto perdido	entrada_ajuste	2025-11-19 14:15:01.745736
+2	10	1	50.00	5.00	test	salida_ajuste	2025-11-19 14:25:20.347451
+3	10	1	5.00	49.00	t	entrada_ajuste	2025-11-19 14:27:45.611874
 \.
 
 
@@ -849,16 +913,18 @@ COPY public.metodos_pago_config (id, metodo_id, nombre, habilitado, fecha_actual
 -- Data for Name: productos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, fecha_actualizacion, categoria_id, nombre, precio_dolares, id_provedores, stock_minimo, id_tasa_iva) FROM stdin;
-11	45.00	32.00	0.00	kg	2025-10-24 18:53:42.73315	1	Pecho de Pollo	0.22	1	10.00	1
-12	15.00	10.00	38.00	kg	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07	1	10.00	1
-15	8.20	5.00	100.00	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04	2	10.00	1
-17	4.20	2.10	249.00	unidad	2025-10-24 18:53:42.73315	3	Sazonador con Especias	0.02	3	10.00	1
-18	5.80	2.90	177.00	unidad	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03	3	10.00	1
-13	5.50	3.50	42.40	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03	2	10.00	1
-16	3.50	1.80	195.00	unidad	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02	3	10.00	1
-14	6.80	4.20	16.50	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Especial	0.03	2	10.00	1
-10	25.00	18.50	49.00	kg	2025-10-24 18:53:42.73315	1	Pollo Entero Premium	0.12	1	10.00	1
+COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, fecha_actualizacion, categoria_id, nombre, precio_dolares, id_provedores, stock_minimo, id_tasa_iva, estado) FROM stdin;
+14	6.80	4.20	50.00	unidad	2025-11-18 13:47:52.398492	2	Milanesa de Pollo Especial	0.03	\N	10.00	1	Activo
+19	150.00	90.00	79.00	kg	2025-11-18 13:40:15.990661	1	picado	0.63	\N	10.00	2	Activo
+13	5.50	3.50	41.40	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03	2	10.00	1	Activo
+10	25.00	18.50	49.00	kg	2025-11-19 14:27:45.611874	1	Pollo Entero Premium	0.12	\N	50.00	1	Activo
+12	15.00	10.00	38.00	kg	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07	1	10.00	1	Activo
+15	8.20	5.00	100.00	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04	2	10.00	1	Activo
+18	5.80	2.90	177.00	unidad	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03	3	10.00	1	Activo
+11	45.00	32.00	50.00	kg	2025-11-18 12:42:11.903588	1	Pecho de Pollo	0.19	\N	10.00	1	Activo
+17	4.20	2.10	250.00	unidad	2025-11-18 12:46:34.434523	3	Sazonador con Especias	0.02	\N	5.00	1	Activo
+16	3.50	1.80	194.00	unidad	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02	3	10.00	1	Activo
+20	1560.00	1000.00	49.00	kg	2025-11-18 12:49:51.763954	4	jamon de pierna	6.59	\N	10.00	2	Activo
 \.
 
 
@@ -893,6 +959,7 @@ COPY public.tasa_cambio (id, tasa_bs, fecha_actualizacion, fuente, activo) FROM 
 13	233.05	2025-11-12 10:50:00.271878	api	t
 14	236.46	2025-11-16 13:18:37.716717	api	t
 15	236.84	2025-11-17 18:31:55.173452	api	t
+16	237.75	2025-11-19 11:59:33.863795	api	t
 \.
 
 
@@ -921,10 +988,10 @@ COPY public.transformacion_producto (id, fecha_transformacion, usuario_id, produ
 
 COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado, fecha_creacion, ultimo_acceso) FROM stdin;
 2	Fabian dacal	Dacal7	$2b$10$sLrW6I2cogVZUFyhUqrY2e5lJyE21RwGBiizoIQmoH4cSSJRE0Ydq	Administrador	Activo	2025-11-02 12:55:48.732599	2025-11-09 13:56:14.005874
-1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Super Admin	Activo	2025-11-02 12:55:48.732599	2025-11-18 10:49:11.280759
 7	mauricioo	varela	$2b$10$AG9TYxnUFeWyUlGM4jO4FezGq2abxxINwbOyZeQYMoV59NAs1zKjK	Vendedor	Activo	2025-11-02 12:55:48.732599	2025-11-09 17:59:33.503432
 8	francisco	velazco	$2b$10$afUaXHy9l/wTgSYrCxAN3OKPr9/FpoleSBQlqKuHsCsALoCs2Sweq	Super Admin	Activo	2025-11-08 11:43:17.74226	\N
 3	Enrique	Perez	$2b$10$GB6VRiHdl7ONeuO.GSsLYeZe6tb6rfm6LoNGcML.AoUuZZueDELh6	Administrador	Activo	2025-11-02 12:55:48.732599	\N
+1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Super Admin	Activo	2025-11-02 12:55:48.732599	2025-11-19 14:40:52.830997
 \.
 
 
@@ -960,6 +1027,9 @@ COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente
 38	2025-11-11 09:53:13.03235	1	mixto	anulada	1	{"total": 4.06, "method": "mixto", "payments": [{"amount": 2, "method": "efectivo_bs"}, {"amount": 2.06, "method": "efectivo_usd"}]}	\N	\N	\N	\N	ghuvflerifbuyughfuwp3eofhipqruhbvreifhunwñeifhuñwaeriufhwpo3fhupwufobhñ4fgb
 39	2025-11-11 11:20:05.451608	1	transferencia	anulada	4	{"bank": "Mercantil", "total": 31.9, "amount": 31.9, "method": "transferencia", "holderId": "V-12345677", "reference": "987654321"}	987654321	Mercantil	\N	\N	rtrtgrg
 40	2025-11-16 16:51:12.841242	1	efectivo_bs	completada	1	{"total": 31.55, "change": 0, "method": "efectivo_bs", "received": 31.55}	\N	\N	31.55	\N	\N
+41	2025-11-18 13:39:09.15553	1	pago_movil	completada	1	{"bank": "Mercantil", "total": 1564.06, "amount": 1564.06, "method": "pago_movil", "holderId": "V-12345677", "reference": "987654322"}	987654322	Mercantil	\N	\N	\N
+42	2025-11-18 13:47:01.225986	1	efectivo_usd	completada	1	{"tasa": 236.84, "total": 0.55, "change": 0.44999999999999996, "method": "efectivo_usd", "received": 1}	\N	\N	1.00	0.45	\N
+43	2025-11-18 14:38:31.225606	1	efectivo_bs	completada	1	{"total": 156.38, "change": 43.620000000000005, "method": "efectivo_bs", "received": 200}	\N	\N	200.00	43.62	\N
 \.
 
 
@@ -1009,7 +1079,14 @@ SELECT pg_catalog.setval('public.detalle_compra_id_seq', 1, false);
 -- Name: detalle_venta_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.detalle_venta_id_seq', 45, true);
+SELECT pg_catalog.setval('public.detalle_venta_id_seq', 50, true);
+
+
+--
+-- Name: historial_inventario_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.historial_inventario_id_seq', 3, true);
 
 
 --
@@ -1023,7 +1100,7 @@ SELECT pg_catalog.setval('public.metodos_pago_config_id_seq', 4, true);
 -- Name: productos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.productos_id_seq', 18, true);
+SELECT pg_catalog.setval('public.productos_id_seq', 21, true);
 
 
 --
@@ -1037,7 +1114,7 @@ SELECT pg_catalog.setval('public.proovedores_id_seq', 1, false);
 -- Name: tasa_cambio_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 15, true);
+SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 16, true);
 
 
 --
@@ -1065,7 +1142,7 @@ SELECT pg_catalog.setval('public.usuarios_id_seq', 8, true);
 -- Name: ventas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ventas_id_seq', 40, true);
+SELECT pg_catalog.setval('public.ventas_id_seq', 43, true);
 
 
 --
@@ -1146,6 +1223,14 @@ ALTER TABLE ONLY public.detalle_compra
 
 ALTER TABLE ONLY public.detalle_venta
     ADD CONSTRAINT detalle_venta_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: historial_inventario historial_inventario_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.historial_inventario
+    ADD CONSTRAINT historial_inventario_pkey PRIMARY KEY (id);
 
 
 --
@@ -1308,6 +1393,22 @@ ALTER TABLE ONLY public.productos
 
 
 --
+-- Name: historial_inventario historial_inventario_producto_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.historial_inventario
+    ADD CONSTRAINT historial_inventario_producto_id_fkey FOREIGN KEY (producto_id) REFERENCES public.productos(id);
+
+
+--
+-- Name: historial_inventario historial_inventario_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.historial_inventario
+    ADD CONSTRAINT historial_inventario_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id);
+
+
+--
 -- Name: productos productos_id_provedores_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1359,5 +1460,5 @@ ALTER TABLE ONLY public.ventas
 -- PostgreSQL database dump complete
 --
 
-\unrestrict AuDeNKFTKrtd6b4csJlQAZ0KexKB7Y6AmgXR7LPHm7eMB3IIE2dEsh5EO3gFgbW
+\unrestrict Tcl2IHPNNZ4Q13Q6TzH3NctEmFCWBl4lFlH5cJOuIqwWGnyzWqSrZZe6asvsX3J
 

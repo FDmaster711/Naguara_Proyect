@@ -213,35 +213,35 @@
 
         <!-- Cards de Resumen -->
         <section class="cards">
-            <div class="card">
-                <i class="fa-solid fa-boxes-stacked"></i>
-                <div class="card-content">
-                    <h3>0</h3>
-                    <p>Total Productos</p>
-                </div>
-            </div>
-            <div class="card">
-                <i class="fa-solid fa-check-circle"></i>
-                <div class="card-content">
-                    <h3>0</h3>
-                    <p>Productos Activos</p>
-                </div>
-            </div>
-            <div class="card">
-                <i class="fa-solid fa-pause-circle"></i>
-                <div class="card-content">
-                    <h3>0</h3>
-                    <p>Productos Inactivos</p>
-                </div>
-            </div>
-            <div class="card">
-                <i class="fa-solid fa-tags"></i>
-                <div class="card-content">
-                    <h3>0</h3>
-                    <p>Categorías</p>
-                </div>
-            </div>
-        </section>
+    <div class="card">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <div class="card-content">
+            <h3 id="card-total-productos">0</h3>
+            <p>Total Productos</p>
+        </div>
+    </div>
+    <div class="card">
+        <i class="fa-solid fa-check-circle"></i>
+        <div class="card-content">
+            <h3 id="card-stock-total">0</h3>
+            <p>Unidades en Stock</p>
+        </div>
+    </div>
+    <div class="card">
+        <i class="fa-solid fa-exclamation-triangle"></i>
+        <div class="card-content">
+            <h3 id="card-bajo-stock">0</h3>
+            <p>Bajo Stock / Agotados</p>
+        </div>
+    </div>
+    <div class="card">
+        <i class="fa-solid fa-money-bill-wave"></i>
+        <div class="card-content">
+            <h3 id="card-valor-inventario">Bs. 0.00</h3>
+            <p>Valor del Inventario</p>
+        </div>
+    </div>
+</section>
 
         <!-- Controles Rápidos -->
         <section class="quick-controls">
@@ -374,6 +374,14 @@
                             <option value="">Seleccionar tasa IVA</option>
                         </select>
                     </div>
+                    <div class="form-group" id="container-reason" style="display: none; grid-column: 1 / -1;">
+    <label for="product-reason" style="display: block; font-weight: 500; color: #5a00b3; margin-bottom: 5px;">
+        <i class="fas fa-comment-alt"></i> Motivo del cambio de stock *
+    </label>
+    <input type="text" id="product-reason" class="input-field" 
+           placeholder="Ej: Llegada de mercancía, Corrección de inventario, Merma..." 
+           style="width: 100%; border-color: #5a00b3; background-color: #f5f3ff;">
+</div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary btn-cancelar">

@@ -17,7 +17,8 @@ import {
   configuracionRoutes,
   backupRoutes,
   proveedoresRoutes,
-  comprasRoutes
+  comprasRoutes,
+  categoriasRoutes
 } from './routes/index.js';
 
 dotenv.config();
@@ -64,6 +65,9 @@ app.use(ventaRoutes);
 app.use(tasaRoutes);
 app.use(configuracionRoutes);
 app.use(backupRoutes);
+app.use(proveedoresRoutes);
+app.use(comprasRoutes);
+app.use(categoriasRoutes);
 
 // Servir archivos HTML del frontend
 fs.readdirSync(rutaFrontend).forEach(file => {

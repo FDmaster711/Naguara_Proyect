@@ -32,25 +32,19 @@ class ProductosManager {
 
     async cargarDatosIniciales() {
         try {
+            // Cargar catálogos y productos en paralelo
             const [productos, categorias, tasasIva] = await Promise.allSettled([
                 this.cargarProductos(1, 10),
                 this.cargarCategorias(),
                 this.cargarTasasIva()
             ]);
 
-            if (productos.status === 'rejected') {
-                console.error('Error cargando productos:', productos.reason);
-            }
-            if (categorias.status === 'rejected') {
-                console.error('Error cargando categorías:', categorias.reason);
-            }
-            if (tasasIva.status === 'rejected') {
-                console.error('Error cargando tasas IVA:', tasasIva.reason);
-            }
+            if (productos.status === 'rejected') console.error('Error cargando productos:', productos.reason);
+            if (categorias.status === 'rejected') console.error('Error cargando categorías:', categorias.reason);
+            if (tasasIva.status === 'rejected') console.error('Error cargando tasas IVA:', tasasIva.reason);
 
         } catch (error) {
             console.error('Error cargando datos iniciales:', error);
-            throw error;
         }
     }
 
@@ -63,6 +57,7 @@ class ProductosManager {
             url.searchParams.append('limit', limit);
             url.searchParams.append('include_zero_stock', 'true');
 
+            // Aplicar filtros
             if (this.filtros.categoria) {
                 url.searchParams.append('categoria_id', this.filtros.categoria);
             }
@@ -88,7 +83,10 @@ class ProductosManager {
 
             const data = await response.json();
             
-            this.productos = data.productos.map(producto => ({
+            // Manejar si el backend devuelve array directo o estructura paginada
+            const listaProductos = data.productos || (Array.isArray(data) ? data : []);
+
+            this.productos = listaProductos.map(producto => ({
                 ...producto,
                 precio_venta: this.parseNumber(producto.precio_venta),
                 precio_dolares: this.parseNumber(producto.precio_dolares),
@@ -98,16 +96,22 @@ class ProductosManager {
                 tasa_iva: this.parseNumber(producto.tasa_iva)
             }));
 
-            this.pagination = {
-                currentPage: data.pagination.page,
-                totalPages: data.pagination.totalPages,
-                totalProducts: data.pagination.total,
-                limit: data.pagination.limit,
-                hasNext: data.pagination.hasNext,
-                hasPrev: data.pagination.hasPrev
-            };
+            // Configurar paginación
+            if (data.pagination) {
+                this.pagination = {
+                    currentPage: data.pagination.page,
+                    totalPages: data.pagination.totalPages,
+                    totalProducts: data.pagination.total,
+                    limit: data.pagination.limit,
+                    hasNext: data.pagination.hasNext,
+                    hasPrev: data.pagination.hasPrev
+                };
+            } else {
+                this.pagination.totalProducts = this.productos.length;
+                // Simular paginación si el backend devuelve todo
+                this.pagination.totalPages = Math.ceil(this.productos.length / limit);
+            }
 
-            console.log(`✅ ${this.productos.length} productos cargados (Página ${this.pagination.currentPage} de ${this.pagination.totalPages})`);
             this.renderizarProductos();
             this.renderizarPaginacion();
             this.actualizarResumen();
@@ -115,95 +119,50 @@ class ProductosManager {
             return this.productos;
         } catch (error) {
             console.error('❌ Error cargando productos:', error);
-            this.mostrarError('Error al cargar los productos: ' + error.message);
-            
-            const tbody = document.querySelector('.table-container tbody');
-            if (tbody) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="9" style="text-align: center; padding: 20px; color: #dc3545;">
-                            <i class="fa-solid fa-exclamation-triangle"></i><br>
-                            Error al cargar productos<br>
-                            <small>${error.message}</small>
-                        </td>
-                    </tr>
-                `;
-            }
-            throw error;
+            this.mostrarError('Error al cargar los productos');
         }
     }
 
     async cargarCategorias() {
         try {
-            console.log('📂 Cargando categorías...');
             const response = await fetch('/api/categorias', {
-                headers: {
-                    'Authorization': `Bearer ${this.getToken()}`,
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Authorization': `Bearer ${this.getToken()}` }
             });
-
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
-
+            if (!response.ok) throw new Error('Error al cargar categorías');
             this.categorias = await response.json();
-            console.log(`✅ ${this.categorias.length} categorías cargadas`);
             this.actualizarSelectCategorias();
-            
-            return this.categorias;
         } catch (error) {
-            console.error('❌ Error cargando categorías:', error);
-            this.mostrarError('Error al cargar las categorías');
-            throw error;
+            console.error('❌ Error:', error);
         }
     }
 
     async cargarTasasIva() {
         try {
-            console.log('🏷️ Cargando tasas IVA...');
             const response = await fetch('/api/tasas-iva', {
-                headers: {
-                    'Authorization': `Bearer ${this.getToken()}`,
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Authorization': `Bearer ${this.getToken()}` }
             });
-
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
-
+            if (!response.ok) throw new Error('Error al cargar tasas');
             this.tasasIva = await response.json();
-            console.log(`✅ ${this.tasasIva.length} tasas IVA cargadas`);
             this.actualizarSelectTasasIva();
-            
-            return this.tasasIva;
         } catch (error) {
-            console.error('❌ Error cargando tasas IVA:', error);
-            this.mostrarError('Error al cargar las tasas de IVA');
-            throw error;
+            console.error('❌ Error:', error);
         }
     }
 
     actualizarSelectCategorias() {
+        // Actualizar filtro
         const selectFiltro = document.querySelector('#filtro-categoria');
-        const selectFormulario = document.querySelector('#product-category');
+        const optionsFiltro = '<option value="">Todas las categorías</option>' +
+            this.categorias.map(cat => `<option value="${cat.id}">${this.escapeHtml(cat.nombre)}</option>`).join('');
         
-        const options = '<option value="">Seleccionar categoría</option>' +
-            this.categorias.map(cat => 
-                `<option value="${cat.id}">${this.escapeHtml(cat.nombre)}</option>`
-            ).join('');
+        if (selectFiltro) selectFiltro.innerHTML = optionsFiltro;
 
-        if (selectFiltro) {
-            selectFiltro.innerHTML = '<option value="">Todas las categorías</option>' +
-                this.categorias.map(cat => 
-                    `<option value="${cat.id}">${this.escapeHtml(cat.nombre)}</option>`
-                ).join('');
-        }
-
-        if (selectFormulario) {
-            selectFormulario.innerHTML = options;
-        }
+        // Actualizar formulario
+        const selectForm = document.querySelector('#product-category');
+        const optionsForm = '<option value="">Seleccionar categoría</option>' +
+            this.categorias.map(cat => `<option value="${cat.id}">${this.escapeHtml(cat.nombre)}</option>`).join('');
+        
+        if (selectForm) selectForm.innerHTML = optionsForm;
     }
 
     actualizarSelectTasasIva() {
@@ -214,30 +173,20 @@ class ProductosManager {
                     `<option value="${tasa.id}">${this.escapeHtml(tasa.descripcion)} (${tasa.tasa}%)</option>`
                 ).join('');
             
+            // Seleccionar tasa general por defecto
             const tasaGeneral = this.tasasIva.find(t => t.tipo === 'general') || this.tasasIva[0];
-            if (tasaGeneral) {
-                selectTasaIva.value = tasaGeneral.id;
-            }
+            if (tasaGeneral) selectTasaIva.value = tasaGeneral.id;
         }
     }
 
+    // ==================== RENDERIZADO ====================
+
     renderizarProductos() {
         const tbody = document.querySelector('.table-container tbody');
-        if (!tbody) {
-            console.error('❌ No se encontró el tbody de la tabla');
-            return;
-        }
+        if (!tbody) return;
 
         if (this.productos.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="9" style="text-align: center; padding: 20px;">
-                        <i class="fa-solid fa-inbox"></i><br>
-                        No se encontraron productos
-                        ${Object.values(this.filtros).some(f => f) ? 'con los filtros aplicados' : ''}
-                    </td>
-                </tr>
-            `;
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px;"><div class="loading-spinner"><i class="fa-solid fa-inbox"></i> No se encontraron productos</div></td></tr>`;
             this.actualizarContadorProductos();
             return;
         }
@@ -253,30 +202,19 @@ class ProductosManager {
                 <td><span class="product-code">#${producto.id}</span></td>
                 <td>
                     <div class="product-info">
-                        <div class="product-image">
-                            <i class="${this.getProductIcon(producto.categoria)}"></i>
-                        </div>
+                        <div class="product-image"><i class="${this.getProductIcon(producto.categoria)}"></i></div>
                         <div class="product-details">
                             <strong>${this.escapeHtml(producto.nombre)}</strong>
                             <small>${this.getProductDescription(producto)}</small>
                         </div>
                     </div>
                 </td>
-                <td>
-                    <span class="category-tag">${this.escapeHtml(producto.categoria || 'Sin categoría')}</span>
-                </td>
-                <td>
-                    <span class="price">Bs ${precioVenta.toFixed(2)}</span>
-                    <small class="text-muted">$${precioDolares.toFixed(2)}</small>
-                </td>
+                <td><span class="category-tag">${this.escapeHtml(producto.categoria || 'Sin categoría')}</span></td>
+                <td><span class="price">Bs ${precioVenta.toFixed(2)}</span><br><small class="text-muted">$${precioDolares.toFixed(2)}</small></td>
                 <td>
                     <div class="stock-info">
-                        <span class="stock-value ${stock === 0 ? 'text-danger' : stock <= stockMinimo ? 'text-warning' : ''}">
-                            ${stock}
-                        </span>
-                        <div class="stock-bar">
-                            <div class="stock-fill ${this.getStockLevel(producto)}"></div>
-                        </div>
+                        <span class="stock-value ${stock === 0 ? 'text-danger' : stock <= stockMinimo ? 'text-warning' : ''}">${stock}</span>
+                        <div class="stock-bar"><div class="stock-fill ${this.getStockLevel(producto)}"></div></div>
                     </div>
                 </td>
                 <td>${stockMinimo}</td>
@@ -284,21 +222,14 @@ class ProductosManager {
                 <td>${this.getEstadoBadge(producto)}</td>
                 <td>
                     <div class="action-buttons">
-                        <button class="btn btn-sm btn-edit" title="Editar" onclick="productosManager.editarProducto(${producto.id})">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <button class="btn btn-sm btn-warning btn-stock" title="Ajustar Stock" onclick="productosManager.ajustarStock(${producto.id})">
-                            <i class="fa-solid fa-boxes-stacked"></i>
-                        </button>
-                        <button class="btn btn-sm btn-info btn-view" title="Ver Detalles" onclick="productosManager.verDetalles(${producto.id})">
-                            <i class="fa-solid fa-eye"></i>
-                        </button>
+                        <button class="btn btn-sm btn-edit" title="Editar" onclick="productosManager.editarProducto(${producto.id})"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-warning btn-stock" title="Ajustar Stock" onclick="productosManager.ajustarStock(${producto.id})"><i class="fa-solid fa-boxes-stacked"></i></button>
+                        <button class="btn btn-sm btn-info btn-view" title="Ver Detalles" onclick="productosManager.verDetalles(${producto.id})"><i class="fa-solid fa-eye"></i></button>
+                        <button class="btn btn-sm btn-danger" title="Eliminar" onclick="productosManager.deleteProduct(${producto.id})"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </td>
-            </tr>
-            `;
+            </tr>`;
         }).join('');
-
         this.actualizarContadorProductos();
     }
 
@@ -306,538 +237,34 @@ class ProductosManager {
         const paginationContainer = document.querySelector('.pagination');
         if (!paginationContainer) return;
 
-        const { currentPage, totalPages, hasNext, hasPrev } = this.pagination;
+        const { currentPage, totalPages, hasPrev, hasNext } = this.pagination;
 
         if (totalPages <= 1) {
             paginationContainer.innerHTML = '';
             return;
         }
 
-        let paginationHTML = '';
+        let html = `<button class="btn ${!hasPrev ? 'disabled' : ''}" onclick="productosManager.cambiarPagina(${currentPage - 1})" ${!hasPrev ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i></button>`;
 
-        paginationHTML += `
-            <button class="btn btn-sm ${!hasPrev ? 'disabled' : ''}" 
-                    ${!hasPrev ? 'disabled' : ''} 
-                    onclick="productosManager.cambiarPagina(${currentPage - 1})">
-                <i class="fa-solid fa-chevron-left"></i>
-            </button>
-        `;
-
-        const startPage = Math.max(1, currentPage - 2);
-        const endPage = Math.min(totalPages, currentPage + 2);
-
-        if (startPage > 1) {
-            paginationHTML += `<button class="btn btn-sm" onclick="productosManager.cambiarPagina(1)">1</button>`;
-            if (startPage > 2) {
-                paginationHTML += `<span class="pagination-ellipsis">...</span>`;
-            }
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<button class="btn ${i === currentPage ? 'active' : ''}" onclick="productosManager.cambiarPagina(${i})">${i}</button>`;
         }
 
-        for (let i = startPage; i <= endPage; i++) {
-            paginationHTML += `
-                <button class="btn btn-sm ${i === currentPage ? 'active' : ''}" 
-                        onclick="productosManager.cambiarPagina(${i})">
-                    ${i}
-                </button>
-            `;
-        }
+        html += `<button class="btn ${!hasNext ? 'disabled' : ''}" onclick="productosManager.cambiarPagina(${currentPage + 1})" ${!hasNext ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>`;
 
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                paginationHTML += `<span class="pagination-ellipsis">...</span>`;
-            }
-            paginationHTML += `<button class="btn btn-sm" onclick="productosManager.cambiarPagina(${totalPages})">${totalPages}</button>`;
-        }
-
-        paginationHTML += `
-            <button class="btn btn-sm ${!hasNext ? 'disabled' : ''}" 
-                    ${!hasNext ? 'disabled' : ''} 
-                    onclick="productosManager.cambiarPagina(${currentPage + 1})">
-                <i class="fa-solid fa-chevron-right"></i>
-            </button>
-        `;
-
-        paginationHTML += `
-            <div class="pagination-info">
-                Página ${currentPage} de ${totalPages} • 
-                ${this.pagination.totalProducts} productos totales
-            </div>
-        `;
-
-        paginationContainer.innerHTML = paginationHTML;
+        paginationContainer.innerHTML = html;
     }
 
-    cambiarPagina(nuevaPagina) {
-        if (nuevaPagina < 1 || nuevaPagina > this.pagination.totalPages) return;
-        this.cargarProductos(nuevaPagina, this.pagination.limit);
-    }
-
-    actualizarContadorProductos() {
-        const contador = document.querySelector('.table-header h2');
-        if (contador) {
-            const { currentPage, totalPages, totalProducts } = this.pagination;
-            contador.innerHTML = `
-                <i class="fa-solid fa-list"></i> Lista de Productos 
-                <small>(${totalProducts} productos totales - Página ${currentPage} de ${totalPages})</small>
-            `;
-        }
-    }
-
-    getStockLevel(producto) {
-        const stock = this.parseNumber(producto.stock);
-        const stockMinimo = this.parseNumber(producto.stock_minimo);
-        
-        if (stock === 0) return 'empty';
-        if (stockMinimo === 0) return 'high';
-        
-        const ratio = stock / stockMinimo;
-        if (ratio >= 2) return 'high';
-        if (ratio >= 1) return 'medium';
-        return 'low';
-    }
-
-    getEstadoBadge(producto) {
-        const stock = this.parseNumber(producto.stock);
-        const stockMinimo = this.parseNumber(producto.stock_minimo);
-        
-        if (stock === 0) {
-            return '<span class="badge badge-danger">Agotado</span>';
-        } else if (stock <= stockMinimo) {
-            return '<span class="badge badge-warning">Bajo Stock</span>';
-        } else {
-            return '<span class="badge badge-success">Disponible</span>';
-        }
-    }
-
-    getProductIcon(categoria) {
-        const categoriaLower = (categoria || '').toLowerCase();
-        if (categoriaLower.includes('pollo')) return 'fa-solid fa-drumstick-bite';
-        if (categoriaLower.includes('milanesa')) return 'fa-solid fa-bacon';
-        if (categoriaLower.includes('aliño') || categoriaLower.includes('adobo')) return 'fa-solid fa-mortar-pestle';
-        if (categoriaLower.includes('embutido')) return 'fa-solid fa-hotdog';
-        return 'fa-solid fa-box';
-    }
-
-    getProductDescription(producto) {
-        const stock = this.parseNumber(producto.stock);
-        const stockMinimo = this.parseNumber(producto.stock_minimo);
-        
-        if (stock === 0) return 'Producto agotado';
-        if (stock <= stockMinimo) return 'Stock bajo - Reponer';
-        return 'Disponible en inventario';
-    }
-
-    async crearProducto(productoData) {
-        try {
-            console.log('📝 Creando producto:', productoData);
-
-            if (!this.validarDatosProducto(productoData)) {
-                return;
-            }
-
-            const response = await fetch('/api/productos', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.getToken()}`
-                },
-                body: JSON.stringify(productoData)
-            });
-
-            const responseData = await response.json();
-
-            if (!response.ok) {
-                throw new Error(responseData.error || `Error ${response.status}: ${response.statusText}`);
-            }
-
-            this.productos.push({
-                ...responseData,
-                precio_venta: this.parseNumber(responseData.precio_venta),
-                precio_dolares: this.parseNumber(responseData.precio_dolares),
-                stock: this.parseNumber(responseData.stock),
-                stock_minimo: this.parseNumber(responseData.stock_minimo)
-            });
-            
-            this.renderizarProductos();
-            this.actualizarResumen();
-            this.mostrarExito('✅ Producto creado exitosamente');
-
-            return responseData;
-        } catch (error) {
-            console.error('❌ Error creando producto:', error);
-            this.mostrarError('❌ Error al crear producto: ' + error.message);
-            throw error;
-        }
-    }
-
-    validarDatosProducto(data) {
-        const errors = [];
-
-        if (!data.nombre || data.nombre.trim().length === 0) {
-            errors.push('El nombre del producto es obligatorio');
-        }
-
-        if (!data.precio_venta || isNaN(data.precio_venta) || data.precio_venta < 0) {
-            errors.push('El precio de venta debe ser un número positivo');
-        }
-
-        if (data.costo_compra && (isNaN(data.costo_compra) || data.costo_compra < 0)) {
-            errors.push('El costo de compra debe ser un número positivo');
-        }
-
-        if (!data.categoria_id || isNaN(data.categoria_id)) {
-            errors.push('La categoría es obligatoria');
-        }
-
-        if (!data.unidad_medida) {
-            errors.push('La unidad de medida es obligatoria');
-        }
-
-        if (!data.id_tasa_iva || isNaN(data.id_tasa_iva)) {
-            errors.push('La tasa de IVA es obligatoria');
-        }
-
-        if (errors.length > 0) {
-            this.mostrarError('Errores en el formulario:<br>' + errors.join('<br>'));
-            return false;
-        }
-
-        return true;
-    }
-
-    async editarProducto(id) {
-        try {
-            const producto = this.productos.find(p => p.id === id);
-            if (!producto) {
-                this.mostrarError('❌ Producto no encontrado');
-                return;
-            }
-
-            this.llenarFormularioEdicion(producto);
-            
-            const submitButton = document.querySelector('#product-form button[type="submit"]');
-            if (submitButton) {
-                submitButton.innerHTML = '<i class="fa-solid fa-sync"></i> Actualizar Producto';
-                submitButton.dataset.modo = 'edicion';
-                submitButton.dataset.productoId = id;
-            }
-
-            document.querySelector('.form-section').scrollIntoView({ 
-                behavior: 'smooth',
-                block: 'start'
-            });
-
-            this.mostrarExito(`✏️ Editando producto: ${producto.nombre}`);
-        } catch (error) {
-            console.error('❌ Error en editarProducto:', error);
-            this.mostrarError('❌ Error al preparar la edición del producto');
-        }
-    }
-
-    llenarFormularioEdicion(producto) {
-        document.querySelector('#product-id').value = producto.id;
-        document.querySelector('#product-name').value = producto.nombre || '';
-        document.querySelector('#product-category').value = producto.categoria_id || '';
-        document.querySelector('#product-price').value = this.parseNumber(producto.precio_venta) || 0;
-        document.querySelector('#product-cost').value = this.parseNumber(producto.costo_compra) || '';
-        document.querySelector('#product-stock').value = this.parseNumber(producto.stock) || 0;
-        document.querySelector('#product-min-stock').value = this.parseNumber(producto.stock_minimo) || 10;
-        document.querySelector('#product-unit').value = producto.unidad_medida || 'unidad';
-        document.querySelector('#product-tasa-iva').value = producto.id_tasa_iva || 1;
-    }
-
-    async actualizarProducto(id, productoData) {
-        try {
-            console.log('📝 Iniciando actualización del producto:', id);
-            console.log('📦 Datos del formulario:', productoData);
-
-            const productId = parseInt(id);
-            if (isNaN(productId)) {
-                throw new Error('ID de producto inválido');
-            }
-
-            if (!productoData.nombre || productoData.nombre.trim() === '') {
-                throw new Error('El nombre del producto es obligatorio');
-            }
-
-            if (!this.validarDatosProducto(productoData)) {
-                return;
-            }
-
-            const datosParaEnviar = {
-                nombre: productoData.nombre.trim(),
-                precio_venta: parseFloat(productoData.precio_venta) || 0,
-                costo_compra: productoData.costo_compra && productoData.costo_compra !== '' 
-                    ? parseFloat(productoData.costo_compra) 
-                    : null,
-                stock: parseFloat(productoData.stock) || 0,
-                unidad_medida: productoData.unidad_medida || 'unidad',
-                categoria_id: parseInt(productoData.categoria_id) || 1,
-                stock_minimo: parseFloat(productoData.stock_minimo) || 10,
-                id_tasa_iva: parseInt(productoData.id_tasa_iva) || 1,
-                id_provedores: null
-            };
-
-            console.log('📤 Datos procesados para enviar:', datosParaEnviar);
-
-            if (datosParaEnviar.precio_venta < 0) {
-                throw new Error('El precio de venta debe ser positivo');
-            }
-
-            if (datosParaEnviar.stock < 0) {
-                throw new Error('El stock no puede ser negativo');
-            }
-
-            const response = await fetch(`/api/productos/${productId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.getToken()}`
-                },
-                body: JSON.stringify(datosParaEnviar)
-            });
-
-            console.log('📡 Estado de la respuesta:', response.status, response.statusText);
-
-            let responseData;
-            const responseText = await response.text();
-            
-            try {
-                responseData = responseText ? JSON.parse(responseText) : {};
-            } catch (parseError) {
-                console.error('❌ Error parseando respuesta JSON:', parseError);
-                throw new Error(`Error ${response.status}: ${response.statusText} - ${responseText}`);
-            }
-
-            if (!response.ok) {
-                console.error('❌ Error del servidor:', responseData);
-                throw new Error(responseData.error || `Error ${response.status}: ${response.statusText}`);
-            }
-
-            console.log('✅ Respuesta del servidor:', responseData);
-
-            const index = this.productos.findIndex(p => p.id === productId);
-            if (index !== -1) {
-                this.productos[index] = {
-                    ...responseData,
-                    precio_venta: this.parseNumber(responseData.precio_venta),
-                    precio_dolares: this.parseNumber(responseData.precio_dolares),
-                    stock: this.parseNumber(responseData.stock),
-                    stock_minimo: this.parseNumber(responseData.stock_minimo)
-                };
-            } else {
-                console.warn('⚠️ Producto no encontrado en lista local, recargando...');
-                await this.cargarProductos(this.pagination.currentPage, this.pagination.limit);
-            }
-
-            this.renderizarProductos();
-            this.actualizarResumen();
-            this.mostrarExito('✅ Producto actualizado exitosamente');
-
-            return responseData;
-
-        } catch (error) {
-            console.error('❌ Error actualizando producto:', error);
-            
-            let mensajeError = '❌ Error al actualizar producto';
-            if (error.message.includes('ID de producto inválido')) {
-                mensajeError = '❌ ID de producto inválido';
-            } else if (error.message.includes('nombre del producto')) {
-                mensajeError = '❌ El nombre del producto es obligatorio';
-            } else if (error.message.includes('precio de venta')) {
-                mensajeError = '❌ El precio de venta debe ser positivo';
-            } else if (error.message.includes('stock no puede ser negativo')) {
-                mensajeError = '❌ El stock no puede ser negativo';
-            } else if (error.message.includes('Error 400')) {
-                mensajeError = '❌ Error en los datos enviados: ' + error.message;
-            } else if (error.message.includes('Error 500')) {
-                mensajeError = '❌ Error del servidor. Por favor, contacta al administrador.';
-            } else {
-                mensajeError = '❌ ' + error.message;
-            }
-            
-            this.mostrarError(mensajeError);
-            throw error;
-        }
-    }
-
-    async ajustarStock(id) {
-        try {
-            const producto = this.productos.find(p => p.id === id);
-            if (!producto) {
-                this.mostrarError('❌ Producto no encontrado');
-                return;
-            }
-
-            const nuevaCantidad = prompt(
-                `Ajustar stock de "${producto.nombre}"\n\nStock actual: ${producto.stock} ${producto.unidad_medida}\nStock mínimo: ${producto.stock_minimo} ${producto.unidad_medida}\n\nIngrese la nueva cantidad:`,
-                producto.stock
-            );
-            
-            if (nuevaCantidad === null) return;
-
-            const cantidadNum = parseFloat(nuevaCantidad);
-            if (isNaN(cantidadNum) || cantidadNum < 0) {
-                this.mostrarError('❌ La cantidad debe ser un número positivo');
-                return;
-            }
-
-            const response = await fetch(`/api/productos/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.getToken()}`
-                },
-                body: JSON.stringify({
-                    stock: cantidadNum
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
-                throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
-            }
-
-            await this.cargarProductos(this.pagination.currentPage, this.pagination.limit);
-            this.mostrarExito('✅ Stock actualizado correctamente');
-        } catch (error) {
-            console.error('❌ Error ajustando stock:', error);
-            this.mostrarError('❌ Error al actualizar stock: ' + error.message);
-        }
-    }
-
-    verDetalles(id) {
-        const producto = this.productos.find(p => p.id === id);
-        if (!producto) {
-            this.mostrarError('❌ Producto no encontrado');
-            return;
-        }
-
-        const detalles = `
-📦 <strong>${this.escapeHtml(producto.nombre)}</strong>
-🆔 ID: ${producto.id}
-📂 Categoría: ${this.escapeHtml(producto.categoria || 'Sin categoría')}
-💰 Precio: Bs ${this.parseNumber(producto.precio_venta).toFixed(2)} ($${this.parseNumber(producto.precio_dolares).toFixed(2)})
-📊 Stock: ${this.parseNumber(producto.stock)} ${producto.unidad_medida}
-⚠️ Stock mínimo: ${this.parseNumber(producto.stock_minimo)} ${producto.unidad_medida}
-🏷️ IVA: ${this.parseNumber(producto.tasa_iva)}%
-${producto.proveedor ? `🏢 Proveedor: ${this.escapeHtml(producto.proveedor)}` : ''}
-        `.trim();
-
-        alert(detalles);
-    }
-
-    async procesarFormulario(event) {
-        if (event) event.preventDefault();
-
-        const submitButton = document.querySelector('#product-form button[type="submit"]');
-        const originalText = submitButton.innerHTML;
-        
-        try {
-            submitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
-            submitButton.disabled = true;
-
-            const getFormValue = (selector, defaultValue = '') => {
-                const element = document.querySelector(selector);
-                return element ? (element.value || defaultValue) : defaultValue;
-            };
-
-            const formData = {
-                nombre: getFormValue('#product-name'),
-                precio_venta: getFormValue('#product-price', '0'),
-                costo_compra: getFormValue('#product-cost', ''),
-                stock: getFormValue('#product-stock', '0'),
-                unidad_medida: getFormValue('#product-unit'),
-                categoria_id: getFormValue('#product-category'),
-                stock_minimo: getFormValue('#product-min-stock', '10'),
-                id_tasa_iva: getFormValue('#product-tasa-iva', '1')
-            };
-
-            console.log('📝 Datos del formulario recogidos:', formData);
-
-            if (!formData.nombre || formData.nombre.trim() === '') {
-                throw new Error('El nombre del producto es obligatorio');
-            }
-
-            if (!formData.precio_venta || parseFloat(formData.precio_venta) <= 0) {
-                throw new Error('El precio de venta debe ser mayor a 0');
-            }
-
-            if (!formData.categoria_id) {
-                throw new Error('Debe seleccionar una categoría');
-            }
-
-            if (!formData.unidad_medida) {
-                throw new Error('Debe seleccionar una unidad de medida');
-            }
-
-            const productoId = document.querySelector('#product-id').value;
-            const isEdicion = submitButton?.dataset.modo === 'edicion' && productoId;
-
-            if (isEdicion) {
-                await this.actualizarProducto(productoId, formData);
-                this.limpiarFormulario();
-            } else {
-                await this.crearProducto(formData);
-                this.limpiarFormulario();
-            }
-
-        } catch (error) {
-            console.error('❌ Error procesando formulario:', error);
-            this.mostrarError(error.message);
-        } finally {
-            submitButton.innerHTML = originalText;
-            submitButton.disabled = false;
-        }
-    }
-
-    limpiarFormulario() {
-        document.querySelector('#product-form').reset();
-        document.querySelector('#product-id').value = '';
-        
-        const submitButton = document.querySelector('#product-form button[type="submit"]');
-        if (submitButton) {
-            submitButton.innerHTML = '<i class="fa-solid fa-save"></i> Guardar Producto';
-            delete submitButton.dataset.modo;
-            delete submitButton.dataset.productoId;
-        }
-        
-        document.querySelector('#product-min-stock').value = 10;
-        
-        const tasaGeneral = this.tasasIva.find(t => t.tipo === 'general') || this.tasasIva[0];
-        if (tasaGeneral) {
-            document.querySelector('#product-tasa-iva').value = tasaGeneral.id;
-        }
-    }
-
-    actualizarResumen() {
-        const totalProductos = this.pagination.totalProducts;
-        const productosActivos = this.productos.filter(p => this.parseNumber(p.stock) > 0).length;
-        const productosInactivos = totalProductos - productosActivos;
-        const totalCategorias = new Set(this.productos.map(p => p.categoria_id).filter(id => id)).size;
-
-        this.actualizarCard('.card:nth-child(1) h3', totalProductos);
-        this.actualizarCard('.card:nth-child(2) h3', productosActivos);
-        this.actualizarCard('.card:nth-child(3) h3', productosInactivos);
-        this.actualizarCard('.card:nth-child(4) h3', totalCategorias);
-    }
-
-    actualizarCard(selector, valor) {
-        const element = document.querySelector(selector);
-        if (element) {
-            element.textContent = valor;
-            element.style.transform = 'scale(1.1)';
-            setTimeout(() => element.style.transform = 'scale(1)', 300);
-        }
-    }
+    // ==================== EVENT LISTENERS ====================
 
     setupEventListeners() {
-        // Filtros
+        // Filtro Categoría
         document.querySelector('#filtro-categoria')?.addEventListener('change', (e) => {
             this.filtros.categoria = e.target.value;
             this.cargarProductos(1, this.pagination.limit);
         });
 
+        // Filtro Stock
         document.querySelector('#filtro-stock')?.addEventListener('change', (e) => {
             this.filtros.stock = e.target.value;
             this.cargarProductos(1, this.pagination.limit);
@@ -846,156 +273,317 @@ ${producto.proveedor ? `🏢 Proveedor: ${this.escapeHtml(producto.proveedor)}` 
         // Búsqueda
         const searchInput = document.querySelector('#search-input');
         if (searchInput) {
-            let searchTimeout;
+            let timeout;
             searchInput.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
                     this.filtros.busqueda = e.target.value;
                     this.cargarProductos(1, this.pagination.limit);
                 }, 300);
             });
-
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    searchInput.value = '';
-                    this.filtros.busqueda = '';
-                    this.cargarProductos(1, this.pagination.limit);
-                }
-            });
         }
 
         // Items por página
-        const itemsPerPageSelect = document.querySelector('#items-per-page');
-        if (itemsPerPageSelect) {
-            itemsPerPageSelect.addEventListener('change', (e) => {
-                const newLimit = parseInt(e.target.value);
-                this.pagination.limit = newLimit;
-                this.cargarProductos(1, newLimit);
-            });
-        }
-
-        // Formulario
-        document.querySelector('#product-form')?.addEventListener('submit', (e) => {
-            this.procesarFormulario(e);
+        document.querySelector('#items-per-page')?.addEventListener('change', (e) => {
+            this.pagination.limit = parseInt(e.target.value);
+            this.cargarProductos(1, this.pagination.limit);
         });
 
-        // Botón cancelar
-        document.querySelector('.btn-cancelar')?.addEventListener('click', () => {
-            this.limpiarFormulario();
-            this.mostrarExito('Formulario limpiado');
-        });
-
-        // Botones de acción
-        document.querySelector('.btn-actualizar')?.addEventListener('click', () => {
-            this.cargarProductos(this.pagination.currentPage, this.pagination.limit);
-            this.mostrarExito('🔄 Datos actualizados');
-        });
-
+        // Botón Nuevo Producto
         document.querySelector('.btn-nuevo-producto')?.addEventListener('click', () => {
             this.limpiarFormulario();
-            document.querySelector('.form-section').scrollIntoView({ 
-                behavior: 'smooth',
-                block: 'start'
-            });
-            this.mostrarExito('✏️ Modo creación de producto');
+            document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('product-name').focus();
         });
 
-        // Efectos hover en tarjetas
-        document.querySelectorAll('.card').forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-5px)';
-                this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
-            });
-            card.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
-            });
+        // Botón Actualizar
+        document.querySelector('.btn-actualizar')?.addEventListener('click', () => {
+            this.cargarProductos(this.pagination.currentPage, this.pagination.limit);
+            this.mostrarExito('Lista actualizada');
         });
 
-        // Teclas rápidas
-        document.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f' && 
-                e.target.tagName !== 'INPUT' && 
-                e.target.tagName !== 'TEXTAREA') {
-                e.preventDefault();
-                document.querySelector('#search-input')?.focus();
-            }
+        // Formulario Submit
+        document.querySelector('#product-form')?.addEventListener('submit', (e) => this.procesarFormulario(e));
 
-            if (e.key === 'Escape' && 
-                e.target.tagName !== 'INPUT' && 
-                e.target.tagName !== 'TEXTAREA') {
-                this.limpiarFiltros();
-            }
-
-            if ((e.ctrlKey || e.metaKey) && e.key === 'n' && 
-                e.target.tagName !== 'INPUT' && 
-                e.target.tagName !== 'TEXTAREA') {
-                e.preventDefault();
-                document.querySelector('.btn-nuevo-producto')?.click();
-            }
-        });
-
-        // Ajustar tabla en responsive
-        window.addEventListener('resize', () => {
-            this.ajustarTablaResponsive();
-        });
-
-        setTimeout(() => {
-            this.ajustarTablaResponsive();
-        }, 100);
-
-        console.log('✅ Event listeners configurados correctamente');
+        // Botón Cancelar Formulario
+        document.querySelector('.btn-cancelar')?.addEventListener('click', () => this.limpiarFormulario());
     }
 
-    limpiarFiltros() {
-        document.querySelector('#filtro-categoria').value = '';
-        document.querySelector('#filtro-stock').value = '';
-        document.querySelector('#search-input').value = '';
-        
-        this.filtros = {
-            categoria: '',
-            stock: '',
-            busqueda: ''
-        };
-        
-        this.cargarProductos(1, this.pagination.limit);
-        this.mostrarExito('🧹 Filtros limpiados');
-    }
+    // ==================== GESTIÓN DE PRODUCTOS ====================
 
-    ajustarTablaResponsive() {
-        const tableContainer = document.querySelector('.table-container');
-        const table = tableContainer?.querySelector('table');
-        
-        if (!table || !tableContainer) return;
-        
-        const containerWidth = tableContainer.clientWidth;
-        const tableWidth = table.scrollWidth;
-        
-        if (tableWidth > containerWidth) {
-            tableContainer.style.overflowX = 'auto';
-            tableContainer.style.position = 'relative';
-            tableContainer.style.boxShadow = 'inset -10px 0 10px -10px rgba(0,0,0,0.1)';
-        } else {
-            tableContainer.style.overflowX = 'visible';
-            tableContainer.style.boxShadow = 'none';
+    async procesarFormulario(event) {
+        event.preventDefault();
+        const submitButton = document.querySelector('#product-form button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+
+        try {
+            submitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
+            submitButton.disabled = true;
+
+            // Usar los IDs exactos del HTML
+            const formData = {
+                nombre: document.getElementById('product-name').value.trim(),
+                categoria_id: document.getElementById('product-category').value,
+                precio_venta: parseFloat(document.getElementById('product-price').value) || 0,
+                costo_compra: parseFloat(document.getElementById('product-cost').value) || 0,
+                stock: parseFloat(document.getElementById('product-stock').value) || 0,
+                stock_minimo: parseFloat(document.getElementById('product-min-stock').value) || 10,
+                unidad_medida: document.getElementById('product-unit').value,
+                id_tasa_iva: document.getElementById('product-tasa-iva').value || 1,
+                // Capturar el motivo del input correcto
+                motivo_ajuste: document.getElementById('product-reason').value.trim()
+            };
+
+            // Validación básica
+            if (!formData.nombre) throw new Error('El nombre es obligatorio');
+            if (!formData.categoria_id) throw new Error('Seleccione una categoría');
+            
+            const productoId = document.getElementById('product-id').value;
+            const isEdicion = !!productoId;
+
+            // Si es edición, el motivo es obligatorio
+            if (isEdicion && !formData.motivo_ajuste) {
+                throw new Error('Debe indicar un motivo para actualizar el inventario');
+            }
+
+            const url = isEdicion ? `/api/productos/${productoId}` : '/api/productos';
+            const method = isEdicion ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.getToken()}`
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Error al guardar');
+            }
+
+            this.mostrarExito(isEdicion ? 'Producto actualizado' : 'Producto creado');
+            this.limpiarFormulario();
+            await this.cargarProductos(this.pagination.currentPage, this.pagination.limit);
+
+        } catch (error) {
+            this.mostrarError(error.message);
+        } finally {
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
         }
     }
 
-    parseNumber(value) {
-        if (value === null || value === undefined) return 0;
-        const num = parseFloat(value);
-        return isNaN(num) ? 0 : num;
+    editarProducto(id) {
+        const producto = this.productos.find(p => p.id === id);
+        if (!producto) return;
+
+        console.log('✏️ Editando:', producto.nombre);
+
+        // Llenar formulario con los IDs correctos
+        document.getElementById('product-id').value = producto.id;
+        document.getElementById('product-name').value = producto.nombre;
+        document.getElementById('product-category').value = producto.categoria_id || "";
+        document.getElementById('product-price').value = producto.precio_venta;
+        document.getElementById('product-cost').value = producto.costo_compra;
+        document.getElementById('product-stock').value = producto.stock;
+        document.getElementById('product-min-stock').value = producto.stock_minimo;
+        document.getElementById('product-unit').value = producto.unidad_medida;
+        document.getElementById('product-tasa-iva').value = producto.id_tasa_iva;
+
+        // Mostrar campo Motivo (Obligatorio en edición)
+        const containerReason = document.getElementById('container-reason');
+        const inputReason = document.getElementById('product-reason');
+        if (containerReason) containerReason.style.display = 'block';
+        if (inputReason) {
+            inputReason.required = true;
+            inputReason.value = '';
+        }
+
+        // Cambiar interfaz
+        document.querySelector('.form-section h2').innerHTML = `<i class="fa-solid fa-pen"></i> Editar Producto #${id}`;
+        document.querySelector('.btn-cancelar').style.display = 'inline-block';
+        const btnSave = document.querySelector('#product-form button[type="submit"]');
+        btnSave.innerHTML = '<i class="fa-solid fa-sync"></i> Actualizar';
+        
+        document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
     }
 
-    getToken() {
-        return localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || 'demo-token';
+    limpiarFormulario() {
+        document.getElementById('product-form').reset();
+        document.getElementById('product-id').value = '';
+        
+        // Ocultar Motivo
+        const containerReason = document.getElementById('container-reason');
+        const inputReason = document.getElementById('product-reason');
+        if (containerReason) containerReason.style.display = 'none';
+        if (inputReason) inputReason.required = false;
+
+        // Restaurar interfaz
+        document.querySelector('.form-section h2').innerHTML = `<i class="fa-solid fa-plus-circle"></i> Registrar Nuevo Producto`;
+        document.querySelector('.btn-cancelar').style.display = 'none'; // Ocultar botón cancelar si lo deseas
+        document.querySelector('#product-form button[type="submit"]').innerHTML = '<i class="fa-solid fa-save"></i> Guardar Producto';
     }
 
+    async ajustarStock(id) {
+        const producto = this.productos.find(p => p.id === id);
+        if (!producto) return;
+
+        const nuevoStockStr = prompt(`Ajustar Stock de "${producto.nombre}"\nActual: ${producto.stock}\n\nNuevo Stock:`, producto.stock);
+        if (nuevoStockStr === null) return; // Cancelado
+
+        const nuevoStock = parseFloat(nuevoStockStr);
+        if (isNaN(nuevoStock)) {
+            this.mostrarError('Stock inválido');
+            return;
+        }
+
+        // Pedir motivo
+        const motivo = prompt("Ingrese el motivo del ajuste (Obligatorio):");
+        if (!motivo || motivo.trim() === "") {
+            this.mostrarError("El motivo es obligatorio");
+            return;
+        }
+
+        // Preparar datos para actualizar (conservando lo demás)
+        const data = {
+            nombre: producto.nombre,
+            categoria_id: producto.categoria_id,
+            precio_venta: producto.precio_venta,
+            costo_compra: producto.costo_compra,
+            unidad_medida: producto.unidad_medida,
+            stock_minimo: producto.stock_minimo,
+            id_tasa_iva: producto.id_tasa_iva,
+            stock: nuevoStock,
+            motivo_ajuste: motivo
+        };
+
+        // Reutilizar la lógica de actualización (simulando envío desde formulario)
+        try {
+            const response = await fetch(`/api/productos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.getToken()}` },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) throw new Error('Error actualizando stock');
+            
+            this.mostrarExito('Stock ajustado correctamente');
+            this.cargarProductos(this.pagination.currentPage, this.pagination.limit);
+        } catch (error) {
+            this.mostrarError('Error al ajustar stock');
+        }
+    }
+
+    async deleteProduct(id) {
+        if (!confirm('¿Estás seguro de eliminar este producto?')) return;
+
+        try {
+            const response = await fetch(`/api/productos/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${this.getToken()}` }
+            });
+
+            if (response.ok) {
+                this.mostrarExito('Producto eliminado');
+                this.cargarProductos(this.pagination.currentPage, this.pagination.limit);
+            } else {
+                const data = await response.json();
+                this.mostrarError(data.error || 'Error al eliminar');
+            }
+        } catch (error) {
+            console.error(error);
+            this.mostrarError('Error de conexión');
+        }
+    }
+
+    // ==================== UTILIDADES Y HELPERS ====================
+
+    cambiarPagina(nuevaPagina) {
+        if (nuevaPagina < 1 || nuevaPagina > this.pagination.totalPages) return;
+        this.cargarProductos(nuevaPagina, this.pagination.limit);
+    }
+
+    verDetalles(id) {
+        const p = this.productos.find(prod => prod.id === id);
+        if (!p) return;
+        alert(`Detalles:\nProducto: ${p.nombre}\nStock: ${p.stock}\nPrecio: Bs. ${p.precio_venta}\nCosto: Bs. ${p.costo_compra || 0}\nProveedor: ${p.proveedor || 'N/A'}`);
+    }
+
+  actualizarResumen() {
+        // Lógica de las tarjetas
+        if (!this.productos) return;
+        
+        // 1. Total de productos (viene de la paginación)
+        const total = this.pagination.totalProducts; 
+        
+        // 2. Stock total (Suma de unidades)
+        const stockTotal = this.productos.reduce((s, p) => s + this.parseNumber(p.stock), 0);
+        
+        // 3. Alertas (Bajo stock + Agotados)
+        const bajoStock = this.productos.filter(p => this.parseNumber(p.stock) <= this.parseNumber(p.stock_minimo)).length;
+        
+        // 4. Valor del Inventario (Costo * Stock) - ESTO FALTABA
+        const valorTotal = this.productos.reduce((sum, p) => {
+            const costo = this.parseNumber(p.costo_compra) || 0;
+            const stock = this.parseNumber(p.stock) || 0;
+            return sum + (costo * stock);
+        }, 0);
+        
+        // Actualizar DOM
+        const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+        
+        setVal('card-total-productos', total);
+        setVal('card-stock-total', stockTotal.toLocaleString('es-VE', {maximumFractionDigits: 2}));
+        setVal('card-bajo-stock', bajoStock);
+        
+        // Mostrar valor formateado en Bs.
+        setVal('card-valor-inventario', `Bs. ${valorTotal.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
+    }
+
+    
+    actualizarContadorProductos() {
+        const el = document.querySelector('.table-header h2');
+        if (el) el.innerHTML = `<i class="fa-solid fa-list"></i> Lista de Productos (${this.pagination.totalProducts})`;
+    }
+
+    // Helpers visuales
+    getStockLevel(p) {
+        const s = this.parseNumber(p.stock);
+        const m = this.parseNumber(p.stock_minimo);
+        if (s <= 0) return 'empty';
+        if (s <= m) return 'low';
+        if (s <= m * 2) return 'medium';
+        return 'high';
+    }
+
+    getEstadoBadge(p) {
+        const s = this.parseNumber(p.stock);
+        const m = this.parseNumber(p.stock_minimo);
+        if (s <= 0) return '<span class="badge badge-danger">Agotado</span>';
+        if (s <= m) return '<span class="badge badge-warning">Bajo Stock</span>';
+        return '<span class="badge badge-success">Disponible</span>';
+    }
+
+    getProductIcon(c) {
+        const cat = (c || '').toLowerCase();
+        if (cat.includes('pollo')) return 'fa-solid fa-drumstick-bite';
+        if (cat.includes('carne') || cat.includes('res')) return 'fa-solid fa-bacon';
+        if (cat.includes('aliño')) return 'fa-solid fa-seedling';
+        return 'fa-solid fa-box';
+    }
+
+    getProductDescription(p) {
+        return p.stock > 0 ? 'En existencia' : 'Sin stock disponible';
+    }
+
+    // Helpers generales
+    parseNumber(val) { return parseFloat(val) || 0; }
+    getToken() { return localStorage.getItem('authToken'); }
     escapeHtml(text) {
         if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
     mostrarExito(mensaje) {
@@ -1006,31 +594,16 @@ ${producto.proveedor ? `🏢 Proveedor: ${this.escapeHtml(producto.proveedor)}` 
         this.mostrarNotificacion(mensaje, 'error');
     }
 
-    mostrarNotificacion(mensaje, tipo = 'info') {
-        document.querySelectorAll('.toast').forEach(toast => toast.remove());
-
+    mostrarNotificacion(mensaje, tipo) {
         const toast = document.createElement('div');
         toast.className = `toast toast-${tipo}`;
-        toast.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <i class="fa-solid fa-${tipo === 'success' ? 'check' : 'exclamation-triangle'}"></i>
-                <span>${this.escapeHtml(mensaje)}</span>
-            </div>
-        `;
-
+        toast.textContent = mensaje;
         document.body.appendChild(toast);
-
-        setTimeout(() => {
-            toast.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast);
-                }
-            }, 300);
-        }, 5000);
+        setTimeout(() => toast.remove(), 3000);
     }
 }
 
+// Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
     window.productosManager = new ProductosManager();
 });

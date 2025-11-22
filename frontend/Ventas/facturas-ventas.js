@@ -417,7 +417,7 @@ class FacturasManager {
         }
     }
 
-    mostrarModalDetalles(factura) {
+  mostrarModalDetalles(factura) {
         const modalBody = document.getElementById('detallesFacturaBody');
         
         const empresa = {
@@ -428,19 +428,34 @@ class FacturasManager {
             mensaje_factura: "¡Gracias por su compra!"
         };
 
-        // ✅ USAR LOS VALORES CALCULADOS DEL BACKEND
-        const subtotal_bs = parseFloat(factura.subtotal) || 0;
-        const tax_bs = parseFloat(factura.iva) || 0;
-        const total_bs = parseFloat(factura.total) || 0;
+        // ✅ CALCULAR IVA POR PRODUCTO (CORREGIDO)
+        let subtotal_bs = 0;
+        let tax_bs = 0;
+        const desgloseIva = {};
 
-        console.log('📊 Datos del backend en modal:', { 
-            subtotal: subtotal_bs, 
-            iva: tax_bs, 
-            total: total_bs 
+        (factura.detalles || []).forEach(detalle => {
+            const cantidad = parseFloat(detalle.cantidad) || 0;
+            const precio_unitario = parseFloat(detalle.precio_unitario) || 0;
+            
+            // CORRECCIÓN: Verificar null/undefined para permitir el 0
+            const tasa_iva = (detalle.tasa_iva !== null && detalle.tasa_iva !== undefined) 
+                             ? parseFloat(detalle.tasa_iva) 
+                             : 16;
+            
+            const precio_sin_iva = precio_unitario / (1 + (tasa_iva / 100));
+            const iva_linea = precio_sin_iva * (tasa_iva / 100) * cantidad;
+            
+            subtotal_bs += precio_sin_iva * cantidad;
+            tax_bs += iva_linea;
+            
+            const claveIva = `${tasa_iva}%`;
+            if (!desgloseIva[claveIva]) {
+                desgloseIva[claveIva] = 0;
+            }
+            desgloseIva[claveIva] += iva_linea;
         });
 
-        // ✅ CALCULAR DESGLOSE DE IVA POR TASA
-        const desgloseIva = this.calcularDesgloseIva(factura.detalles || []);
+        const total_bs = subtotal_bs + tax_bs;
 
         // ✅ GENERAR DESGLOSE DE IVA
         let desgloseIvaHTML = '';
@@ -448,14 +463,12 @@ class FacturasManager {
             desgloseIvaHTML += `
                 <div class="flex justify-between text-sm">
                     <span>IVA ${tipo}:</span>
-                    <span>$${desgloseIva[tipo].toFixed(2)}</span>
-                </div>
+                    <span>Bs. ${desgloseIva[tipo].toFixed(2)}</span> </div>
             `;
         });
 
         const invoiceHTML = `
             <div class="invoice-container" style="max-width: 100%;">
-                <!-- Encabezado -->
                 <div class="grid grid-cols-2 gap-6 mb-6">
                     <div>
                         <h3 class="text-xl font-bold text-gray-800">${empresa.nombre_empresa}</h3>
@@ -471,7 +484,6 @@ class FacturasManager {
                     </div>
                 </div>
 
-                <!-- Información del Cliente -->
                 <div class="mb-4 p-4 bg-gray-50 rounded-lg">
                     <h4 class="font-bold text-gray-800 mb-2 text-sm">INFORMACIÓN DEL CLIENTE</h4>
                     <div class="grid grid-cols-2 gap-4 text-sm">
@@ -486,7 +498,6 @@ class FacturasManager {
                     </div>
                 </div>
 
-                <!-- Detalles de la Venta -->
                 <div class="mb-4">
                     <h4 class="font-bold text-gray-800 mb-3 text-sm">DETALLES DE LA VENTA</h4>
                     <table class="w-full border-collapse border border-gray-300 text-sm">
@@ -503,7 +514,12 @@ class FacturasManager {
                             ${(factura.detalles || []).map(detalle => {
                                 const cantidad = parseFloat(detalle.cantidad) || 0;
                                 const precio_unitario = parseFloat(detalle.precio_unitario) || 0;
-                                const tasa_iva = parseFloat(detalle.tasa_iva) || 16;
+                                
+                                // CORRECCIÓN DE TASA
+                                const tasa_iva = (detalle.tasa_iva !== null && detalle.tasa_iva !== undefined) 
+                                                 ? parseFloat(detalle.tasa_iva) 
+                                                 : 16;
+                                                 
                                 const subtotal = cantidad * precio_unitario;
                                 
                                 return `
@@ -515,8 +531,8 @@ class FacturasManager {
                                               '<span class="text-green-600 text-xs">EXENTO</span>' : 
                                               `${tasa_iva}%`}
                                         </td>
-                                        <td class="border border-gray-300 p-2 text-right">$${precio_unitario.toFixed(2)}</td>
-                                        <td class="border border-gray-300 p-2 text-right">$${subtotal.toFixed(2)}</td>
+                                        <td class="border border-gray-300 p-2 text-right">Bs. ${precio_unitario.toFixed(2)}</td>
+                                        <td class="border border-gray-300 p-2 text-right">Bs. ${subtotal.toFixed(2)}</td>
                                     </tr>
                                 `;
                             }).join('')}
@@ -524,33 +540,29 @@ class FacturasManager {
                     </table>
                 </div>
 
-                <!-- Resumen y Método de Pago -->
                 <div class="grid grid-cols-2 gap-4">
-                    <!-- Método de Pago -->
                     <div class="p-3 bg-purple-50 rounded-lg">
                         <h4 class="font-bold text-purple-800 mb-2 text-sm">MÉTODO DE PAGO</h4>
                         <p class="text-purple-700 font-semibold text-sm">${this.formatearMetodoPago(factura.metodo_pago)}</p>
                         ${factura.detalles_pago ? this.mostrarDetallesPagoFormateados(factura.detalles_pago, factura.metodo_pago) : ''}
                     </div>
 
-                    <!-- Resumen -->
                     <div class="p-3 bg-gray-50 rounded-lg">
                         <h4 class="font-bold text-gray-800 mb-2 text-sm">RESUMEN</h4>
                         <div class="space-y-1 text-sm">
                             <div class="flex justify-between">
                                 <span>Subtotal:</span>
-                                <span>$${subtotal_bs.toFixed(2)}</span>
+                                <span>Bs. ${subtotal_bs.toFixed(2)}</span>
                             </div>
                             ${desgloseIvaHTML}
                             <div class="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
                                 <span>TOTAL:</span>
-                                <span class="text-purple-600">$${total_bs.toFixed(2)}</span>
+                                <span class="text-purple-600">Bs. ${total_bs.toFixed(2)}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Vendedor y Pie de página -->
                 <div class="mt-4 text-center text-gray-500 text-xs">
                     <p><strong>Vendedor:</strong> ${factura.vendedor || 'N/A'}</p>
                     <p>${empresa.mensaje_factura}</p>
@@ -563,6 +575,7 @@ class FacturasManager {
         modalBody.innerHTML = invoiceHTML;
         this.abrirModal('modalDetalles');
     }
+
 
     calcularDesgloseIva(detalles) {
         const desgloseIva = {};
@@ -720,9 +733,7 @@ class FacturasManager {
         }
     }
 
-    mostrarVentanaImpresion(facturaData) {
-        console.log('🔍 DATOS RECIBIDOS DEL BACKEND:', facturaData);
-        
+   mostrarVentanaImpresion(facturaData) {
         const ventanaImpresion = window.open('', '_blank', 'width=800,height=600');
         
         if (!ventanaImpresion) {
@@ -730,21 +741,36 @@ class FacturasManager {
             return;
         }
 
-        const { factura, empresa, cliente, vendedor, items, detalles_pago, subtotal, iva, total } = facturaData;
+        const { factura, empresa, cliente, vendedor, items, detalles_pago } = facturaData;
 
-        // ✅ USAR LOS VALORES CALCULADOS DEL BACKEND
-        const subtotal_bs = parseFloat(subtotal) || 0;
-        const tax_bs = parseFloat(iva) || 0;
-        const total_bs = parseFloat(total) || 0;
+        // ✅ CALCULAR IVA POR PRODUCTO (CORREGIDO)
+        let subtotal_bs = 0;
+        let tax_bs = 0;
+        const desgloseIva = {};
 
-        console.log('📊 Datos del backend en impresión:', { 
-            subtotal: subtotal_bs, 
-            iva: tax_bs, 
-            total: total_bs 
+        (items || []).forEach(item => {
+            const cantidad = parseFloat(item.cantidad) || 0;
+            const precio_unitario = parseFloat(item.precio_unitario) || 0;
+            
+            // CORRECCIÓN: Verificar null/undefined correctamente para el 0
+            const tasa_iva = (item.tasa_iva !== null && item.tasa_iva !== undefined) 
+                             ? parseFloat(item.tasa_iva) 
+                             : 16;
+            
+            const precio_sin_iva = precio_unitario / (1 + (tasa_iva / 100));
+            const iva_linea = precio_sin_iva * (tasa_iva / 100) * cantidad;
+            
+            subtotal_bs += precio_sin_iva * cantidad;
+            tax_bs += iva_linea;
+            
+            const claveIva = `${tasa_iva}%`;
+            if (!desgloseIva[claveIva]) {
+                desgloseIva[claveIva] = 0;
+            }
+            desgloseIva[claveIva] += iva_linea;
         });
 
-        // ✅ CALCULAR DESGLOSE DE IVA POR TASA
-        const desgloseIva = this.calcularDesgloseIva(items || []);
+        const total_bs = subtotal_bs + tax_bs;
 
         // ✅ GENERAR DESGLOSE DE IVA
         let desgloseIvaHTML = '';
@@ -752,7 +778,7 @@ class FacturasManager {
             desgloseIvaHTML += `
                 <div class="flex justify-between text-sm">
                     <span>IVA ${tipo}:</span>
-                    <span>$${desgloseIva[tipo].toFixed(2)}</span>
+                    <span>Bs. ${desgloseIva[tipo].toFixed(2)}</span>
                 </div>
             `;
         });
@@ -783,7 +809,6 @@ class FacturasManager {
             </head>
             <body class="bg-white">
                 <div class="max-w-4xl mx-auto">
-                    <!-- Encabezado -->
                     <div class="grid grid-cols-2 gap-6 mb-8 border-b border-gray-300 pb-6">
                         <div>
                             <h1 class="text-2xl font-bold text-gray-800">${empresa?.nombre_empresa || "Pollera Na'Guara"}</h1>
@@ -801,7 +826,6 @@ class FacturasManager {
                         </div>
                     </div>
 
-                    <!-- Información del Cliente -->
                     <div class="mb-6 p-4 bg-gray-50 rounded-lg">
                         <h3 class="font-bold text-gray-800 mb-2 text-sm">INFORMACIÓN DEL CLIENTE</h3>
                         <div class="grid grid-cols-2 gap-4 text-sm">
@@ -816,7 +840,6 @@ class FacturasManager {
                         </div>
                     </div>
 
-                    <!-- Detalles de la Venta -->
                     <div class="mb-6">
                         <h3 class="font-bold text-gray-800 mb-3 text-sm">DETALLES DE LA VENTA</h3>
                         <table class="w-full border-collapse border border-gray-300 text-sm">
@@ -833,7 +856,12 @@ class FacturasManager {
                                 ${(items || []).map(item => {
                                     const cantidad = parseFloat(item.cantidad) || 0;
                                     const precio_unitario = parseFloat(item.precio_unitario) || 0;
-                                    const tasa_iva = parseFloat(item.tasa_iva) || 16;
+                                    
+                                    // CORRECCIÓN DE TASA
+                                    const tasa_iva = (item.tasa_iva !== null && item.tasa_iva !== undefined) 
+                                                     ? parseFloat(item.tasa_iva) 
+                                                     : 16;
+                                                     
                                     const subtotal = cantidad * precio_unitario;
                                     
                                     return `
@@ -845,8 +873,8 @@ class FacturasManager {
                                                   '<span class="text-green-600 text-xs">EXENTO</span>' : 
                                                   `${tasa_iva}%`}
                                             </td>
-                                            <td class="border border-gray-300 p-2 text-right">$${precio_unitario.toFixed(2)}</td>
-                                            <td class="border border-gray-300 p-2 text-right">$${subtotal.toFixed(2)}</td>
+                                            <td class="border border-gray-300 p-2 text-right">Bs. ${precio_unitario.toFixed(2)}</td>
+                                            <td class="border border-gray-300 p-2 text-right">Bs. ${subtotal.toFixed(2)}</td>
                                         </tr>
                                     `;
                                 }).join('')}
@@ -854,33 +882,29 @@ class FacturasManager {
                         </table>
                     </div>
 
-                    <!-- Resumen y Método de Pago -->
                     <div class="grid grid-cols-2 gap-6 mb-6">
-                        <!-- Método de Pago -->
                         <div class="p-4 bg-purple-50 rounded-lg">
                             <h4 class="font-bold text-purple-800 mb-2 text-sm">MÉTODO DE PAGO</h4>
                             <p class="text-purple-700 font-semibold text-sm">${this.formatearMetodoPago(factura.metodo_pago)}</p>
                             ${detalles_pago ? this.mostrarDetallesPagoFormateados(detalles_pago, factura.metodo_pago) : ''}
                         </div>
 
-                        <!-- Resumen -->
                         <div class="p-4 bg-gray-50 rounded-lg">
                             <h4 class="font-bold text-gray-800 mb-2 text-sm">RESUMEN</h4>
                             <div class="space-y-1 text-sm">
                                 <div class="flex justify-between">
                                     <span>Subtotal:</span>
-                                    <span>$${subtotal_bs.toFixed(2)}</span>
+                                    <span>Bs. ${subtotal_bs.toFixed(2)}</span>
                                 </div>
                                 ${desgloseIvaHTML}
                                 <div class="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
                                     <span>TOTAL:</span>
-                                    <span class="text-purple-600">$${total_bs.toFixed(2)}</span>
+                                    <span class="text-purple-600">Bs. ${total_bs.toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Vendedor y Pie de página -->
                     <div class="mt-8 text-center text-gray-500 text-xs border-t border-gray-300 pt-4">
                         <p><strong>Vendedor:</strong> ${vendedor || 'N/A'}</p>
                         <p>${empresa?.mensaje_factura || '¡Gracias por su compra!'}</p>
@@ -888,7 +912,6 @@ class FacturasManager {
                         <p>Factura reimpresa el ${new Date().toLocaleString('es-ES')}</p>
                     </div>
 
-                    <!-- Botones de acción (solo en vista previa) -->
                     <div class="no-print mt-6 text-center">
                         <button onclick="window.print()" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors">
                             🖨️ Imprimir Factura
@@ -898,14 +921,6 @@ class FacturasManager {
                         </button>
                     </div>
                 </div>
-
-                <script>
-                    setTimeout(() => {
-                        if (window.location.search.includes('autoprint')) {
-                            window.print();
-                        }
-                    }, 1000);
-                </script>
             </body>
             </html>
         `;
