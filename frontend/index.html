@@ -33,7 +33,7 @@
             <i class="fas fa-warehouse"></i> <span>Inventario</span> <i class="fas fa-chevron-down submenu-arrow"></i>
           </button>
           <ul id="inventario-submenu" class="submenu">
-            <li><a href="Inventario/inventario-general.html" class="submenu-item">Inventario General</a></li>
+            <li><a href="Inventario/transformaciones.html" class="submenu-item">Transformación Producto</a></li>
             <li><a href="Inventario/Productos.html" class="submenu-item">Productos</a></li>
             <li><a href="Inventario/Categorias.html" class="submenu-item">Categorías</a></li>
           </ul>
@@ -69,7 +69,7 @@
         <span class="user-role" id="userRole">Usuario</span>
       </span>
       <div class="user-dropdown" id="userDropdown">
-        <a href="#" class="dropdown-item"><i class="fas fa-user"></i> Ver perfil</a>
+        <a href="#" class="dropdown-item" onclick="goUsers()"><i class="fas fa-user"></i> Ver usuario</a>
         <div class="dropdown-divider"></div>
         <a href="#" class="dropdown-item" id="logoutBtn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</a>
       </div>
@@ -245,6 +245,10 @@
       setTimeout(() => {
         document.getElementById('userDropdown').classList.remove('active');
       }, 150);
+    }
+
+    function goUsers() {
+      window.location.href = 'GestionUsuarios/GestionU.html';
     }
 
     async function logout() {

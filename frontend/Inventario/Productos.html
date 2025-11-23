@@ -345,6 +345,12 @@
                         </select>
                     </div>
                     <div class="form-group">
+                      <label for="product-provider">Proveedor</label>
+                       <select id="product-provider" class="form-control">
+                      <option value="">Seleccionar proveedor</option>
+                    </select>
+                    </div>
+                    <div class="form-group">
                         <label for="product-price">Precio (Bs) *</label>
                         <input type="number" id="product-price" class="form-control" required step="0.01" placeholder="0.00" min="0">
                     </div>
@@ -394,6 +400,62 @@
             </form>
         </section>
     </div>
+
+    <div class="modal" id="modal-detalles">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-circle-info"></i> Detalles del Producto</h3>
+            <button class="close-btn" onclick="productosManager.cerrarModal('modal-detalles')">&times;</button>
+        </div>
+        <div class="modal-body" id="modal-detalles-body">
+            </div>
+        <div class="modal-footer" style="padding: 15px 20px; text-align: right; background: #f8f9fa; border-top: 1px solid #eee;">
+            <button class="btn btn-secondary" onclick="productosManager.cerrarModal('modal-detalles')">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modal-stock">
+    <div class="modal-content">
+        <div class="modal-header" style="background: var(--warning);">
+            <h3><i class="fa-solid fa-boxes-stacked"></i> Ajuste Manual de Stock</h3>
+            <button class="close-btn" onclick="productosManager.cerrarModal('modal-stock')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="form-ajuste-stock">
+                <input type="hidden" id="stock-product-id">
+                
+                <div class="form-group">
+                    <label>Producto</label>
+                    <input type="text" id="stock-product-name" class="form-control" disabled style="background: #f1f1f1;">
+                </div>
+
+                <div class="form-grid" style="margin-top: 15px; grid-template-columns: 1fr 1fr;">
+                    <div class="form-group">
+                        <label>Stock Actual</label>
+                        <input type="number" id="stock-actual-display" class="form-control" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Nuevo Stock Total *</label>
+                        <input type="number" id="stock-nuevo-input" class="form-control" required step="0.01" min="0">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Motivo del Ajuste *</label>
+                    <textarea id="stock-motivo-input" class="form-control" rows="2" required placeholder="Ej: Conteo físico, merma, corrección..."></textarea>
+                </div>
+
+                <div class="form-actions" style="margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="productosManager.cerrarModal('modal-stock')">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fa-solid fa-save"></i> Guardar Ajuste
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
     <script src="productos.js"></script>
 </body>

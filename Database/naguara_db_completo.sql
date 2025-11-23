@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Tcl2IHPNNZ4Q13Q6TzH3NctEmFCWBl4lFlH5cJOuIqwWGnyzWqSrZZe6asvsX3J
+\restrict z7XAhqjZIm7ttZNraUDTAScfIi5Nt9beUbb4RjeCGB0mhOxP3ymTP0PEPHcdAmR
 
 -- Dumped from database version 18.0
 -- Dumped by pg_dump version 18.0
@@ -539,6 +539,42 @@ ALTER SEQUENCE public.tasas_iva_id_seq OWNED BY public.tasas_iva.id;
 
 
 --
+-- Name: transformacion_detalles; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.transformacion_detalles (
+    id integer NOT NULL,
+    transformacion_id integer NOT NULL,
+    producto_destino_id integer NOT NULL,
+    cantidad_destino numeric(10,2) NOT NULL
+);
+
+
+ALTER TABLE public.transformacion_detalles OWNER TO postgres;
+
+--
+-- Name: transformacion_detalles_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.transformacion_detalles_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.transformacion_detalles_id_seq OWNER TO postgres;
+
+--
+-- Name: transformacion_detalles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.transformacion_detalles_id_seq OWNED BY public.transformacion_detalles.id;
+
+
+--
 -- Name: transformacion_producto; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -546,11 +582,8 @@ CREATE TABLE public.transformacion_producto (
     id integer NOT NULL,
     fecha_transformacion timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     usuario_id integer,
-    producto_entrada_id integer,
-    cantidad_entrada numeric(10,2),
-    producto_salida_id integer,
-    cantidad_salida numeric(10,2),
-    rendimiento numeric(5,2),
+    producto_origen_id integer,
+    cantidad_origen numeric(10,2),
     observaciones text
 );
 
@@ -759,6 +792,13 @@ ALTER TABLE ONLY public.tasas_iva ALTER COLUMN id SET DEFAULT nextval('public.ta
 
 
 --
+-- Name: transformacion_detalles id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.transformacion_detalles ALTER COLUMN id SET DEFAULT nextval('public.transformacion_detalles_id_seq'::regclass);
+
+
+--
 -- Name: transformacion_producto id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -788,6 +828,7 @@ COPY public.categorias (id, nombre, descripcion, estado, fecha_creacion) FROM st
 2	Milanesa	Milanesas de pollo y res	Activa	2025-10-24 18:51:18.983894
 3	Aliño	Condimentos y aderezos	Activa	2025-10-24 18:51:18.983894
 4	Embutidos	Salchichas, chorizos y otros embutidos	Activa	2025-10-24 18:51:18.983894
+11	Prueba	uiuiuiui	Inactiva	2025-11-22 13:25:01.498352
 \.
 
 
@@ -883,6 +924,8 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 48	42	14	16.50	6.80
 49	43	19	1.00	150.00
 50	43	13	1.00	5.50
+51	44	16	1.00	3.50
+52	44	20	1.80	1560.00
 \.
 
 
@@ -918,13 +961,13 @@ COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, fec
 19	150.00	90.00	79.00	kg	2025-11-18 13:40:15.990661	1	picado	0.63	\N	10.00	2	Activo
 13	5.50	3.50	41.40	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Pollo Clásica	0.03	2	10.00	1	Activo
 10	25.00	18.50	49.00	kg	2025-11-19 14:27:45.611874	1	Pollo Entero Premium	0.12	\N	50.00	1	Activo
+16	3.50	1.80	193.00	unidad	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02	3	10.00	1	Activo
+20	1560.00	1000.00	47.20	kg	2025-11-18 12:49:51.763954	4	jamon de pierna	6.59	\N	10.00	2	Activo
 12	15.00	10.00	38.00	kg	2025-10-24 18:53:42.73315	1	Muslos de Pollo	0.07	1	10.00	1	Activo
 15	8.20	5.00	100.00	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04	2	10.00	1	Activo
 18	5.80	2.90	177.00	unidad	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03	3	10.00	1	Activo
 11	45.00	32.00	50.00	kg	2025-11-18 12:42:11.903588	1	Pecho de Pollo	0.19	\N	10.00	1	Activo
 17	4.20	2.10	250.00	unidad	2025-11-18 12:46:34.434523	3	Sazonador con Especias	0.02	\N	5.00	1	Activo
-16	3.50	1.80	194.00	unidad	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02	3	10.00	1	Activo
-20	1560.00	1000.00	49.00	kg	2025-11-18 12:49:51.763954	4	jamon de pierna	6.59	\N	10.00	2	Activo
 \.
 
 
@@ -960,6 +1003,7 @@ COPY public.tasa_cambio (id, tasa_bs, fecha_actualizacion, fuente, activo) FROM 
 14	236.46	2025-11-16 13:18:37.716717	api	t
 15	236.84	2025-11-17 18:31:55.173452	api	t
 16	237.75	2025-11-19 11:59:33.863795	api	t
+17	243.11	2025-11-22 12:43:39.822098	api	t
 \.
 
 
@@ -975,10 +1019,18 @@ COPY public.tasas_iva (id, tasa, descripcion, tipo, estado, fecha_creacion, fech
 
 
 --
+-- Data for Name: transformacion_detalles; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.transformacion_detalles (id, transformacion_id, producto_destino_id, cantidad_destino) FROM stdin;
+\.
+
+
+--
 -- Data for Name: transformacion_producto; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.transformacion_producto (id, fecha_transformacion, usuario_id, producto_entrada_id, cantidad_entrada, producto_salida_id, cantidad_salida, rendimiento, observaciones) FROM stdin;
+COPY public.transformacion_producto (id, fecha_transformacion, usuario_id, producto_origen_id, cantidad_origen, observaciones) FROM stdin;
 \.
 
 
@@ -987,11 +1039,11 @@ COPY public.transformacion_producto (id, fecha_transformacion, usuario_id, produ
 --
 
 COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado, fecha_creacion, ultimo_acceso) FROM stdin;
+1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Super Admin	Activo	2025-11-02 12:55:48.732599	2025-11-22 13:26:20.891216
 2	Fabian dacal	Dacal7	$2b$10$sLrW6I2cogVZUFyhUqrY2e5lJyE21RwGBiizoIQmoH4cSSJRE0Ydq	Administrador	Activo	2025-11-02 12:55:48.732599	2025-11-09 13:56:14.005874
 7	mauricioo	varela	$2b$10$AG9TYxnUFeWyUlGM4jO4FezGq2abxxINwbOyZeQYMoV59NAs1zKjK	Vendedor	Activo	2025-11-02 12:55:48.732599	2025-11-09 17:59:33.503432
 8	francisco	velazco	$2b$10$afUaXHy9l/wTgSYrCxAN3OKPr9/FpoleSBQlqKuHsCsALoCs2Sweq	Super Admin	Activo	2025-11-08 11:43:17.74226	\N
 3	Enrique	Perez	$2b$10$GB6VRiHdl7ONeuO.GSsLYeZe6tb6rfm6LoNGcML.AoUuZZueDELh6	Administrador	Activo	2025-11-02 12:55:48.732599	\N
-1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Super Admin	Activo	2025-11-02 12:55:48.732599	2025-11-19 14:40:52.830997
 \.
 
 
@@ -1030,6 +1082,7 @@ COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente
 41	2025-11-18 13:39:09.15553	1	pago_movil	completada	1	{"bank": "Mercantil", "total": 1564.06, "amount": 1564.06, "method": "pago_movil", "holderId": "V-12345677", "reference": "987654322"}	987654322	Mercantil	\N	\N	\N
 42	2025-11-18 13:47:01.225986	1	efectivo_usd	completada	1	{"tasa": 236.84, "total": 0.55, "change": 0.44999999999999996, "method": "efectivo_usd", "received": 1}	\N	\N	1.00	0.45	\N
 43	2025-11-18 14:38:31.225606	1	efectivo_bs	completada	1	{"total": 156.38, "change": 43.620000000000005, "method": "efectivo_bs", "received": 200}	\N	\N	200.00	43.62	\N
+44	2025-11-22 12:55:08.891953	1	mixto	completada	4	{"total": 3261.34, "method": "mixto", "payments": [{"amount": 1500, "method": "efectivo_bs"}, {"amount": 1761.34, "method": "efectivo_usd"}]}	\N	\N	\N	\N	\N
 \.
 
 
@@ -1037,7 +1090,7 @@ COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente
 -- Name: categorias_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.categorias_id_seq', 5, true);
+SELECT pg_catalog.setval('public.categorias_id_seq', 11, true);
 
 
 --
@@ -1079,7 +1132,7 @@ SELECT pg_catalog.setval('public.detalle_compra_id_seq', 1, false);
 -- Name: detalle_venta_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.detalle_venta_id_seq', 50, true);
+SELECT pg_catalog.setval('public.detalle_venta_id_seq', 52, true);
 
 
 --
@@ -1114,7 +1167,7 @@ SELECT pg_catalog.setval('public.proovedores_id_seq', 1, false);
 -- Name: tasa_cambio_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 16, true);
+SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 17, true);
 
 
 --
@@ -1122,6 +1175,13 @@ SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 16, true);
 --
 
 SELECT pg_catalog.setval('public.tasas_iva_id_seq', 3, true);
+
+
+--
+-- Name: transformacion_detalles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.transformacion_detalles_id_seq', 1, false);
 
 
 --
@@ -1142,7 +1202,7 @@ SELECT pg_catalog.setval('public.usuarios_id_seq', 8, true);
 -- Name: ventas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ventas_id_seq', 43, true);
+SELECT pg_catalog.setval('public.ventas_id_seq', 44, true);
 
 
 --
@@ -1282,6 +1342,14 @@ ALTER TABLE ONLY public.tasas_iva
 
 
 --
+-- Name: transformacion_detalles transformacion_detalles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.transformacion_detalles
+    ADD CONSTRAINT transformacion_detalles_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: transformacion_producto transformacion_producto_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1385,11 +1453,27 @@ ALTER TABLE ONLY public.productos
 
 
 --
+-- Name: transformacion_detalles fk_producto_destino; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.transformacion_detalles
+    ADD CONSTRAINT fk_producto_destino FOREIGN KEY (producto_destino_id) REFERENCES public.productos(id);
+
+
+--
 -- Name: productos fk_producto_tasa_iva; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.productos
     ADD CONSTRAINT fk_producto_tasa_iva FOREIGN KEY (id_tasa_iva) REFERENCES public.tasas_iva(id);
+
+
+--
+-- Name: transformacion_detalles fk_transformacion; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.transformacion_detalles
+    ADD CONSTRAINT fk_transformacion FOREIGN KEY (transformacion_id) REFERENCES public.transformacion_producto(id) ON DELETE CASCADE;
 
 
 --
@@ -1421,15 +1505,7 @@ ALTER TABLE ONLY public.productos
 --
 
 ALTER TABLE ONLY public.transformacion_producto
-    ADD CONSTRAINT transformacion_producto_producto_entrada_id_fkey FOREIGN KEY (producto_entrada_id) REFERENCES public.productos(id);
-
-
---
--- Name: transformacion_producto transformacion_producto_producto_salida_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.transformacion_producto
-    ADD CONSTRAINT transformacion_producto_producto_salida_id_fkey FOREIGN KEY (producto_salida_id) REFERENCES public.productos(id);
+    ADD CONSTRAINT transformacion_producto_producto_entrada_id_fkey FOREIGN KEY (producto_origen_id) REFERENCES public.productos(id);
 
 
 --
@@ -1460,5 +1536,5 @@ ALTER TABLE ONLY public.ventas
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Tcl2IHPNNZ4Q13Q6TzH3NctEmFCWBl4lFlH5cJOuIqwWGnyzWqSrZZe6asvsX3J
+\unrestrict z7XAhqjZIm7ttZNraUDTAScfIi5Nt9beUbb4RjeCGB0mhOxP3ymTP0PEPHcdAmR
 

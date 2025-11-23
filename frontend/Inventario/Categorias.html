@@ -3,67 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Categorías | Pollo Na'Guara</title>
+    <title>Gestión de Categorías | Pollo Na'Guara</title>
     <link rel="stylesheet" href="inventario.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        /* Estilos para notificaciones (Toast) */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+            max-width: 300px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-left: 4px solid;
+        }
+        .toast-success { background: #28a745; border-left-color: #1e7e34; }
+        .toast-error { background: #dc3545; border-left-color: #c82333; }
+        .toast-info { background: #17a2b8; border-left-color: #138496; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
 </head>
 <body>
     <div class="inventario-container">
+        <div class="breadcrumb">
+            <a href="../index.html">Dashboard</a> / 
+            <span>Categorías</span>
+        </div>
 
-                 <div class="breadcrumb">
-                <a href="../index.html">Dashboard</a> / 
-                <span>Inventario</span>
-                 </div>
-        <!-- Header Section -->
         <section class="header-section">
-            <h1><i class="fa-solid fa-tags"></i> Categorías de Productos</h1>
-            <p>Administra las categorías que agrupan los productos de Pollo Na'Guara.</p>
+            <h1><i class="fa-solid fa-tags"></i> Gestión de Categorías</h1>
+            <p>Administra las clasificaciones de productos disponibles en el sistema.</p>
         </section>
 
-        <!-- Cards de Resumen -->
         <section class="cards">
             <div class="card">
-                <i class="fa-solid fa-tags"></i>
+                <i class="fa-solid fa-layer-group"></i>
                 <div class="card-content">
-                    <h3>8</h3>
+                    <h3 id="card-total-categorias">0</h3>
                     <p>Total Categorías</p>
                 </div>
             </div>
             <div class="card">
-                <i class="fa-solid fa-boxes-stacked"></i>
+                <i class="fa-solid fa-check-circle"></i>
                 <div class="card-content">
-                    <h3>156</h3>
-                    <p>Productos Activos</p>
-                </div>
-            </div>
-            <div class="card">
-                <i class="fa-solid fa-chart-line"></i>
-                <div class="card-content">
-                    <h3>7</h3>
-                    <p>Categorías Activas</p>
-                </div>
-            </div>
-            <div class="card">
-                <i class="fa-solid fa-clock"></i>
-                <div class="card-content">
-                    <h3>1</h3>
-                    <p>Categorías Inactivas</p>
+                    <h3 id="card-activas">0</h3>
+                    <p>Activas</p>
                 </div>
             </div>
         </section>
 
-        <!-- Tabla de Categorías -->
         <section class="table-section">
             <div class="table-header">
                 <h2><i class="fa-solid fa-list"></i> Lista de Categorías</h2>
                 <div class="table-actions">
                     <div class="search-box">
                         <i class="fa-solid fa-search"></i>
-                        <input type="text" placeholder="Buscar categoría...">
+                        <input type="text" placeholder="Buscar categoría..." id="search-input">
                     </div>
-                    <button class="btn btn-primary">
-                        <i class="fa-solid fa-plus"></i> Nueva Categoría
-                    </button>
+                    <div class="items-per-page">
+                        <button class="btn btn-primary btn-nuevo">
+                            <i class="fa-solid fa-plus"></i> Nueva Categoría
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -72,218 +81,61 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Nombre de Categoría</th>
+                            <th>Nombre</th>
                             <th>Descripción</th>
                             <th>Productos</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="categorias-body">
                         <tr>
-                            <td>C01</td>
-                            <td>
-                                <div class="category-info">
-                                    <i class="fa-solid fa-drumstick-bite category-icon"></i>
-                                    <span>Pollos</span>
-                                </div>
-                            </td>
-                            <td>Productos de pollo entero y en cortes listos para consumo.</td>
-                            <td>45</td>
-                            <td><span class="badge badge-success">Activa</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>C02</td>
-                            <td>
-                                <div class="category-info">
-                                    <i class="fa-solid fa-bacon category-icon"></i>
-                                    <span>Milanesas</span>
-                                </div>
-                            </td>
-                            <td>Diferentes tipos de milanesas y filetes empanizados.</td>
-                            <td>32</td>
-                            <td><span class="badge badge-success">Activa</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>C03</td>
-                            <td>
-                                <div class="category-info">
-                                    <i class="fa-solid fa-seedling category-icon"></i>
-                                    <span>Aliños</span>
-                                </div>
-                            </td>
-                            <td>Aliños naturales, ajos frescos y procesados.</td>
-                            <td>28</td>
-                            <td><span class="badge badge-success">Activa</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>C04</td>
-                            <td>
-                                <div class="category-info">
-                                    <i class="fa-solid fa-mortar-pestle category-icon"></i>
-                                    <span>Especias</span>
-                                </div>
-                            </td>
-                            <td>Variedad de especias nacionales e importadas.</td>
-                            <td>51</td>
-                            <td><span class="badge badge-success">Activa</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>C05</td>
-                            <td>
-                                <div class="category-info">
-                                    <i class="fa-solid fa-wine-bottle category-icon"></i>
-                                    <span>Salsas</span>
-                                </div>
-                            </td>
-                            <td>Salsas y aderezos para complementar tus comidas.</td>
-                            <td>18</td>
-                            <td><span class="badge badge-success">Activa</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>C06</td>
-                            <td>
-                                <div class="category-info">
-                                    <i class="fa-solid fa-egg category-icon"></i>
-                                    <span>Huevos</span>
-                                </div>
-                            </td>
-                            <td>Huevos frescos de gallina y productos derivados.</td>
-                            <td>12</td>
-                            <td><span class="badge badge-warning">Inactiva</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
+                            <td colspan="6" style="text-align: center; padding: 20px;">
+                                <div class="loading-spinner">
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                    Cargando datos...
                                 </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-
-            <!-- Paginación -->
-            <div class="pagination">
-                <button class="btn btn-sm">
-                    <i class="fa-solid fa-chevron-left"></i>
-                </button>
-                <span class="page-active">1</span>
-                <button class="btn btn-sm">2</button>
-                <button class="btn btn-sm">3</button>
-                <button class="btn btn-sm">
-                    <i class="fa-solid fa-chevron-right"></i>
-                </button>
+            
+            <div style="padding: 15px; text-align: right; color: #6c757d; font-size: 0.9rem;">
+                <span id="registros-info">Mostrando 0 registros</span>
             </div>
         </section>
 
-        <!-- Formulario para Nueva Categoría -->
-        <section class="form-section">
-            <h2><i class="fa-solid fa-plus-circle"></i> Registrar Nueva Categoría</h2>
-            <form class="category-form">
+        <section class="form-section" id="form-section">
+            <h2><i class="fa-solid fa-plus-circle"></i> Registrar / Editar Categoría</h2>
+            <form id="categoria-form">
+                <input type="hidden" id="categoria-id">
+                
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="category-id">ID de Categoría</label>
-                        <input type="text" id="category-id" placeholder="Ej: C07">
+                        <label for="categoria-nombre">Nombre de la Categoría *</label>
+                        <input type="text" id="categoria-nombre" class="form-control" required placeholder="Ej: Bebidas">
                     </div>
+                    
                     <div class="form-group">
-                        <label for="category-name">Nombre de Categoría</label>
-                        <input type="text" id="category-name" placeholder="Ej: Embutidos">
-                    </div>
-                    <div class="form-group">
-                        <label for="category-status">Estado</label>
-                        <select id="category-status">
-                            <option value="active">Activa</option>
-                            <option value="inactive">Inactiva</option>
-                        </select>
+                        <label for="categoria-descripcion">Descripción</label>
+                        <input type="text" id="categoria-descripcion" class="form-control" placeholder="Breve descripción...">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="category-description">Descripción</label>
-                    <textarea id="category-description" rows="3" placeholder="Descripción de la categoría..."></textarea>
-                </div>
+
                 <div class="form-actions">
-                    <button type="reset" class="btn">
+                    <button type="button" class="btn btn-secondary btn-cancelar" id="btn-cancelar">
                         <i class="fa-solid fa-times"></i> Cancelar
                     </button>
                     <button type="submit" class="btn btn-primary">
-                        <i class="fa-solid fa-save"></i> Guardar Categoría
+                        <i class="fa-solid fa-save"></i> Guardar
                     </button>
                 </div>
             </form>
         </section>
     </div>
 
-    <script>
-        // Simulación de funcionalidad básica
-        document.querySelector('.category-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('Categoría guardada correctamente');
-            this.reset();
-        });
-
-        // Efectos hover en las tarjetas
-        document.querySelectorAll('.card').forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-5px)';
-            });
-            card.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
-            });
-        });
-    </script>
+    <script src="../auth-check.js"></script>
+    <script src="categorias.js"></script>
 </body>
 </html>

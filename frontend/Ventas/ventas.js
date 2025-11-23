@@ -859,70 +859,71 @@ class VentasManager {
         }
     }
 
-   async loadProducts() {
-    try {
-        console.log('📦 Cargando productos...');
-        const response = await fetch('/api/productos', { 
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (response.ok) {
-            const responseData = await response.json();
-            const rawProducts = responseData.productos;
-            
-            if (!Array.isArray(rawProducts)) {
-                console.error('❌ La respuesta no contiene un array de productos:', responseData);
-                this.showAlert('Error: Formato de productos no válido');
-                return;
-            }
-            
-            console.log('📊 Productos recibidos (primeros 3):', rawProducts.slice(0, 3));
-            
-            this.products = rawProducts.map(product => {
-                const precioBs = parseFloat(product.precio_venta) || 0;
-                const precioUsd = parseFloat(product.precio_dolares) || this.bsToUsd(precioBs);
-                
-                // ✅ DEBUG: Mostrar productos con precios
-                if (product.id_tasa_iva === 2) {
-                    console.log(`✅ Producto exento: ${product.nombre}`, {
-                        id: product.id,
-                        precio_venta: product.precio_venta,
-                        precio_dolares: product.precio_dolares,
-                        tasa_iva: product.tasa_iva
-                    });
+  async loadProducts() {
+        try {
+            console.log('📦 Cargando productos...');
+            const response = await fetch('/api/productos', { 
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
-                
-                return {
-                    id: product.id,
-                    nombre: product.nombre,
-                    precio_venta: precioBs,  // ✅ Mantener precio_venta original
-                    precio_dolares: precioUsd, // ✅ Mantener precio_dolares original
-                    precio_bs: precioBs,      // ✅ También incluir precio_bs para compatibilidad
-                    precio_usd: precioUsd,    // ✅ También incluir precio_usd para compatibilidad
-                    stock: parseFloat(product.stock) || 0,
-                    unidad_medida: product.unidad_medida || 'unidad',
-                    categoria: product.categoria || 'Sin categoría',
-                    id_tasa_iva: product.id_tasa_iva || 1,
-                    tasa_iva: parseFloat(product.tasa_iva) || 0,
-                    tipo_iva: product.tipo_iva || 'general',
-                    stock_minimo: parseFloat(product.stock_minimo) || 10
-                };
             });
             
-            console.log(`✅ ${this.products.length} productos formateados correctamente`);
-            
-        } else {
-            console.error('❌ Error cargando productos:', response.status, response.statusText);
-            this.showAlert('Error al cargar productos del servidor');
+            if (response.ok) {
+                const responseData = await response.json();
+                
+                // ✅ CORRECCIÓN: Detectar si es array directo o propiedad .productos
+                const rawProducts = Array.isArray(responseData) ? responseData : (responseData.productos || []);
+                
+                if (rawProducts.length === 0) {
+                    console.warn('⚠️ La lista de productos está vacía');
+                }
+                
+                console.log('📊 Productos recibidos:', rawProducts.length);
+                
+                this.products = rawProducts.map(product => {
+                    const precioBs = parseFloat(product.precio_venta) || 0;
+                    // Si no viene precio_dolares, lo calculamos
+                    const precioUsd = parseFloat(product.precio_dolares) || this.bsToUsd(precioBs);
+                    
+                    // Debug para productos exentos
+                    if (product.id_tasa_iva === 2) {
+                       // console.log(`ℹ️ Producto exento detectado: ${product.nombre}`);
+                    }
+                    
+                    return {
+                        id: product.id,
+                        nombre: product.nombre,
+                        // ✅ Mantenemos ambas estructuras para compatibilidad
+                        precio_venta: precioBs,
+                        precio_dolares: precioUsd,
+                        precio_bs: precioBs,
+                        precio_usd: precioUsd,
+                        
+                        stock: parseFloat(product.stock) || 0,
+                        unidad_medida: product.unidad_medida || 'unidad',
+                        categoria: product.categoria || 'Sin categoría',
+                        
+                        // Datos de impuestos
+                        id_tasa_iva: product.id_tasa_iva || 1,
+                        tasa_iva: parseFloat(product.tasa_iva) || 0,
+                        tipo_iva: product.tipo_iva || 'general',
+                        
+                        stock_minimo: parseFloat(product.stock_minimo) || 10
+                    };
+                });
+                
+                console.log(`✅ ${this.products.length} productos cargados y listos.`);
+                
+            } else {
+                console.error('❌ Error respuesta servidor:', response.status);
+                this.showAlert('Error al cargar productos del servidor');
+            }
+        } catch (error) {
+            console.error('❌ Error crítico cargando productos:', error);
+            this.showAlert('Error de conexión al cargar productos');
         }
-    } catch (error) {
-        console.error('❌ Error cargando productos:', error);
-        this.showAlert('Error de conexión al cargar productos');
     }
-}
 
 
     searchProducts(query) {

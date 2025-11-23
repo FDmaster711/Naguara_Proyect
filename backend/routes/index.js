@@ -9,6 +9,7 @@ import backupRoutes from './backup.js';
 import proveedoresRoutes from './proveedores.js'
 import comprasRoutes from './compras.js'; 
 import categoriasRoutes from './categorias.js';
+import transformacionesRoutes from './transformaciones.js';
 
 export {
   authRoutes,
@@ -21,5 +22,6 @@ export {
   backupRoutes,
   proveedoresRoutes,
   comprasRoutes,
-  categoriasRoutes
+  categoriasRoutes,
+  transformacionesRoutes
 };
