@@ -359,30 +359,26 @@ class VentasManager {
     }
 
     selectPaymentMethod(method) {
-        const metodoConfig = this.metodosPagoConfig?.find(m => m.id === metodo);
+        const metodoConfig = this.metodosPagoConfig?.find(m => m.id === method);
+        
         if (metodoConfig && !metodoConfig.habilitado) {
             this.showAlert(`El método de pago "${method}" está deshabilitado en la configuración`, 'error');
             return;
         }
 
-        console.log('💳 Método de pago seleccionado:', method);
         this.selectedPaymentMethod = method;
         
-        // Remover clases activas de todos los botones
-        document.querySelectorAll('.payment-btn').forEach(btn => {
-            btn.classList.remove('active', 'bg-purple-100', 'border-purple-300', 'ring-2', 'ring-purple-500');
+        document.querySelectorAll('.payment-btn').forEach(b => {
+            b.classList.remove('selected', 'bg-purple-100', 'border-purple-500', 'ring-2', 'ring-purple-500');
         });
         
-        // Activar botón seleccionado
-        const selectedBtn = document.querySelector(`[data-method="${method}"]`);
-        if (selectedBtn) {
-            selectedBtn.classList.add('active', 'bg-purple-100', 'border-purple-300', 'ring-2', 'ring-purple-500');
+        const btn = document.querySelector(`[data-method="${method}"]`);
+        if(btn) {
+            btn.classList.add('selected', 'bg-purple-100', 'border-purple-500', 'ring-2', 'ring-purple-500');
         }
-
-        // Mostrar detalles del método de pago
+        
         this.showPaymentDetails(method);
         
-        // Avanzar al siguiente paso si hay productos en el carrito
         if (this.cart.length > 0) {
             this.goToStep(4);
         }

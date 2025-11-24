@@ -65,13 +65,19 @@ router.get('/api/productos', requireAuth, async (req, res) => {
         precioDolares = precioVenta / tasaActual;
       }
 
+      // CORRECCIÓN AQUÍ: Validar explícitamente null/undefined para permitir el 0
+      const tasaIvaRaw = producto.tasa_iva;
+      const tasaIva = (tasaIvaRaw !== null && tasaIvaRaw !== undefined) 
+                      ? parseFloat(tasaIvaRaw) 
+                      : 16;
+
       return {
         ...producto,
         precio_venta: precioVenta,
         precio_dolares: parseFloat(precioDolares.toFixed(2)),
         stock: parseFloat(producto.stock) || 0,
         stock_minimo: parseFloat(producto.stock_minimo) || 0,
-        tasa_iva: parseFloat(producto.tasa_iva) || 16
+        tasa_iva: tasaIva // Ahora sí acepta 0
       };
     });
     
@@ -165,8 +171,6 @@ router.put('/api/productos/:id', requireAuth, async (req, res) => {
     if (stockAnterior !== nuevoStock) {
        const tipo = nuevoStock > stockAnterior ? 'entrada_ajuste' : 'salida_ajuste';
        
-       // Verificar si la tabla historial existe (por si acaso no corriste el SQL anterior)
-       // Si ya la creaste, esto insertará el registro.
        try {
            await client.query(`
              INSERT INTO historial_inventario 

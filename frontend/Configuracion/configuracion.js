@@ -415,59 +415,59 @@ async deleteCategoria(id) {
 
     // ==================== CONFIGURACIÓN DE NEGOCIO ====================
 
-    async loadConfigNegocio() {
-        try {
-            const response = await fetch('/api/configuracion/negocio', {
-                credentials: 'include'
-            });
+   async loadConfigNegocio() {
+    try {
+        const response = await fetch('/api/configuracion/negocio', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const config = await response.json();
+            // Solo cargamos el IVA, el stock global ya no existe en el HTML
+            const ivaInput = document.getElementById('iva-rate');
+            if(ivaInput) ivaInput.value = config.iva_rate || 16;
             
-            if (response.ok) {
-                const config = await response.json();
-                document.getElementById('iva-rate').value = config.iva_rate || 16;
-                document.getElementById('stock-minimo-global').value = config.stock_minimo || 10;
-                console.log('✅ Configuración negocio cargada:', config);
-            }
-        } catch (error) {
-            console.error('Error cargando configuración negocio:', error);
+            console.log('✅ Configuración negocio cargada:', config);
         }
+    } catch (error) {
+        console.error('Error cargando configuración negocio:', error);
+    }
+}
+
+   async handleConfigNegocio() {
+    // Solo capturamos el IVA
+    const configData = {
+        iva_rate: parseFloat(document.getElementById('iva-rate').value)
+        // Eliminamos stock_minimo de aquí
+    };
+
+    if (isNaN(configData.iva_rate) || configData.iva_rate < 0 || configData.iva_rate > 100) {
+        this.showAlert('La tasa de IVA debe estar entre 0 y 100', 'error');
+        return;
     }
 
-    async handleConfigNegocio() {
-        const configData = {
-            iva_rate: parseFloat(document.getElementById('iva-rate').value),
-            stock_minimo: parseInt(document.getElementById('stock-minimo-global').value)
-        };
+    // Eliminamos la validación del stock mínimo porque ya no existe
 
-        if (configData.iva_rate < 0 || configData.iva_rate > 100) {
-            this.showAlert('La tasa de IVA debe estar entre 0 y 100', 'error');
-            return;
+    try {
+        const response = await fetch('/api/configuracion/negocio', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(configData)
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            this.showAlert('Configuración de negocio guardada correctamente', 'success');
+            console.log('✅ Configuración guardada:', result);
+        } else {
+            this.showAlert('Error al guardar configuración', 'error');
         }
-
-        if (configData.stock_minimo < 1) {
-            this.showAlert('El stock mínimo debe ser mayor a 0', 'error');
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/configuracion/negocio', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(configData)
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                this.showAlert('Configuración de negocio guardada correctamente', 'success');
-                console.log('✅ Configuración guardada:', result);
-            } else {
-                this.showAlert('Error al guardar configuración', 'error');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            this.showAlert('Error de conexión', 'error');
-        }
+    } catch (error) {
+        console.error('Error:', error);
+        this.showAlert('Error de conexión', 'error');
     }
+}
 
     // ==================== MÉTODOS DE PAGO ====================
 
