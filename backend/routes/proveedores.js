@@ -162,7 +162,7 @@ router.put('/api/proveedores/:id', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/proveedores/:id - Eliminar proveedor (solo si no tiene productos)
+// DELETE /api/proveedores/:id - 
 router.delete('/api/proveedores/:id', requireAuth, async (req, res) => {
   const client = await pool.connect();
   
@@ -173,7 +173,6 @@ router.delete('/api/proveedores/:id', requireAuth, async (req, res) => {
 
     console.log('🗑️ Eliminando proveedor:', id);
 
-    // Verificar si el proveedor tiene productos asociados
     const productosResult = await client.query(
       'SELECT COUNT(*) as count FROM productos WHERE id_provedores = $1',
       [id]
@@ -221,7 +220,7 @@ router.delete('/api/proveedores/:id', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/proveedores/:id/productos - Obtener productos de un proveedor
+// GET /api/proveedores/:id/productos 
 router.get('/api/proveedores/:id/productos', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -247,7 +246,7 @@ router.get('/api/proveedores/:id/productos', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/proveedores/stats/estadisticas - Estadísticas de proveedores
+// GET /api/proveedores/stats/estadisticas 
 router.get('/api/proveedores/stats/estadisticas', requireAuth, async (req, res) => {
   try {
     console.log('📊 Obteniendo estadísticas de proveedores');

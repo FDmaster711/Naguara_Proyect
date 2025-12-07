@@ -9,7 +9,6 @@ router.get('/api/productos', requireAuth, async (req, res) => {
   try {
     const { categoria_id, stock_alerts, search, include_inactive } = req.query;
     
-    // Obtener tasa del día para cálculos referenciales
     const tasaResult = await pool.query(
       'SELECT tasa_bs FROM tasa_cambio ORDER BY fecha_actualizacion DESC LIMIT 1'
     );
@@ -32,7 +31,6 @@ router.get('/api/productos', requireAuth, async (req, res) => {
     let params = [];
     let paramCount = 0;
 
-    // FILTRO: Por defecto solo mostrar Activos, a menos que se pida lo contrario
     if (include_inactive !== 'true') {
         query += ` AND (p.estado = 'Activo' OR p.estado IS NULL)`;
     }
@@ -65,7 +63,6 @@ router.get('/api/productos', requireAuth, async (req, res) => {
         precioDolares = precioVenta / tasaActual;
       }
 
-      // CORRECCIÓN AQUÍ: Validar explícitamente null/undefined para permitir el 0
       const tasaIvaRaw = producto.tasa_iva;
       const tasaIva = (tasaIvaRaw !== null && tasaIvaRaw !== undefined) 
                       ? parseFloat(tasaIvaRaw) 
@@ -77,7 +74,7 @@ router.get('/api/productos', requireAuth, async (req, res) => {
         precio_dolares: parseFloat(precioDolares.toFixed(2)),
         stock: parseFloat(producto.stock) || 0,
         stock_minimo: parseFloat(producto.stock_minimo) || 0,
-        tasa_iva: tasaIva // Ahora sí acepta 0
+        tasa_iva: tasaIva 
       };
     });
     
@@ -138,12 +135,11 @@ router.put('/api/productos/:id', requireAuth, async (req, res) => {
     const { 
       nombre, precio_venta, costo_compra, stock, unidad_medida, 
       id_provedores, categoria_id, stock_minimo, id_tasa_iva,
-      motivo_ajuste // Dato del frontend
+      motivo_ajuste 
     } = req.body;
     
     const usuario_id = req.session.user.id;
 
-    // 1. Obtener stock anterior
     const productoActual = await client.query('SELECT stock FROM productos WHERE id = $1', [id]);
     
     if (productoActual.rows.length === 0) {
@@ -154,7 +150,6 @@ router.put('/api/productos/:id', requireAuth, async (req, res) => {
     const stockAnterior = parseFloat(productoActual.rows[0].stock);
     const nuevoStock = parseFloat(stock);
 
-    // 2. Actualizar producto
     const result = await client.query(`
       UPDATE productos 
       SET nombre = $1, precio_venta = $2, costo_compra = $3, stock = $4, 
@@ -167,7 +162,6 @@ router.put('/api/productos/:id', requireAuth, async (req, res) => {
       id_provedores, categoria_id, stock_minimo, id_tasa_iva, id
     ]);
 
-    // 3. Guardar historial si hubo cambio de stock
     if (stockAnterior !== nuevoStock) {
        const tipo = nuevoStock > stockAnterior ? 'entrada_ajuste' : 'salida_ajuste';
        
@@ -204,21 +198,16 @@ router.delete('/api/productos/:id', requireAuth, async (req, res) => {
     await client.query('BEGIN');
     const { id } = req.params;
 
-    // 1. Verificar historial
     const ventasCheck = await client.query('SELECT id FROM detalle_venta WHERE id_producto = $1 LIMIT 1', [id]);
     const comprasCheck = await client.query('SELECT id FROM detalle_compra WHERE id_producto = $1 LIMIT 1', [id]);
     const tieneHistorial = ventasCheck.rows.length > 0 || comprasCheck.rows.length > 0;
 
     if (tieneHistorial) {
-        // Opción A: Tiene historial -> DESACTIVAR (Soft Delete)
         console.log(`⚠️ Producto ${id} tiene historial. Se procederá a desactivar.`);
         await client.query("UPDATE productos SET estado = 'Inactivo' WHERE id = $1", [id]);
         await client.query('COMMIT');
         return res.json({ message: 'Producto archivado correctamente (no se puede borrar por historial)' });
     } else {
-        // Opción B: No tiene historial -> ELIMINAR (Hard Delete)
-        console.log(`🗑️ Producto ${id} limpio. Se eliminará permanentemente.`);
-        // Limpiar historial de ajustes si hubiera (para permitir borrado físico)
         await client.query('DELETE FROM historial_inventario WHERE producto_id = $1', [id]);
         
         const result = await client.query('DELETE FROM productos WHERE id = $1 RETURNING *', [id]);
@@ -241,7 +230,6 @@ router.delete('/api/productos/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Otras rutas (stock alerts, etc.)
 router.get('/api/productos/stock-alerts', requireAuth, async (req, res) => {
   try {
     const productosResult = await pool.query(`

@@ -11,7 +11,7 @@ class FacturasManager {
 
     async init() {
         this.setupEventListeners();
-        await this.applyUrlFilters();
+        this.applyUrlFilters();
         this.cargarFacturas();
     }
 
@@ -36,6 +36,15 @@ class FacturasManager {
         });
     }
 
+    // Helper para obtener YYYY-MM-DD respetando tu zona horaria local
+    getLocalDateString(date) {
+        const year = date.getFullYear();
+        // getMonth() devuelve 0-11, así que sumamos 1. padStart asegura el "0" inicial.
+        const month = String(date.getMonth() + 1).padStart(2, '0'); 
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
     initializeDates() {
         const fechaInicio = document.getElementById('fechaInicio').value;
         const fechaFin = document.getElementById('fechaFin').value;
@@ -45,8 +54,9 @@ class FacturasManager {
             const hace30Dias = new Date();
             hace30Dias.setDate(hoy.getDate() - 30);
 
-            document.getElementById('fechaInicio').value = hace30Dias.toISOString().split('T')[0];
-            document.getElementById('fechaFin').value = hoy.toISOString().split('T')[0];
+            // CORRECCIÓN: Usamos el helper local en lugar de toISOString()
+            document.getElementById('fechaInicio').value = this.getLocalDateString(hace30Dias);
+            document.getElementById('fechaFin').value = this.getLocalDateString(hoy);
         }
     }
 
@@ -68,12 +78,17 @@ class FacturasManager {
         const regex = /^\d{4}-\d{2}-\d{2}$/;
         if (!regex.test(dateString)) return false;
         
-        const date = new Date(dateString);
+        // Truco: Agregamos T00:00:00 para asegurar que JS lo lea en hora local
+        const date = new Date(dateString + 'T00:00:00');
         return date instanceof Date && !isNaN(date);
     }
 
     mostrarIndicadorFecha(fecha) {
-        const fechaFormateada = new Date(fecha).toLocaleDateString('es-ES', {
+        // CORRECCIÓN: Forzamos la interpretación como medianoche LOCAL
+        // Al agregar 'T00:00:00', JS entiende: "Medianoche en Barquisimeto", no en Londres.
+        const fechaObj = new Date(fecha + 'T00:00:00');
+
+        const fechaFormateada = fechaObj.toLocaleDateString('es-ES', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -106,7 +121,6 @@ class FacturasManager {
             </div>
         `;
     }
-
     quitarFiltroFecha() {
         const url = new URL(window.location);
         url.searchParams.delete('fecha');
@@ -987,7 +1001,7 @@ class FacturasManager {
     // Utilidades
     formatearMetodoPago(metodo) {
         const metodos = {
-            'efectivo': 'Efectivo BS',
+            'efectivo_bs': 'Efectivo BS',
             'efectivo_usd': 'Efectivo USD',
             'tarjeta': 'Tarjeta',
             'transferencia': 'Transferencia',

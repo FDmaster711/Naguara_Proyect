@@ -12,24 +12,27 @@ class VentasManager {
         this.paymentDetails = {};
         this.ivaRate = 0.16;
         this.tasasIva = [];
+        this.metodosPagoConfig = [];
         
         this.init();
     }
 
-   async init() {
-    console.log('🚀 Inicializando módulo de ventas paso a paso...');
+async init() {
+    console.log('🚀 Inicializando módulo de ventas...');
     this.setCurrentDate();
     this.setupEventListeners();
     this.checkAuthentication();
-    this.loadTasaCambio();
     
-    // ✅ CARGA SECUENCIAL: Primero tasas IVA, luego productos
-    await this.loadTasasIva();
-    await this.loadProducts();
+    // ✅ MODIFICACIÓN: Cargar métodos de pago en paralelo con lo demás
+    await Promise.all([
+        this.loadTasaCambio(),
+        this.loadTasasIva(),
+        this.loadProducts(),
+        this.loadEmpresaData(),
+        this.loadMetodosPagoConfig() // <--- ESTA ES LA CLAVE
+    ]);
     
     this.updateStepIndicator();
-    this.loadEmpresaData();
-    this.loadMetodosPagoConfig();
     this.setupAutocompleteClickHandler();
 }
 
@@ -43,7 +46,7 @@ class VentasManager {
                 this.tasasIva = await response.json();
                 console.log('✅ Tasas de IVA cargadas:', this.tasasIva);
                 
-                // Establecer la tasa general como predeterminada
+                
                 const tasaGeneral = this.tasasIva.find(t => t.tipo === 'general');
                 if (tasaGeneral) {
                     this.ivaRate = parseFloat(tasaGeneral.tasa) / 100;
@@ -53,7 +56,6 @@ class VentasManager {
             }
         } catch (error) {
             console.error('Error cargando tasas IVA:', error);
-            // Fallback a valores por defecto
             this.tasasIva = [
                 { id: 1, tasa: 16.00, descripcion: 'IVA General', tipo: 'general', estado: 'Activa' },
                 { id: 2, tasa: 0.00, descripcion: 'Exento de IVA', tipo: 'exento', estado: 'Activa' },
@@ -90,7 +92,6 @@ class VentasManager {
     }
 
     async loadTasaCambio() {
-        // ✅ PASO 1: Verificar si hay tasa manual ACTIVA
         const tasaManual = localStorage.getItem('tasaCambioManual');
         const tasaTimestamp = localStorage.getItem('tasaCambioTimestamp');
         
@@ -111,7 +112,7 @@ class VentasManager {
             }
         }
 
-        // ✅ PASO 2: Si no hay tasa manual, usar API
+        // Si no hay tasa manual, usar API
         try {
             console.log('💰 Cargando tasa de cambio desde API...');
             const response = await fetch('/api/tasa-cambio/actual');
@@ -179,67 +180,74 @@ class VentasManager {
         }
     }
 
-    loadMetodosPagoConfig() {
+   async loadMetodosPagoConfig() {
         try {
-            const metodosConfig = localStorage.getItem('metodosPagoConfig');
-            const timestamp = localStorage.getItem('metodosPagoTimestamp');
+            // Consultar directamente a la base de datos
+            const response = await fetch('/api/configuracion/metodos-pago', {
+                credentials: 'include'
+            });
             
-            if (metodosConfig && timestamp) {
-                const horasDesdeActualizacion = (new Date() - new Date(timestamp)) / (1000 * 60 * 60);
-                
-                if (horasDesdeActualizacion < 1) {
-                    this.metodosPagoConfig = JSON.parse(metodosConfig);
-                    console.log('✅ Métodos de pago configurados cargados (cache):', this.metodosPagoConfig);
-                } else {
-                    localStorage.removeItem('metodosPagoConfig');
-                    localStorage.removeItem('metodosPagoTimestamp');
-                    this.metodosPagoConfig = null;
-                    console.log('🔄 Configuración de métodos muy vieja, se limpió');
-                }
+            if (response.ok) {
+                this.metodosPagoConfig = await response.json();
             } else {
-                this.metodosPagoConfig = null;
+                // Fallback de seguridad
+                this.metodosPagoConfig = [
+                    { id: 'efectivo', habilitado: true },
+                    { id: 'tarjeta', habilitado: true },
+                    { id: 'transferencia', habilitado: true },
+                    { id: 'pago_movil', habilitado: true }
+                ];
             }
-            
-            this.updatePaymentMethodsUI();
-            
         } catch (error) {
-            console.error('Error cargando métodos pago config:', error);
-            this.metodosPagoConfig = null;
+            console.error('Error sincronizando métodos:', error);
         }
+        
+        this.updatePaymentMethodsUI(); 
     }
 
-    updatePaymentMethodsUI() {
+  updatePaymentMethodsUI() {
+        if (!this.metodosPagoConfig) return;
+
         const paymentButtons = document.querySelectorAll('.payment-btn');
         
         paymentButtons.forEach(btn => {
-            const metodo = btn.dataset.method;
-            const metodoConfig = this.metodosPagoConfig?.find(m => m.id === metodo);
-            
-            if (metodoConfig && !metodoConfig.habilitado) {
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-                btn.disabled = true;
-                btn.title = `Método deshabilitado en configuración`;
+            const metodoVenta = btn.dataset.method; 
+            let config = null;
+
+            // 1. Buscar coincidencia exacta (Ej: pago_movil)
+            config = this.metodosPagoConfig.find(m => m.id === metodoVenta);
+
+            // 2. Si no existe exacta, buscar su "padre" en la configuración
+            if (!config) {
+                if (metodoVenta.includes('efectivo')) {
+                    // efectivo_bs y efectivo_usd obedecen a 'efectivo'
+                    config = this.metodosPagoConfig.find(m => m.id === 'efectivo');
+                } else if (metodoVenta === 'punto_venta') {
+                    // punto_venta obedece a 'tarjeta'
+                    config = this.metodosPagoConfig.find(m => m.id === 'tarjeta');
+                }
+            }
+
+            const estaHabilitado = config ? config.habilitado : true;
+
+            if (!estaHabilitado) {
+                btn.classList.add('opacity-50', 'cursor-not-allowed', 'grayscale');
+                btn.style.pointerEvents = 'none';
+                btn.title = "Método deshabilitado en configuración";
                 
-                // Si este método estaba seleccionado, limpiar selección
-                if (this.selectedPaymentMethod === metodo) {
+                if (this.selectedPaymentMethod === metodoVenta) {
                     this.selectedPaymentMethod = null;
-                    this.showPaymentDetails(null);
-                    
-                    // Remover clases activas
-                    btn.classList.remove('active', 'bg-purple-100', 'border-purple-300', 'ring-2', 'ring-purple-500');
+                    btn.classList.remove('selected', 'bg-purple-100', 'border-purple-500', 'ring-2');
+                    document.getElementById('payment-details').innerHTML = 
+                        '<div class="text-center text-red-500 p-4">Método no disponible. Seleccione otro.</div>';
                 }
             } else {
-                // ✅ MÉTODO HABILITADO
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                btn.disabled = false;
-                btn.title = '';
+                btn.classList.remove('opacity-50', 'cursor-not-allowed', 'grayscale');
+                btn.style.pointerEvents = 'auto';
+                btn.title = "";
             }
         });
-        
-        // ✅ Mostrar mensaje si no hay métodos habilitados
-        this.checkMetodosHabilitados();
     }
-
     checkMetodosHabilitados() {
         const metodosHabilitados = this.metodosPagoConfig?.filter(m => m.habilitado) || [];
         const paymentDetails = document.getElementById('payment-details');
@@ -455,7 +463,7 @@ class VentasManager {
 
             if (response.ok) {
                 const result = await response.json();
-                this.showAlert('✅ Cierre de caja procesado exitosamente!', 'success');
+                this.showAlert(' Cierre de caja procesado exitosamente!', 'success');
                 this.hideModal('cash-register-modal');
                 
                 // Limpiar formulario
@@ -664,7 +672,6 @@ class VentasManager {
         this.currentStep = step;
         this.updateStepIndicator();
         
-        // Aquí puedes agregar lógica específica para cada paso
         switch(step) {
             case 1:
                 document.getElementById('customer-id').focus();
@@ -704,7 +711,6 @@ class VentasManager {
         }
     }
 
-    // ==================== GESTIÓN DE CLIENTES ====================
 
     validateCedulaFormat(cedula) {
         if (!cedula || cedula.trim() === '') {
@@ -868,7 +874,6 @@ class VentasManager {
             if (response.ok) {
                 const responseData = await response.json();
                 
-                // ✅ CORRECCIÓN: Detectar si es array directo o propiedad .productos
                 const rawProducts = Array.isArray(responseData) ? responseData : (responseData.productos || []);
                 
                 if (rawProducts.length === 0) {
@@ -884,13 +889,11 @@ class VentasManager {
                     
                     // Debug para productos exentos
                     if (product.id_tasa_iva === 2) {
-                       // console.log(`ℹ️ Producto exento detectado: ${product.nombre}`);
                     }
                     
                     return {
                         id: product.id,
                         nombre: product.nombre,
-                        // ✅ Mantenemos ambas estructuras para compatibilidad
                         precio_venta: precioBs,
                         precio_dolares: precioUsd,
                         precio_bs: precioBs,
@@ -978,7 +981,6 @@ class VentasManager {
     setupAutocompleteClickHandler() {
         const suggestionsContainer = document.getElementById('product-suggestions');
         
-        // ✅ USAR EVENT DELEGATION - MÁS EFICIENTE Y EVITA MÚLTIPLES LISTENERS
         suggestionsContainer.addEventListener('click', (e) => {
             const autocompleteItem = e.target.closest('.autocomplete-item');
             
@@ -1055,7 +1057,6 @@ class VentasManager {
         this.cart[existingItemIndex].subtotal_bs = (this.cart[existingItemIndex].cantidad * this.cart[existingItemIndex].precio_bs).toFixed(2);
         this.cart[existingItemIndex].subtotal_usd = this.bsToUsd(parseFloat(this.cart[existingItemIndex].subtotal_bs));
     } else {
-        // ✅ CORREGIDO: Usar precio_venta en lugar de precio_bs
         const precioBs = parseFloat(product.precio_venta) || 0;
         const precioUsd = parseFloat(product.precio_dolares) || this.bsToUsd(precioBs);
         
@@ -1292,7 +1293,6 @@ debugCartIVA() {
         }
     }
 
-    // ✅ CORREGIDO: Calcular IVA usando la tasa específica de cada producto
     updateTotals() {
         let subtotal_bs = 0;
         let tax_bs = 0;
@@ -1302,11 +1302,9 @@ debugCartIVA() {
             const itemSubtotal = parseFloat(item.subtotal_bs);
             subtotal_bs += itemSubtotal;
             
-            // ✅ CORREGIDO: Calcular IVA específico para este producto usando su tasa_iva
             const itemTax = itemSubtotal * (item.tasa_iva / 100);
             tax_bs += itemTax;
             
-            // Acumular para desglose
             const claveIva = `${item.tasa_iva}%`;
             if (!desgloseIva[claveIva]) {
                 desgloseIva[claveIva] = 0;
@@ -1343,7 +1341,6 @@ debugCartIVA() {
         }
     }
 
-    // ✅ CORREGIDO: Calcular total usando tasas específicas de cada producto
     getTotalBs() {
         let subtotal = 0;
         let tax = 0;
@@ -1351,7 +1348,6 @@ debugCartIVA() {
         this.cart.forEach(item => {
             const itemSubtotal = parseFloat(item.subtotal_bs);
             subtotal += itemSubtotal;
-            // ✅ CORREGIDO: Usar tasa específica del producto
             const tasaProducto = item.tasa_iva / 100;
             tax += itemSubtotal * tasaProducto;
         });
@@ -1562,109 +1558,165 @@ debugCartIVA() {
         this.goToStep(5);
     }
 
-    openMixedPaymentModal() {
-        const total = parseFloat(this.getTotalBs());
-        document.getElementById('mixed-total').textContent = `Bs. ${total.toFixed(2)}`;
-        
-        const methodsContainer = document.getElementById('mixed-payment-methods');
-        methodsContainer.innerHTML = `
-            <div class="grid grid-cols-1 gap-4">
-                <div class="mixed-method">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Efectivo (Bs)</label>
-                    <input type="number" class="mixed-amount input-field" data-method="efectivo_bs" placeholder="0.00" step="0.01" min="0">
-                </div>
-                <div class="mixed-method">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Efectivo (USD)</label>
-                    <input type="number" class="mixed-amount input-field" data-method="efectivo_usd" placeholder="0.00" step="0.01" min="0">
-                </div>
-                <div class="mixed-method">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Punto de Venta</label>
-                    <input type="number" class="mixed-amount input-field" data-method="punto_venta" placeholder="0.00" step="0.01" min="0">
-                </div>
-                <div class="mixed-method">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Transferencia</label>
-                    <input type="number" class="mixed-amount input-field" data-method="transferencia" placeholder="0.00" step="0.01" min="0">
-                </div>
-                <div class="mixed-method">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Pago Móvil</label>
-                    <input type="number" class="mixed-amount input-field" data-method="pago_movil" placeholder="0.00" step="0.01" min="0">
-                </div>
+   openMixedPaymentModal() {
+    const total = parseFloat(this.getTotalBs());
+    document.getElementById('mixed-total').textContent = `Bs. ${total.toFixed(2)}`;
+    
+    // Agregamos la tasa de cambio al título o cabecera
+    const methodsContainer = document.getElementById('mixed-payment-methods');
+    methodsContainer.innerHTML = `
+        <div class="mb-3 text-right text-sm text-gray-500">
+            Tasa de cambio: <strong>Bs. ${this.tasaCambio.toFixed(2)}</strong>
+        </div>
+        <div class="grid grid-cols-1 gap-4">
+            <div class="mixed-method">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Efectivo (Bs)</label>
+                <input type="number" class="mixed-amount input-field" data-method="efectivo_bs" placeholder="0.00" step="0.01" min="0">
             </div>
-        `;
+            
+            <div class="mixed-method bg-blue-50 p-3 rounded-lg border border-blue-100">
+                <label class="block text-sm font-medium text-blue-800 mb-2">Efectivo (USD)</label>
+                <div class="flex gap-2">
+                    <input type="number" class="mixed-amount input-field w-full" data-method="efectivo_usd" placeholder="0.00" step="0.01" min="0">
+                </div>
+                <small id="mixed-usd-conversion" class="block text-right text-blue-600 font-bold mt-1">
+                    = Bs. 0.00
+                </small>
+            </div>
 
-        // Agregar event listeners a los inputs
-        methodsContainer.querySelectorAll('.mixed-amount').forEach(input => {
-            input.addEventListener('input', () => this.calculateMixedTotal());
-        });
+            <div class="mixed-method">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Punto de Venta</label>
+                <input type="number" class="mixed-amount input-field" data-method="punto_venta" placeholder="0.00" step="0.01" min="0">
+            </div>
+            <div class="mixed-method">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Transferencia</label>
+                <input type="number" class="mixed-amount input-field" data-method="transferencia" placeholder="0.00" step="0.01" min="0">
+            </div>
+            <div class="mixed-method">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Pago Móvil</label>
+                <input type="number" class="mixed-amount input-field" data-method="pago_movil" placeholder="0.00" step="0.01" min="0">
+            </div>
+        </div>
+    `;
 
-        this.calculateMixedTotal();
-        this.showModal('mixed-payment-modal');
-    }
+    methodsContainer.querySelectorAll('.mixed-amount').forEach(input => {
+        input.addEventListener('input', () => this.calculateMixedTotal());
+    });
+
+    this.calculateMixedTotal();
+    this.showModal('mixed-payment-modal');
+}
 
     calculateMixedTotal() {
-        let assignedTotal = 0;
-        const total = parseFloat(this.getTotalBs());
-        
-        document.querySelectorAll('.mixed-amount').forEach(input => {
-            const amount = parseFloat(input.value) || 0;
-            assignedTotal += amount;
-        });
+    let assignedTotal = 0;
+    const total = parseFloat(this.getTotalBs());
+    
+    document.querySelectorAll('.mixed-amount').forEach(input => {
+        const amount = parseFloat(input.value) || 0;
+        const method = input.dataset.method;
 
-        const remaining = total - assignedTotal;
-        
-        document.getElementById('mixed-assigned-total').textContent = `Bs. ${assignedTotal.toFixed(2)}`;
-        document.getElementById('mixed-remaining').textContent = `Bs. ${remaining.toFixed(2)}`;
-        
-        const confirmBtn = document.getElementById('confirm-mixed');
-        confirmBtn.disabled = Math.abs(remaining) > 0.01; // Permitir pequeñas diferencias por redondeo
-
-        if (remaining > 0) {
-            document.getElementById('mixed-remaining').classList.add('text-red-600');
-        } else if (remaining < 0) {
-            document.getElementById('mixed-remaining').classList.add('text-orange-600');
-        } else {
-            document.getElementById('mixed-remaining').classList.remove('text-red-600', 'text-orange-600');
-            document.getElementById('mixed-remaining').classList.add('text-green-600');
-        }
-    }
-
-    confirmMixedPayment() {
-        const mixedPayments = [];
-        let totalAssigned = 0;
-
-        document.querySelectorAll('.mixed-amount').forEach(input => {
-            const amount = parseFloat(input.value) || 0;
-            if (amount > 0) {
-                mixedPayments.push({
-                    method: input.dataset.method,
-                    amount: amount
-                });
-                totalAssigned += amount;
+        if (amount > 0) {
+            if (method === 'efectivo_usd') {
+                // Conversión: Dólares * Tasa = Bolívares
+                const amountInBs = this.usdToBs(amount);
+                assignedTotal += amountInBs;
+                
+                // Actualizar el texto pequeño debajo del input de dólares
+                const conversionText = document.getElementById('mixed-usd-conversion');
+                if (conversionText) {
+                    conversionText.textContent = `= Bs. ${amountInBs.toFixed(2)}`;
+                }
+            } else {
+                // Los demás métodos ya están en Bolívares
+                assignedTotal += amount;
             }
-        });
-
-        const total = parseFloat(this.getTotalBs());
-        
-        if (Math.abs(totalAssigned - total) > 0.01) {
-            this.showAlert('El total asignado no coincide con el total de la venta');
-            return;
+        } else if (method === 'efectivo_usd') {
+             // Resetear texto si está vacío
+             const conversionText = document.getElementById('mixed-usd-conversion');
+             if (conversionText) conversionText.textContent = `= Bs. 0.00`;
         }
+    });
 
-        this.paymentDetails = {
-            method: 'mixto',
-            payments: mixedPayments,
-            total: total
-        };
+    const remaining = total - assignedTotal;
+    
+    document.getElementById('mixed-assigned-total').textContent = `Bs. ${assignedTotal.toFixed(2)}`;
+    document.getElementById('mixed-remaining').textContent = `Bs. ${remaining.toFixed(2)}`;
+    
+    const confirmBtn = document.getElementById('confirm-mixed');
+    // Permitir un margen de error mínimo por redondeo (0.10 Bs)
+    confirmBtn.disabled = Math.abs(remaining) > 0.10; 
 
-        this.hideModal('mixed-payment-modal');
-        this.showProcessSaleButton();
-        this.goToStep(5);
+    const remainingEl = document.getElementById('mixed-remaining');
+    if (remaining > 0.10) {
+        remainingEl.className = 'font-semibold text-red-600';
+        remainingEl.textContent = `Falta: Bs. ${remaining.toFixed(2)}`;
+    } else if (remaining < -0.10) {
+        remainingEl.className = 'font-semibold text-orange-600';
+        remainingEl.textContent = `Sobran: Bs. ${Math.abs(remaining).toFixed(2)} (Cambio)`;
+        // Opcional: Si sobra dinero, podrías habilitar el botón para registrar el cambio
+        confirmBtn.disabled = false; 
+    } else {
+        remainingEl.className = 'font-semibold text-green-600';
+        remainingEl.textContent = `Completo`;
+    }
+}
+   confirmMixedPayment() {
+    const mixedPayments = [];
+    let totalAssigned = 0;
+
+    document.querySelectorAll('.mixed-amount').forEach(input => {
+        const amount = parseFloat(input.value) || 0;
+        const method = input.dataset.method;
+
+        if (amount > 0) {
+            let amountInBs = amount;
+            
+            // Si es USD, calculamos su valor en Bs para la suma total
+            if (method === 'efectivo_usd') {
+                amountInBs = this.usdToBs(amount);
+            }
+
+            mixedPayments.push({
+                method: method,
+                amount: amount, // Guardamos la cantidad original (ej: 10 USD)
+                amount_bs: amountInBs // Guardamos la equivalencia para referencia
+            });
+            
+            totalAssigned += amountInBs;
+        }
+    });
+
+    const total = parseFloat(this.getTotalBs());
+    
+    // Validación con margen de error pequeño
+    if (totalAssigned < (total - 0.10)) {
+        this.showAlert(`El monto asignado (Bs. ${totalAssigned.toFixed(2)}) es menor al total de la venta`);
+        return;
     }
 
-    showProcessSaleButton() {
-        document.getElementById('process-sale').classList.remove('hidden');
-    }
+    this.paymentDetails = {
+        method: 'mixto',
+        payments: mixedPayments,
+        total_pagado_bs: totalAssigned,
+        total_venta_bs: total,
+        cambio: Math.max(0, totalAssigned - total) // Calculamos si hay cambio
+    };
 
+    this.hideModal('mixed-payment-modal');
+    this.showProcessSaleButton();
+    this.goToStep(5);
+}
+
+showProcessSaleButton() {
+        const btnProcess = document.getElementById('process-sale');
+        if (btnProcess) {
+            btnProcess.classList.remove('hidden');
+            // Opcional: Hacer scroll hacia el botón para que el usuario lo vea
+            btnProcess.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            console.error('Error: No se encontró el botón con ID "process-sale"');
+        }
+    }
     // ==================== PROCESAR VENTA ====================
 
     async processSale() {
@@ -1756,7 +1808,6 @@ debugCartIVA() {
     generateInvoiceHTML(ventaData) {
         const invoiceContent = document.getElementById('invoice-content');
         
-        // ✅ CORREGIDO: Calcular con IVA específico por producto
         let subtotal_bs = 0;
         let tax_bs = 0;
         const desgloseIva = {};
@@ -1765,7 +1816,6 @@ debugCartIVA() {
             const itemSubtotal = parseFloat(item.subtotal_bs);
             subtotal_bs += itemSubtotal;
             
-            // ✅ CORREGIDO: Usar tasa específica del producto
             const itemTax = itemSubtotal * (item.tasa_iva / 100);
             tax_bs += itemTax;
             
@@ -1791,7 +1841,6 @@ debugCartIVA() {
             mensaje_factura: "¡Gracias por su compra!"
         };
 
-        // ✅ NUEVO: Generar HTML del desglose de IVA
         let desgloseIvaHTML = '';
         Object.keys(desgloseIva).forEach(tipo => {
             desgloseIvaHTML += `
@@ -1979,7 +2028,6 @@ debugCartIVA() {
         printWindow.document.close();
     }
 
-    // ==================== NUEVA VENTA ====================
 
     newSale() {
         console.log('🔄 Iniciando nueva venta...');
@@ -1990,7 +2038,6 @@ debugCartIVA() {
         this.paymentDetails = {};
         this.currentStep = 1;
         
-        // Limpiar formularios
         document.getElementById('customer-id').value = '';
         document.getElementById('customer-info').classList.add('hidden');
         document.getElementById('customer-form').classList.add('hidden');
@@ -1998,7 +2045,6 @@ debugCartIVA() {
         document.getElementById('product-suggestions').classList.add('hidden');
         this.clearValidationStyles();
         
-        // Limpiar métodos de pago
         document.querySelectorAll('.payment-btn').forEach(btn => {
             btn.classList.remove('active', 'bg-purple-100', 'border-purple-300', 'ring-2', 'ring-purple-500');
         });

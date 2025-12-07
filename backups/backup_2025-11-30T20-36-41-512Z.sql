@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict yPmQD7hPUxNAUPQDsNawZp5kyPA7WoRDbgFCT8MYmPoyPyma001Z9NQSMOa5Q2R
+\restrict TjkY9V2wdLwyMJGsxyQDoi5Wx9FeQKOnxmZfxbeYNua3d4osXHGjNwKopGnJO1x
 
 -- Dumped from database version 18.0
 -- Dumped by pg_dump version 18.0
@@ -852,6 +852,7 @@ COPY public.clientes (id, cedula_rif, nombre, telefono, direccion, estado, fecha
 3	J-123456789	Empresa ABC C.A.	0212-9876543	Caracas, Venezuela	Activo	2025-10-23 20:17:38.768564
 4	V-12345677	Fabian da cal	04125566894	calle 13	Activo	2025-10-25 20:51:43.352716
 5	V-12345674	jesus	04125566897	sss	Activo	2025-11-05 10:46:32.318949
+6	V-12345672	susana	04125500689	wefwef	Activo	2025-11-30 16:19:37.793017
 \.
 
 
@@ -863,6 +864,8 @@ COPY public.compras (id, fecha_compra, id_proveedor, id_usuario, num_factura, es
 1	2025-11-23	1	1	FAC-001	recibida	18.50	primera compra	2025-11-23 15:59:18.013605
 2	2025-11-23	1	1	FAC-001	recibida	69.24	prueba	2025-11-23 16:09:58.702282
 3	2025-11-23	1	1	FAC-003	recibida	39.60	sasasasas	2025-11-23 16:10:19.325104
+4	2025-11-30	3	1	FAC-000	recibida	2.90	dfvesdv	2025-11-30 16:32:06.596113
+5	2025-11-30	1	1	FAC-001	parcial	58.80	htrh	2025-11-30 16:32:40.926087
 \.
 
 
@@ -885,6 +888,8 @@ COPY public.detalle_compra (id, id_compra, id_producto, cantidad, precio_compra,
 3	2	11	1.07	32.00	1.07	Gen	\N
 4	3	14	6.00	4.20	6.00	Gen	\N
 5	3	12	1.44	10.00	1.44	Gen	\N
+6	4	18	1.00	2.90	1.00	Gen	\N
+7	5	14	14.00	4.20	13.00	Gen	\N
 \.
 
 
@@ -937,6 +942,13 @@ COPY public.detalle_venta (id, id_venta, id_producto, cantidad, precio_unitario)
 53	45	19	1.10	150.00
 54	45	13	1.00	5.50
 55	46	20	1.00	1560.00
+56	47	10	1.00	25.00
+57	48	16	1.00	3.50
+58	48	20	1.00	1560.00
+59	49	16	1.00	3.50
+60	50	20	1.00	1560.00
+61	51	13	10.00	5.50
+62	51	19	10.00	150.00
 \.
 
 
@@ -951,6 +963,7 @@ COPY public.historial_inventario (id, producto_id, usuario_id, stock_anterior, s
 4	20	1	47.20	48.00	proveedor agregado	entrada_ajuste	2025-11-23 14:19:05.940287
 5	13	1	41.40	41.00	proveedor agregado	salida_ajuste	2025-11-23 14:19:48.051748
 6	10	1	43.97	43.00	proveedor agregado	salida_ajuste	2025-11-23 14:20:21.493999
+7	22	1	50.00	49.00	defectuoso	salida_ajuste	2025-11-30 16:28:24.513434
 \.
 
 
@@ -962,7 +975,7 @@ COPY public.metodos_pago_config (id, metodo_id, nombre, habilitado, fecha_actual
 1	efectivo	Efectivo	t	2025-11-03 14:34:31.087937
 4	pago_movil	Pago Móvil	t	2025-11-03 14:34:31.087937
 3	transferencia	Transferencia	t	2025-11-23 19:16:44.206927
-2	tarjeta	Tarjeta	t	2025-11-23 19:25:44.230939
+2	tarjeta	Tarjeta	f	2025-11-30 16:34:56.779403
 \.
 
 
@@ -971,17 +984,18 @@ COPY public.metodos_pago_config (id, metodo_id, nombre, habilitado, fecha_actual
 --
 
 COPY public.productos (id, precio_venta, costo_compra, stock, unidad_medida, fecha_actualizacion, categoria_id, nombre, precio_dolares, id_provedores, stock_minimo, id_tasa_iva, estado) FROM stdin;
-16	3.50	1.80	193.00	unidad	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02	3	10.00	1	Activo
 15	8.20	5.00	100.00	unidad	2025-10-24 18:53:42.73315	2	Milanesa de Res	0.04	2	10.00	1	Activo
-18	5.80	2.90	177.00	unidad	2025-10-24 18:53:42.73315	3	Adobo Tradicional	0.03	3	10.00	1	Activo
 17	4.20	2.10	250.00	unidad	2025-11-23 14:20:38.20384	3	Sazonador con Especias	0.02	3	5.00	1	Activo
-10	25.00	18.50	44.00	kg	2025-11-23 14:20:21.493999	1	Pollo Entero Premium	0.12	1	50.00	1	Activo
-11	45.00	32.00	81.07	kg	2025-11-23 16:09:58.702282	1	Pecho de Pollo	0.19	1	10.00	1	Activo
-14	6.80	4.20	58.00	unidad	2025-11-23 16:10:19.325104	2	Milanesa de Pollo Especial	0.03	1	10.00	1	Activo
 12	15.00	10.00	39.94	kg	2025-11-23 16:10:19.325104	1	Muslos de Pollo	0.07	1	10.00	1	Activo
-19	150.00	90.00	78.90	kg	2025-11-23 14:20:30.411127	1	Pollo picado	0.63	1	10.00	2	Activo
+16	3.50	1.80	191.00	unidad	2025-10-24 18:53:42.73315	3	Aliño Completo NaGuara	0.02	3	10.00	1	Activo
+20	1560.00	1000.00	45.00	kg	2025-11-23 14:19:05.940287	4	jamon de pierna	6.59	2	10.00	2	Activo
 13	5.50	3.50	50.00	unidad	2025-11-23 16:09:58.702282	2	Milanesa de Pollo Clásica	0.03	1	10.00	1	Activo
-20	1560.00	1000.00	47.00	kg	2025-11-23 14:19:05.940287	4	jamon de pierna	6.59	2	10.00	2	Activo
+22	90.00	40.00	49.00	kg	2025-11-30 16:28:24.513434	1	morcilla	\N	1	20.00	2	Activo
+10	25.00	18.50	33.00	kg	2025-11-23 14:20:21.493999	1	Pollo Entero Premium	0.12	1	50.00	1	Activo
+11	45.00	32.00	86.07	kg	2025-11-23 16:09:58.702282	1	Pecho de Pollo	0.19	1	10.00	1	Activo
+19	150.00	90.00	80.90	kg	2025-11-23 14:20:30.411127	1	Pollo picado	0.63	1	10.00	2	Activo
+18	5.80	2.90	178.00	unidad	2025-11-30 16:32:06.596113	3	Adobo Tradicional	0.03	3	10.00	1	Activo
+14	6.80	4.20	71.00	unidad	2025-11-30 16:32:40.926087	2	Milanesa de Pollo Especial	0.03	1	10.00	1	Activo
 \.
 
 
@@ -1018,6 +1032,9 @@ COPY public.tasa_cambio (id, tasa_bs, fecha_actualizacion, fuente, activo) FROM 
 15	236.84	2025-11-17 18:31:55.173452	api	t
 16	237.75	2025-11-19 11:59:33.863795	api	t
 17	243.11	2025-11-22 12:43:39.822098	api	t
+18	244.65	2025-11-26 23:02:04.382897	api	t
+19	245.67	2025-11-27 18:24:49.095086	api	t
+20	247.30	2025-11-30 16:18:42.95838	api	t
 \.
 
 
@@ -1028,7 +1045,7 @@ COPY public.tasa_cambio (id, tasa_bs, fecha_actualizacion, fuente, activo) FROM 
 COPY public.tasas_iva (id, tasa, descripcion, tipo, estado, fecha_creacion, fecha_actualizacion) FROM stdin;
 2	0.00	Exento de IVA	exento	Activa	2025-11-15 20:47:15.542161	2025-11-15 20:47:15.542161
 3	8.00	IVA Reducido	reducido	Activa	2025-11-15 20:47:15.542161	2025-11-15 20:47:15.542161
-1	16.00	IVA General	general	Activa	2025-11-15 20:47:15.542161	2025-11-24 17:53:11.062749
+1	16.00	IVA General	general	Activa	2025-11-15 20:47:15.542161	2025-11-30 16:36:01.433647
 \.
 
 
@@ -1041,6 +1058,8 @@ COPY public.transformacion_detalles (id, transformacion_id, producto_destino_id,
 2	1	19	1.00
 3	1	12	0.50
 4	2	11	30.00
+5	3	11	5.00
+6	3	19	2.00
 \.
 
 
@@ -1051,6 +1070,7 @@ COPY public.transformacion_detalles (id, transformacion_id, producto_destino_id,
 COPY public.transformacion_producto (id, fecha_transformacion, usuario_id, producto_origen_id, cantidad_origen, observaciones) FROM stdin;
 1	2025-11-22 14:45:11.79763	1	10	5.00	test
 2	2025-11-22 14:56:59.737289	1	10	0.03	
+3	2025-11-30 16:30:23.946576	1	10	10.00	floivnhbdoñhbv
 \.
 
 
@@ -1059,11 +1079,11 @@ COPY public.transformacion_producto (id, fecha_transformacion, usuario_id, produ
 --
 
 COPY public.usuarios (id, nombre, nombre_usuario, password, rol, estado, fecha_creacion, ultimo_acceso) FROM stdin;
+1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Super Admin	Activo	2025-11-02 12:55:48.732599	2025-11-30 16:35:07.183961
 2	Fabian dacal	Dacal7	$2b$10$sLrW6I2cogVZUFyhUqrY2e5lJyE21RwGBiizoIQmoH4cSSJRE0Ydq	Administrador	Activo	2025-11-02 12:55:48.732599	2025-11-09 13:56:14.005874
 7	mauricioo	varela	$2b$10$AG9TYxnUFeWyUlGM4jO4FezGq2abxxINwbOyZeQYMoV59NAs1zKjK	Vendedor	Activo	2025-11-02 12:55:48.732599	2025-11-09 17:59:33.503432
 8	francisco	velazco	$2b$10$afUaXHy9l/wTgSYrCxAN3OKPr9/FpoleSBQlqKuHsCsALoCs2Sweq	Super Admin	Activo	2025-11-08 11:43:17.74226	\N
 3	Enrique	Perez	$2b$10$GB6VRiHdl7ONeuO.GSsLYeZe6tb6rfm6LoNGcML.AoUuZZueDELh6	Administrador	Activo	2025-11-02 12:55:48.732599	\N
-1	Usuario Demo	admin	$2b$10$aTWDxi.hlZhb8Aak/kKzAOn1aPeMa8b4s7KyxrR5WDZZGALNq6rjq	Super Admin	Activo	2025-11-02 12:55:48.732599	2025-11-26 16:18:39.791986
 \.
 
 
@@ -1098,6 +1118,8 @@ COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente
 35	2025-11-08 09:42:57.251864	1	efectivo_usd	anulada	4	{"tasa": 228.4796, "total": 0.03, "change": 1.97, "method": "efectivo_usd", "received": 2}	\N	\N	2.00	1.97	test
 38	2025-11-11 09:53:13.03235	1	mixto	anulada	1	{"total": 4.06, "method": "mixto", "payments": [{"amount": 2, "method": "efectivo_bs"}, {"amount": 2.06, "method": "efectivo_usd"}]}	\N	\N	\N	\N	ghuvflerifbuyughfuwp3eofhipqruhbvreifhunwñeifhuñwaeriufhwpo3fhupwufobhñ4fgb
 39	2025-11-11 11:20:05.451608	1	transferencia	anulada	4	{"bank": "Mercantil", "total": 31.9, "amount": 31.9, "method": "transferencia", "holderId": "V-12345677", "reference": "987654321"}	987654321	Mercantil	\N	\N	rtrtgrg
+50	2025-11-27 18:40:30.055913	1	punto_venta	completada	1	{"total": 1560, "amount": 1560, "method": "punto_venta", "reference": "165465"}	165465	\N	\N	\N	\N
+51	2025-11-30 16:21:11.65731	1	mixto	anulada	6	{"total": 1563.8, "method": "mixto", "payments": [{"amount": 1000, "method": "efectivo_bs"}, {"amount": 563.8, "method": "punto_venta"}]}	\N	\N	\N	\N	mal despacho
 40	2025-11-16 16:51:12.841242	1	efectivo_bs	completada	1	{"total": 31.55, "change": 0, "method": "efectivo_bs", "received": 31.55}	\N	\N	31.55	\N	\N
 41	2025-11-18 13:39:09.15553	1	pago_movil	completada	1	{"bank": "Mercantil", "total": 1564.06, "amount": 1564.06, "method": "pago_movil", "holderId": "V-12345677", "reference": "987654322"}	987654322	Mercantil	\N	\N	\N
 42	2025-11-18 13:47:01.225986	1	efectivo_usd	completada	1	{"tasa": 236.84, "total": 0.55, "change": 0.44999999999999996, "method": "efectivo_usd", "received": 1}	\N	\N	1.00	0.45	\N
@@ -1105,6 +1127,9 @@ COPY public.ventas (id, fecha_venta, id_usuario, metodo_pago, estado, id_cliente
 44	2025-11-22 12:55:08.891953	1	mixto	completada	4	{"total": 3261.34, "method": "mixto", "payments": [{"amount": 1500, "method": "efectivo_bs"}, {"amount": 1761.34, "method": "efectivo_usd"}]}	\N	\N	\N	\N	\N
 45	2025-11-23 19:48:07.3842	1	efectivo_bs	completada	1	{"total": 171.6, "change": 0, "method": "efectivo_bs", "received": 171.6}	\N	\N	171.60	\N	\N
 46	2025-11-24 17:52:08.211157	1	punto_venta	completada	1	{"total": 1560, "amount": 1560, "method": "punto_venta", "reference": "013584698"}	013584698	\N	\N	\N	\N
+47	2025-11-26 23:02:16.589248	1	efectivo_bs	completada	1	{"total": 29, "change": 0, "method": "efectivo_bs", "received": 29}	\N	\N	29.00	\N	\N
+48	2025-11-27 18:25:11.469971	1	transferencia	completada	1	{"bank": "Provincial", "total": 1564.06, "amount": 1564.06, "method": "transferencia", "holderId": "V-12345677", "reference": "1231681"}	1231681	Provincial	\N	\N	\N
+49	2025-11-27 18:27:24.584098	1	efectivo_bs	completada	1	{"total": 4.06, "change": 0, "method": "efectivo_bs", "received": 4.06}	\N	\N	4.06	\N	\N
 \.
 
 
@@ -1126,14 +1151,14 @@ SELECT pg_catalog.setval('public.cierre_caja_id_seq', 4, true);
 -- Name: clientes_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.clientes_id_seq', 5, true);
+SELECT pg_catalog.setval('public.clientes_id_seq', 6, true);
 
 
 --
 -- Name: compras_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.compras_id_seq', 3, true);
+SELECT pg_catalog.setval('public.compras_id_seq', 5, true);
 
 
 --
@@ -1147,21 +1172,21 @@ SELECT pg_catalog.setval('public.configuracion_empresa_id_seq', 1, true);
 -- Name: detalle_compra_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.detalle_compra_id_seq', 5, true);
+SELECT pg_catalog.setval('public.detalle_compra_id_seq', 7, true);
 
 
 --
 -- Name: detalle_venta_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.detalle_venta_id_seq', 55, true);
+SELECT pg_catalog.setval('public.detalle_venta_id_seq', 62, true);
 
 
 --
 -- Name: historial_inventario_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.historial_inventario_id_seq', 6, true);
+SELECT pg_catalog.setval('public.historial_inventario_id_seq', 7, true);
 
 
 --
@@ -1175,7 +1200,7 @@ SELECT pg_catalog.setval('public.metodos_pago_config_id_seq', 4, true);
 -- Name: productos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.productos_id_seq', 21, true);
+SELECT pg_catalog.setval('public.productos_id_seq', 22, true);
 
 
 --
@@ -1189,7 +1214,7 @@ SELECT pg_catalog.setval('public.proovedores_id_seq', 1, false);
 -- Name: tasa_cambio_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 17, true);
+SELECT pg_catalog.setval('public.tasa_cambio_id_seq', 20, true);
 
 
 --
@@ -1203,14 +1228,14 @@ SELECT pg_catalog.setval('public.tasas_iva_id_seq', 3, true);
 -- Name: transformacion_detalles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.transformacion_detalles_id_seq', 4, true);
+SELECT pg_catalog.setval('public.transformacion_detalles_id_seq', 6, true);
 
 
 --
 -- Name: transformacion_producto_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.transformacion_producto_id_seq', 2, true);
+SELECT pg_catalog.setval('public.transformacion_producto_id_seq', 3, true);
 
 
 --
@@ -1224,7 +1249,7 @@ SELECT pg_catalog.setval('public.usuarios_id_seq', 8, true);
 -- Name: ventas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ventas_id_seq', 46, true);
+SELECT pg_catalog.setval('public.ventas_id_seq', 51, true);
 
 
 --
@@ -1558,5 +1583,5 @@ ALTER TABLE ONLY public.ventas
 -- PostgreSQL database dump complete
 --
 
-\unrestrict yPmQD7hPUxNAUPQDsNawZp5kyPA7WoRDbgFCT8MYmPoyPyma001Z9NQSMOa5Q2R
+\unrestrict TjkY9V2wdLwyMJGsxyQDoi5Wx9FeQKOnxmZfxbeYNua3d4osXHGjNwKopGnJO1x
 

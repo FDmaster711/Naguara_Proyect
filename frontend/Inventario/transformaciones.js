@@ -6,7 +6,7 @@ class TransformacionManager {
     }
 
     async init() {
-        console.log('🔪 Inicializando Gestor de Transformaciones Inteligente...');
+        console.log('🔪 Inicializando Gestor de Transformaciones...');
         await this.cargarProductos();
         this.setupEventListeners();
         this.cargarHistorial();
@@ -32,65 +32,47 @@ class TransformacionManager {
         const selectOrigen = document.getElementById('origen-producto');
         selectOrigen.innerHTML = '<option value="">Seleccione producto origen...</option>';
         
-        // FILTRO: Solo permitir productos que sean "Enteros"
+        // 1. FILTRO RESTAURADO: Solo productos "Entero"
         this.productosOrigenValidos = this.productos.filter(p => 
             p.nombre.toLowerCase().includes('entero')
         );
 
-        if (this.productosOrigenValidos.length === 0) {
-            this.productosOrigenValidos = this.productos.filter(p => p.categoria_id === 1);
-        }
+        // Ordenar alfabéticamente
+        this.productosOrigenValidos.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         this.productosOrigenValidos.forEach(p => {
-            selectOrigen.innerHTML += `<option value="${p.id}" data-stock="${p.stock}" data-unidad="${p.unidad_medida || 'Unidad'}">
-                ${p.nombre} (Stock: ${p.stock})
+            selectOrigen.innerHTML += `<option value="${p.id}" data-stock="${p.stock}" data-unidad="${p.unidad_medida}">
+                ${p.nombre} (Stock: ${p.stock} ${p.unidad_medida})
             </option>`;
         });
     }
 
     getProductosDestino(origenId) {
         if (!origenId) return [];
-
-        const origen = this.productos.find(p => p.id == origenId);
-        if (!origen) return [];
-
-        const nombreOrigen = origen.nombre.toLowerCase();
-        let terminosValidos = [];
-        let terminosExcluidos = [];
-
-        if (nombreOrigen.includes('pollo')) {
-            terminosValidos = ['pollo', 'pechuga', 'muslo', 'alas', 'milanesa', 'carcasa', 'hueso', 'recorte', 'menudencia'];
-            terminosExcluidos = ['res', 'cerdo', 'aliño', 'salsa', 'entero']; 
-        } else if (nombreOrigen.includes('res') || nombreOrigen.includes('carne')) {
-            terminosValidos = ['res', 'bistec', 'molida', 'mechar', 'guisar', 'costilla'];
-            terminosExcluidos = ['pollo', 'cerdo'];
-        } else {
-            return this.productos.filter(p => p.id != origenId);
-        }
-
-        return this.productos.filter(p => {
-            const nombreP = p.nombre.toLowerCase();
-            if (p.id == origenId) return false;
-            const esValido = terminosValidos.some(t => nombreP.includes(t));
-            const esExcluido = terminosExcluidos.some(t => nombreP.includes(t));
-            return esValido && !esExcluido;
-        });
+        // Filtramos para que no salga el mismo producto de origen en el destino
+        const posibles = this.productos.filter(p => p.id != origenId);
+        return posibles.sort((a, b) => a.nombre.localeCompare(b.nombre));
     }
 
     setupEventListeners() {
+        // Cambio de producto origen
         document.getElementById('origen-producto').addEventListener('change', (e) => {
             const select = e.target;
             const option = select.selectedOptions[0];
             const stockSpan = document.getElementById('stock-disponible');
             const unidadInput = document.getElementById('origen-unidad');
             
-            document.getElementById('output-container').innerHTML = '';
+            document.getElementById('output-container').innerHTML = ''; // Limpiar salidas
             
             if (option && option.value) {
                 const stock = option.getAttribute('data-stock');
                 const unidad = option.getAttribute('data-unidad');
+                
                 stockSpan.textContent = `Stock actual: ${stock} ${unidad}`;
                 unidadInput.value = unidad;
+                
+                // NOTA: Aquí ya no pedimos peso extra para el origen, se asume que la cantidad ingresada es la masa base
+                // o que el usuario gestiona la equivalencia.
                 this.agregarFilaSalida(select.value);
             } else {
                 stockSpan.textContent = 'Stock actual: 0';
@@ -99,7 +81,10 @@ class TransformacionManager {
             this.calcularTotales();
         });
 
+        // Listener para input de cantidad origen
         document.getElementById('origen-cantidad').addEventListener('input', () => this.calcularTotales());
+
+        // Botón agregar fila
         document.getElementById('btn-add-row').addEventListener('click', () => {
             const origenId = document.getElementById('origen-producto').value;
             if (!origenId) {
@@ -115,35 +100,83 @@ class TransformacionManager {
     agregarFilaSalida(origenId) {
         const container = document.getElementById('output-container');
         const rowId = Date.now();
-        
         const productosPosibles = this.getProductosDestino(origenId);
-
-        if (productosPosibles.length === 0) {
-            this.mostrarNotificacion('No se encontraron productos derivados compatibles', 'warning');
-            return;
-        }
 
         const row = document.createElement('div');
         row.className = 'output-item';
         row.dataset.id = rowId;
+        // Ajustamos el grid para acomodar el nuevo campo de peso (3 columnas principales + borrar)
+        row.style.gridTemplateColumns = '2fr 1fr 1fr 40px'; 
 
         let options = '<option value="">Seleccione derivado...</option>';
         productosPosibles.forEach(p => {
-            options += `<option value="${p.id}">${p.nombre}</option>`;
+            // Guardamos la unidad en el option para detectarla al seleccionar
+            const unidad = (p.unidad_medida || 'unidad').toLowerCase();
+            options += `<option value="${p.id}" data-unidad="${unidad}">${p.nombre}</option>`;
         });
 
+        // HTML de la fila: Incluye input de cantidad Y input de peso (oculto por defecto)
         row.innerHTML = `
-            <select class="form-control row-product">${options}</select>
+            <div style="display:flex; flex-direction:column;">
+                <select class="form-control row-product" style="width:100%">${options}</select>
+                <small class="text-muted unit-label" style="font-size:0.75rem; margin-top:2px;">-</small>
+            </div>
+            
             <input type="number" class="form-control row-qty" placeholder="Cant." step="0.01" min="0">
+            
+            <div class="weight-container" style="display:none;">
+                <input type="number" class="form-control row-weight" placeholder="Peso Kg" step="0.01" min="0" style="border-color: #ffc107; background: #fffdf5;">
+                <small style="font-size: 0.7rem; color: #856404;">Peso Real</small>
+            </div>
+
             <button class="btn btn-danger btn-sm btn-icon" onclick="transformacionManager.eliminarFila(${rowId})">
                 <i class="fa-solid fa-trash"></i>
             </button>
         `;
 
         container.appendChild(row);
-        row.style.opacity = 0;
-        setTimeout(() => row.style.opacity = 1, 10);
-        row.querySelector('.row-qty').addEventListener('input', () => this.calcularTotales());
+        
+        // --- LISTENERS DE LA FILA ---
+        const select = row.querySelector('.row-product');
+        const qtyInput = row.querySelector('.row-qty');
+        const weightInput = row.querySelector('.row-weight');
+        const weightContainer = row.querySelector('.weight-container');
+        const unitLabel = row.querySelector('.unit-label');
+
+        // 1. Detectar cambio de producto para mostrar/ocultar campo de peso
+        select.addEventListener('change', (e) => {
+            const opt = e.target.selectedOptions[0];
+            if (opt && opt.value) {
+                const unidad = opt.getAttribute('data-unidad');
+                unitLabel.textContent = `Unidad: ${unidad}`;
+
+                // LÓGICA: Si NO es Kg, pedimos el peso real para la métrica
+                const esMasa = unidad.includes('kg') || unidad.includes('kilo') || unidad.includes('gramo');
+                
+                if (!esMasa) {
+                    // Es Unidad/Pieza -> Mostrar campo peso
+                    weightContainer.style.display = 'block';
+                    weightInput.required = true;
+                    // Cambiar placeholder de cantidad
+                    qtyInput.placeholder = "Unidades";
+                } else {
+                    // Es Kg -> Ocultar campo peso (la cantidad YA es el peso)
+                    weightContainer.style.display = 'none';
+                    weightInput.required = false;
+                    weightInput.value = '';
+                    qtyInput.placeholder = "Kilos";
+                }
+            } else {
+                unitLabel.textContent = '-';
+                weightContainer.style.display = 'none';
+            }
+            this.calcularTotales();
+        });
+
+        // 2. Recalcular totales al escribir
+        qtyInput.addEventListener('input', () => this.calcularTotales());
+        weightInput.addEventListener('input', () => this.calcularTotales());
+        
         container.scrollTop = container.scrollHeight;
     }
 
@@ -154,22 +187,38 @@ class TransformacionManager {
     }
 
     calcularTotales() {
-        const cantOrigen = parseFloat(document.getElementById('origen-cantidad').value) || 0;
-        let cantSalidaTotal = 0;
+        const origenCant = parseFloat(document.getElementById('origen-cantidad').value) || 0;
+        
+        // Entrada Total: Asumimos que la cantidad de origen es la base de masa 
+        // (OJO: Si metes 5 unidades de pollo, el sistema usará "5" como base. 
+        // Si necesitas peso en origen también, avísame, pero dijiste que el peso extra era solo para resultantes).
+        let masaEntrada = origenCant; 
+
+        let masaSalidaTotal = 0;
 
         document.querySelectorAll('.output-item').forEach(row => {
+            const weightContainer = row.querySelector('.weight-container');
             const qty = parseFloat(row.querySelector('.row-qty').value) || 0;
-            cantSalidaTotal += qty;
+            const weight = parseFloat(row.querySelector('.row-weight').value) || 0;
+
+            if (weightContainer.style.display !== 'none') {
+                // Si el campo peso es visible, usamos ESE valor para la métrica
+                masaSalidaTotal += weight;
+            } else {
+                // Si no, es porque el producto es Kg, usamos la cantidad
+                masaSalidaTotal += qty;
+            }
         });
 
-        document.getElementById('resumen-entrada').textContent = cantOrigen.toFixed(2);
-        document.getElementById('resumen-salida').textContent = cantSalidaTotal.toFixed(2);
+        // Actualizar UI
+        document.getElementById('resumen-entrada').textContent = masaEntrada.toFixed(2);
+        document.getElementById('resumen-salida').textContent = masaSalidaTotal.toFixed(2); // Muestra PESO total
         
-        const diferencia = cantOrigen - cantSalidaTotal;
+        const diferencia = masaEntrada - masaSalidaTotal;
         const diffEl = document.getElementById('resumen-diferencia');
         diffEl.textContent = diferencia.toFixed(2);
 
-        this.actualizarBarraRendimiento(cantOrigen, cantSalidaTotal);
+        this.actualizarBarraRendimiento(masaEntrada, masaSalidaTotal);
     }
 
     actualizarBarraRendimiento(entrada, salida) {
@@ -181,73 +230,71 @@ class TransformacionManager {
             bar.style.width = `${Math.min(porcentaje, 100)}%`;
             text.textContent = `${porcentaje.toFixed(1)}% Rendimiento`;
 
-            if (porcentaje > 100) {
-                bar.style.backgroundColor = '#dc3545'; // Rojo ERROR
-                text.textContent += ' (IMPOSIBLE)';
-            } else if (porcentaje < 85) {
-                bar.style.backgroundColor = '#ffc107'; // Amarillo
+            if (porcentaje > 105) { // Margen error
+                bar.style.backgroundColor = '#dc3545';
+                text.textContent += ' (ERROR)';
+            } else if (porcentaje < 80) {
+                bar.style.backgroundColor = '#ffc107';
             } else {
-                bar.style.backgroundColor = '#28a745'; // Verde
+                bar.style.backgroundColor = '#28a745';
             }
             
             const diffEl = document.getElementById('resumen-diferencia');
-            if ((entrada - salida) < 0) diffEl.style.color = 'red'; // Error visual en el número
-            else diffEl.style.color = 'green';
+            diffEl.style.color = (entrada - salida) < 0 ? 'red' : 'green';
         } else {
             bar.style.width = '0%';
             text.textContent = '0% Rendimiento';
+            bar.style.backgroundColor = '#e9ecef';
         }
     }
 
-    // =========================================================
-    // AQUÍ ESTÁ LA LÓGICA QUE ME PEDISTE
-    // =========================================================
     async procesarTransformacion() {
         const btn = document.getElementById('btn-procesar');
         const origenId = document.getElementById('origen-producto').value;
-        const origenCant = parseFloat(document.getElementById('origen-cantidad').value);
+        const origenCant = parseFloat(document.getElementById('origen-cantidad').value); 
         const obs = document.getElementById('observaciones').value;
 
         if (!origenId) return this.mostrarNotificacion('Seleccione el producto origen', 'error');
-        if (!origenCant || origenCant <= 0) return this.mostrarNotificacion('Ingrese cantidad válida', 'error');
+        if (!origenCant || origenCant <= 0) return this.mostrarNotificacion('Ingrese cantidad origen', 'error');
 
         const detalles = [];
-        let totalSalida = 0; // Variable para sumar el peso de salida
-        let error = false;
+        let masaSalidaTotal = 0;
+        let errorFila = false;
 
         document.querySelectorAll('.output-item').forEach(row => {
             const destId = row.querySelector('.row-product').value;
-            const destCant = parseFloat(row.querySelector('.row-qty').value);
+            const destQty = parseFloat(row.querySelector('.row-qty').value);
+            const destWeight = parseFloat(row.querySelector('.row-weight').value) || 0;
+            const weightVisible = row.querySelector('.weight-container').style.display !== 'none';
 
-            if (destId && destCant > 0) {
-                detalles.push({ producto_destino_id: destId, cantidad_destino: destCant });
-                totalSalida += destCant; // Sumamos al total
-            } else if (destId || destCant) {
-                error = true;
+            if (destId && destQty > 0) {
+                // Validación: Si pide peso, debe tener peso
+                if (weightVisible && destWeight <= 0) {
+                    errorFila = true;
+                    this.mostrarNotificacion('Debe indicar el peso real para los productos por unidad', 'warning');
+                    return;
+                }
+
+                // Para la métrica usamos el peso si existe, si no la cantidad
+                masaSalidaTotal += weightVisible ? destWeight : destQty;
+
+                // Al backend enviamos la cantidad (Unidades o Kg) para el stock
+                // Opcional: Podríamos enviar el peso en un campo 'notas' o auxiliar si se requiere en futuro
+                detalles.push({ 
+                    producto_destino_id: destId, 
+                    cantidad_destino: destQty 
+                });
+            } else if (destId || destQty) {
+                errorFila = true;
             }
         });
 
-        if (error) return this.mostrarNotificacion('Complete todas las filas', 'warning');
-        if (detalles.length === 0) return this.mostrarNotificacion('Agregue al menos un producto de salida', 'warning');
+        if (errorFila) return;
+        if (detalles.length === 0) return this.mostrarNotificacion('Agregue productos de salida', 'warning');
 
-        // --- VALIDACIÓN LÓGICA DE MASA ---
-        // Permitimos un margen de error minúsculo (0.01) por redondeo de decimales, 
-        // pero en general Salida > Entrada es Bloqueante.
-        if (totalSalida > (origenCant + 0.01)) {
-            this.mostrarNotificacion(`⛔ ERROR LÓGICO: Estás sacando ${totalSalida.toFixed(2)}kg de ${origenCant.toFixed(2)}kg disponibles. La materia no se crea de la nada.`, 'error');
-            
-            // Efecto visual de error
-            document.getElementById('yield-bar').style.backgroundColor = '#dc3545';
-            document.getElementById('resumen-diferencia').style.color = 'red';
-            return; // DETIENE LA EJECUCIÓN AQUÍ
-        }
-        // ---------------------------------
-
-        // Validar stock disponible en BD (Check rápido del frontend)
-        const optionOrigen = document.querySelector(`#origen-producto option[value="${origenId}"]`);
-        const stockActual = parseFloat(optionOrigen.getAttribute('data-stock'));
-        if (origenCant > stockActual) {
-            if(!confirm(`⚠️ El sistema indica que solo hay ${stockActual} en stock. ¿Deseas intentar procesar ${origenCant} de todos modos?`)) return;
+        // Validación Lógica (Masa Entrada vs Masa Salida Total)
+        if (masaSalidaTotal > (origenCant + 0.5)) { 
+            if(!confirm(`⚠️ Advertencia: La salida (${masaSalidaTotal.toFixed(2)}) supera la entrada (${origenCant.toFixed(2)}). ¿Es correcto?`)) return;
         }
 
         btn.disabled = true;
@@ -269,13 +316,12 @@ class TransformacionManager {
             });
 
             const data = await response.json();
-
             if (!response.ok) throw new Error(data.error || 'Error al procesar');
 
-            this.mostrarNotificacion('Transformación exitosa', 'success');
+            this.mostrarNotificacion('Transformación registrada', 'success');
             this.resetForm();
             this.cargarHistorial();
-            await this.cargarProductos();
+            await this.cargarProductos(); 
 
         } catch (error) {
             this.mostrarNotificacion(error.message, 'error');
@@ -288,14 +334,19 @@ class TransformacionManager {
     resetForm() {
         document.getElementById('origen-producto').value = '';
         document.getElementById('origen-cantidad').value = '';
-        document.getElementById('origen-unidad').value = '';
         document.getElementById('stock-disponible').textContent = 'Stock actual: 0';
+        document.getElementById('origen-unidad').value = '';
         document.getElementById('observaciones').value = '';
         document.getElementById('output-container').innerHTML = '';
-        this.calcularTotales();
+        
+        document.getElementById('resumen-entrada').textContent = '0.00';
+        document.getElementById('resumen-salida').textContent = '0.00';
+        document.getElementById('resumen-diferencia').textContent = '0.00';
+        this.actualizarBarraRendimiento(0,0);
     }
 
     async cargarHistorial() {
+        // ... (código historial igual que antes) ...
         const tbody = document.getElementById('historial-body');
         if(!tbody) return;
         
@@ -322,7 +373,7 @@ class TransformacionManager {
             `).join('');
         } catch(e) { console.error(e); }
     }
-
+    
     async verDetalle(id) {
         try {
             const res = await fetch(`/api/transformaciones/${id}`, {

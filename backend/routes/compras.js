@@ -4,9 +4,7 @@ import pool from '../database.js';
 
 const router = express.Router();
 
-// ==========================================
-// 1. RUTAS ESPECÍFICAS (Deben ir PRIMERO)
-// ==========================================
+
 
 // GET Estadísticas
 router.get('/api/compras/stats/estadisticas', requireAuth, async (req, res) => {
@@ -33,17 +31,14 @@ router.get('/api/compras/stats/estadisticas', requireAuth, async (req, res) => {
   }
 });
 
-// ==========================================
-// 2. RUTAS DINÁMICAS CON PARÁMETROS
-// ==========================================
 
-// GET Factura para imprimir (CORREGIDO: Se eliminó p.rif de la consulta)
+
+// GET Factura para imprimir 
 router.get('/api/compras/:id/factura', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // 1. Datos de la Compra y Proveedor
-    // NOTA: Eliminamos "p.rif as prov_rif" porque la columna no existe en la tabla
+
     const compraRes = await pool.query(`
       SELECT c.*, 
              p.nombre as prov_nombre, p.direccion as prov_direccion, p.contacto as prov_contacto,
@@ -71,7 +66,7 @@ router.get('/api/compras/:id/factura', requireAuth, async (req, res) => {
         empresa: empresa,
         proveedor: {
             nombre: compra.prov_nombre,
-            rif: 'N/A', // Devolvemos N/A ya que no tenemos el dato en BD
+            rif: 'N/A', 
             direccion: compra.prov_direccion,
             contacto: compra.prov_contacto
         },
@@ -101,15 +96,17 @@ router.get('/api/compras/:id/factura', requireAuth, async (req, res) => {
 });
 
 // PUT Recibir Compra (Actualiza Stock y Costos)
+// PUT Recibir Compra (Actualiza Stock, Costos y N° Factura)
 router.put('/api/compras/:id/recibir', requireAuth, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     
     const { id } = req.params;
-    const { detalles_recibidos } = req.body; 
+    // Extraemos num_factura del cuerpo de la petición
+    const { detalles_recibidos, num_factura } = req.body; 
 
-    console.log('📥 Recibiendo compra ID:', id);
+    console.log('📥 Recibiendo compra ID:', id, 'Factura:', num_factura);
 
     for (const detalle of detalles_recibidos) {
       await client.query(
@@ -151,13 +148,14 @@ router.put('/api/compras/:id/recibir', requireAuth, async (req, res) => {
 
     const estado = parseInt(pendientesResult.rows[0].pendientes) > 0 ? 'parcial' : 'recibida';
 
+    // AQUI SE ACTUALIZA EL NUMERO DE FACTURA
     await client.query(
-      'UPDATE compras SET estado = $1, fecha_recepcion = CURRENT_TIMESTAMP WHERE id = $2',
-      [estado, id]
+      'UPDATE compras SET estado = $1, fecha_recepcion = CURRENT_TIMESTAMP, num_factura = $2 WHERE id = $3',
+      [estado, num_factura, id]
     );
 
     await client.query('COMMIT');
-    res.json({ mensaje: 'Recepción procesada y costos actualizados', estado });
+    res.json({ mensaje: 'Recepción procesada y factura actualizada', estado });
 
   } catch (error) {
     await client.query('ROLLBACK');
@@ -168,11 +166,9 @@ router.put('/api/compras/:id/recibir', requireAuth, async (req, res) => {
   }
 });
 
-// GET Detalles de una compra (Genérico con ID)
 router.get('/api/compras/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    // También quitamos p.rif de aquí por seguridad
     const compraResult = await pool.query(`
       SELECT c.*, p.nombre as proveedor_nombre 
       FROM compras c
@@ -195,9 +191,7 @@ router.get('/api/compras/:id', requireAuth, async (req, res) => {
   }
 });
 
-// ==========================================
-// 3. RUTAS GENERALES (Sin parámetros)
-// ==========================================
+
 
 // GET Listar todas las compras
 router.get('/api/compras', requireAuth, async (req, res) => {

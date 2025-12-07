@@ -1,4 +1,3 @@
-// routes/clientes.js
 import express from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import pool from '../database.js';
@@ -129,12 +128,10 @@ router.post('/api/clientes', requireAuth, async (req, res) => {
     
     const { cedula_rif, nombre, telefono, direccion } = req.body;
     
-    // Validaciones básicas
     if (!cedula_rif || !nombre) {
       return res.status(400).json({ error: 'Cédula/RIF y nombre son obligatorios' });
     }
 
-    // Verificar si ya existe un cliente con la misma cédula/RIF
     const exists = await client.query(
       'SELECT id FROM clientes WHERE cedula_rif = $1',
       [cedula_rif]
@@ -145,7 +142,6 @@ router.post('/api/clientes', requireAuth, async (req, res) => {
       return res.status(409).json({ error: 'Ya existe un cliente con esta cédula/RIF' });
     }
 
-    // Insertar nuevo cliente
     const result = await client.query(
       `INSERT INTO clientes (cedula_rif, nombre, telefono, direccion) 
        VALUES ($1, $2, $3, $4) 
@@ -178,12 +174,10 @@ router.put('/api/clientes/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { cedula_rif, nombre, telefono, direccion, estado } = req.body;
     
-    // Validaciones básicas
     if (!cedula_rif || !nombre) {
       return res.status(400).json({ error: 'Cédula/RIF y nombre son obligatorios' });
     }
 
-    // Verificar que el cliente existe
     const clienteExists = await client.query(
       'SELECT id FROM clientes WHERE id = $1',
       [id]
@@ -194,7 +188,6 @@ router.put('/api/clientes/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Cliente no encontrado' });
     }
 
-    // Verificar que no exista otro cliente con la misma cédula/RIF
     const duplicateCheck = await client.query(
       'SELECT id FROM clientes WHERE cedula_rif = $1 AND id != $2',
       [cedula_rif, id]
@@ -205,7 +198,6 @@ router.put('/api/clientes/:id', requireAuth, async (req, res) => {
       return res.status(409).json({ error: 'Ya existe otro cliente con esta cédula/RIF' });
     }
 
-    // Actualizar cliente
     const result = await client.query(
       `UPDATE clientes 
        SET cedula_rif = $1, nombre = $2, telefono = $3, direccion = $4, estado = $5
@@ -238,7 +230,6 @@ router.delete('/api/clientes/:id', requireAuth, async (req, res) => {
     
     const { id } = req.params;
 
-    // Verificar que el cliente existe
     const clienteExists = await client.query(
       'SELECT id FROM clientes WHERE id = $1',
       [id]
@@ -249,7 +240,6 @@ router.delete('/api/clientes/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Cliente no encontrado' });
     }
 
-    // Actualizar estado a Inactivo (eliminación lógica)
     const result = await client.query(
       `UPDATE clientes 
        SET estado = 'Inactivo' 
@@ -275,19 +265,15 @@ router.delete('/api/clientes/:id', requireAuth, async (req, res) => {
 // GET /api/clientes-stats - Obtener estadísticas de clientes
 router.get('/api/clientes-stats', requireAuth, async (req, res) => {
   try {
-    // Total de clientes
     const totalResult = await pool.query('SELECT COUNT(*) FROM clientes');
     const total = parseInt(totalResult.rows[0].count);
 
-    // Clientes activos
     const activosResult = await pool.query('SELECT COUNT(*) FROM clientes WHERE estado = $1', ['Activo']);
     const activos = parseInt(activosResult.rows[0].count);
 
-    // Clientes inactivos
     const inactivosResult = await pool.query('SELECT COUNT(*) FROM clientes WHERE estado = $1', ['Inactivo']);
     const inactivos = parseInt(inactivosResult.rows[0].count);
 
-    // Nuevos clientes este mes
     const nuevosMesResult = await pool.query(
       `SELECT COUNT(*) FROM clientes 
        WHERE fecha_registro >= date_trunc('month', CURRENT_DATE)`

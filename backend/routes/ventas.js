@@ -24,7 +24,6 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
     let subtotal = 0;
     let iva_total = 0;
 
-    // Verificar stock y calcular totales
     for (const detalle of detalles) {
       const productoResult = await client.query(
         `SELECT p.stock, p.nombre, p.precio_venta, ti.tasa as tasa_iva
@@ -154,14 +153,13 @@ router.get('/api/ventas/resumen-diario', requireAuth, async (req, res) => {
   try {
     const { fecha } = req.query;
     const fechaFiltro = fecha || new Date().toISOString().split('T')[0];
-    const usuario_id = req.session.user.id; // ✅ Obtener el usuario de la sesión
+    const usuario_id = req.session.user.id; 
 
     console.log('📊 Obteniendo resumen diario para:', { 
       fecha: fechaFiltro, 
       usuario: usuario_id 
     });
 
-    // 1. Obtener ventas NO mixtas DEL USUARIO ACTUAL
     const ventasNoMixtas = await pool.query(`
       SELECT 
         metodo_pago,
@@ -179,7 +177,6 @@ router.get('/api/ventas/resumen-diario', requireAuth, async (req, res) => {
       GROUP BY metodo_pago
     `, [fechaFiltro, usuario_id]);
 
-    // 2. Obtener ventas mixtas DEL USUARIO ACTUAL
     const ventasMixtas = await pool.query(`
       SELECT v.id, v.detalles_pago
       FROM ventas v
@@ -189,7 +186,6 @@ router.get('/api/ventas/resumen-diario', requireAuth, async (req, res) => {
         AND v.id_usuario = $2  -- ✅ FILTRAR POR USUARIO
     `, [fechaFiltro, usuario_id]);
 
-    // 3. Obtener estadísticas generales DEL USUARIO ACTUAL
     const statsResult = await pool.query(`
       SELECT 
         COUNT(*) as total_ventas_count,
@@ -221,10 +217,9 @@ router.get('/api/ventas/resumen-diario', requireAuth, async (req, res) => {
       total_ventas_count: parseInt(stats.total_ventas_count) || 0,
       primera_venta: stats.primera_venta,
       ultima_venta: stats.ultima_venta,
-      usuario: usuario_id  // ✅ Incluir info del usuario
+      usuario: usuario_id  
     };
 
-    // 4. Procesar ventas NO mixtas
     ventasNoMixtas.rows.forEach(row => {
       const metodo = row.metodo_pago;
       const total = parseFloat(row.total_ventas) || 0;
@@ -235,7 +230,6 @@ router.get('/api/ventas/resumen-diario', requireAuth, async (req, res) => {
       resumen.total += total;
     });
 
-    // 5. Procesar ventas Mixtas - DESGLOSAR
     let contadorMixtas = 0;
     ventasMixtas.rows.forEach(venta => {
       contadorMixtas++;
@@ -270,7 +264,7 @@ router.get('/api/ventas/resumen-diario', requireAuth, async (req, res) => {
   }
 });
 
-// Ruta para obtener todas las facturas con filtros avanzados
+
 router.get('/api/facturas-venta', requireAuth, async (req, res) => {
   try {
     const { 
@@ -431,7 +425,6 @@ router.put('/api/facturas-venta/:id/anular', requireAuth, async (req, res) => {
 
     console.log(`❌ Anulando factura ${id}, motivo: ${motivo_anulacion}`);
 
-    // 1. Verificar que la factura existe y está activa
     const facturaResult = await client.query(
       'SELECT id, estado FROM ventas WHERE id = $1',
       [id]
@@ -451,7 +444,6 @@ router.put('/api/facturas-venta/:id/anular', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Solo se pueden anular facturas completadas' });
     }
 
-    // 2. Obtener detalles de la venta para revertir stock
     const detallesResult = await client.query(
       `SELECT dv.id_producto, dv.cantidad, p.nombre, p.stock
        FROM detalle_venta dv 
@@ -460,7 +452,6 @@ router.put('/api/facturas-venta/:id/anular', requireAuth, async (req, res) => {
       [id]
     );
 
-    // 3. Revertir stock de productos
     for (const detalle of detallesResult.rows) {
       await client.query(
         'UPDATE productos SET stock = stock + $1 WHERE id = $2',
@@ -469,7 +460,6 @@ router.put('/api/facturas-venta/:id/anular', requireAuth, async (req, res) => {
       console.log(`📦 Stock revertido: ${detalle.nombre} +${detalle.cantidad}`);
     }
 
-    // 4. Marcar factura como anulada
     await client.query(
       'UPDATE ventas SET estado = $1, motivo_anulacion = $2 WHERE id = $3',
       ['anulada', motivo_anulacion, id]
@@ -536,7 +526,6 @@ router.get('/api/facturas-venta/estadisticas', requireAuth, async (req, res) => 
         const result = await pool.query(query, params);
         const estadisticas = result.rows[0];
 
-        // Obtener métodos de pago (solo de facturas completadas)
         const metodosPagoQuery = `
             SELECT 
                 metodo_pago,
@@ -624,7 +613,6 @@ router.post('/api/cierre-caja', requireAuth, async (req, res) => {
 
     console.log('🔐 Validando cierre de caja para usuario:', usuario_id, 'fecha:', fecha);
 
-    // ✅ VALIDACIÓN: Verificar si ya existe un cierre de caja para este usuario en esta fecha
     const existingClose = await client.query(
       'SELECT id, fecha, usuario_id FROM cierre_caja WHERE fecha = $1 AND usuario_id = $2',
       [fecha, usuario_id]
@@ -678,23 +666,36 @@ router.post('/api/cierre-caja', requireAuth, async (req, res) => {
 });
 
 
+// GET Top Productos (Dashboard)
 router.get('/api/ventas/top-productos', requireAuth, async (req, res) => {
   try {
     const { fecha } = req.query;
-    const result = await pool.query(`
+    let query = `
       SELECT 
         p.nombre,
-        SUM(dv.cantidad) as cantidad,
-        SUM(dv.cantidad * dv.precio_unitario) as total
+        SUM(dv.cantidad) as cantidad
       FROM detalle_venta dv
       JOIN productos p ON dv.id_producto = p.id
       JOIN ventas v ON dv.id_venta = v.id
-      WHERE DATE(v.fecha_venta) = $1
+      WHERE v.estado = 'completada'
+    `;
+    
+    const params = [];
+
+    if (fecha) {
+        query += ` AND DATE(v.fecha_venta) = $1`;
+        params.push(fecha);
+    } else {
+        query += ` AND DATE_TRUNC('month', v.fecha_venta) = DATE_TRUNC('month', CURRENT_DATE)`;
+    }
+
+    query += `
       GROUP BY p.id, p.nombre
       ORDER BY cantidad DESC
-      LIMIT 10
-    `, [fecha]);
+      LIMIT 5
+    `;
 
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
     console.error('Error obteniendo top productos:', error);
@@ -724,7 +725,6 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
 
     const venta = ventaResult.rows[0];
 
-    // ✅ NUEVO: Incluir tasa_iva en la consulta de detalles
     const detallesResult = await pool.query(`
       SELECT dv.*, p.nombre as producto_nombre, p.unidad_medida, ti.tasa as tasa_iva
       FROM detalle_venta dv
@@ -735,7 +735,6 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
 
     const detalles = detallesResult.rows;
     
-    // ✅ NUEVO: Calcular subtotal e IVA por producto
     let subtotal = 0;
     let iva_total = 0;
 
@@ -835,7 +834,6 @@ router.get('/api/facturas-venta/:id/reimprimir', requireAuth, async (req, res) =
 
     const detalles = detallesResult.rows;
     
-    // ✅ NUEVO: Calcular subtotal e IVA por producto
     let subtotal = 0;
     let iva_total = 0;
 
@@ -853,7 +851,6 @@ router.get('/api/facturas-venta/:id/reimprimir', requireAuth, async (req, res) =
 
     const total = subtotal + iva_total;
 
-    // Obtener información de la empresa
     const empresaResult = await pool.query('SELECT * FROM configuracion_empresa WHERE id = 1');
     const empresa = empresaResult.rows[0] || {
       nombre_empresa: "Pollera Na'Guara",
@@ -863,7 +860,6 @@ router.get('/api/facturas-venta/:id/reimprimir', requireAuth, async (req, res) =
       mensaje_factura: "¡Gracias por su compra!"
     };
 
-    // Manejar detalles_pago (código existente)
     let detallesPago = venta.detalles_pago;
     if (detallesPago && typeof detallesPago === 'string') {
       try {

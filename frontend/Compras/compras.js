@@ -59,17 +59,27 @@ class ComprasManager {
         this.notificar('Lista de productos actualizada para este proveedor', 'info');
     }
 
-    agregarFilaProducto() {
+  agregarFilaProducto() {
         const idProveedor = document.getElementById('new-proveedor').value;
         
         if (!idProveedor) {
             return this.notificar('⚠️ Primero selecciona un proveedor', 'warning');
         }
 
-        const productosFiltrados = this.productos.filter(p => p.id_provedores == idProveedor);
+        const proveedorActual = this.proveedores.find(p => p.id == idProveedor);
+
+        let productosFiltrados = this.productos.filter(p => p.id_provedores == idProveedor);
+
+ 
+        if (proveedorActual && proveedorActual.nombre.toLowerCase().includes('avícola')) {
+            productosFiltrados = productosFiltrados.filter(p => 
+                p.nombre.toLowerCase().includes('entero')
+            );
+        }
+        // ---------------------------------------------
 
         if (productosFiltrados.length === 0) {
-            return this.notificar('Este proveedor no tiene productos asignados', 'warning');
+            return this.notificar('Este proveedor no tiene productos habilitados para compra directa (solo transformación)', 'warning');
         }
 
         const tbody = document.getElementById('new-items-body');
@@ -158,7 +168,7 @@ class ComprasManager {
         document.getElementById('new-total').textContent = `Bs. ${total.toFixed(2)}`;
     }
 
-    async guardarPedido(e) {
+async guardarPedido(e) {
         e.preventDefault();
         const btn = document.querySelector('#form-nuevo-pedido button[type="submit"]');
         
@@ -182,12 +192,14 @@ class ComprasManager {
 
         if(detalles.length === 0) return this.notificar('Agregue al menos un producto válido', 'error');
 
+        // --- CORRECCIÓN AQUÍ ---
         const payload = {
             id_proveedor: idProveedor,
-            num_factura: document.getElementById('new-factura').value,
+            num_factura: null, // Enviamos null porque ahora se pide al recibir
             observaciones: document.getElementById('new-obs').value,
             detalles: detalles
         };
+        // -----------------------
 
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
@@ -276,6 +288,9 @@ class ComprasManager {
             const data = await res.json();
             
             document.getElementById('recibir-compra-id').value = idCompra;
+            
+            document.getElementById('recibir-num-factura').value = ''; 
+
             const tbody = document.getElementById('recibir-body');
             tbody.innerHTML = '';
 
@@ -292,15 +307,33 @@ class ComprasManager {
             });
 
             document.getElementById('modal-recibir').classList.add('active');
+            
+            // Opcional: Poner foco en el campo de factura
+            setTimeout(() => document.getElementById('recibir-num-factura').focus(), 100);
+
         } catch (error) {
             this.notificar('Error cargando detalles', 'error');
         }
     }
 
-    async confirmarRecepcion() {
+   async confirmarRecepcion() {
         const idCompra = document.getElementById('recibir-compra-id').value;
-        const items = [];
+        
+        // 1. LEER EL INPUT DEL MODAL
+        const facturaInput = document.getElementById('recibir-num-factura');
+        const numFactura = facturaInput.value.trim();
 
+        // 2. VALIDAR
+        if (!numFactura) {
+            this.notificar('⚠️ Debe ingresar el Número de Factura para procesar el ingreso', 'warning');
+            facturaInput.style.borderColor = 'red'; // Resaltar error visualmente
+            facturaInput.focus();
+            return;
+        } else {
+            facturaInput.style.borderColor = '#2ecc71'; // Restaurar color
+        }
+
+        const items = [];
         document.querySelectorAll('#recibir-body tr').forEach(tr => {
             const qty = tr.querySelector('.receive-qty').value;
             items.push({
@@ -312,13 +345,16 @@ class ComprasManager {
             });
         });
 
-        if(!confirm('¿Confirmar ingreso? Se sumará el stock y se actualizará el costo.')) return;
+        if(!confirm(`¿Confirmar ingreso de mercancía con Factura N° ${numFactura}?`)) return;
 
         try {
             const res = await fetch(`${this.API_BASE}/compras/${idCompra}/recibir`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.getToken()}` },
-                body: JSON.stringify({ detalles_recibidos: items })
+                body: JSON.stringify({ 
+                    detalles_recibidos: items,
+                    num_factura: numFactura // Enviamos el dato capturado en el modal
+                })
             });
 
             if(!res.ok) throw new Error('Error al recibir');
@@ -333,6 +369,7 @@ class ComprasManager {
         }
     }
 
+    
     // ✅ FUNCIÓN ACTUALIZADA: VER FACTURA EN MODAL (NO POPUP)
     async verFactura(id) {
         try {

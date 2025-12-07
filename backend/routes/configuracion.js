@@ -4,9 +4,7 @@ import pool from '../database.js';
 
 const router = express.Router();
 
-// ==========================================
-// 1. DASHBOARD (Estadísticas Generales)
-// ==========================================
+
 router.get('/api/dashboard/stats', async (req, res) => {
   try {
     // 1. Productos Activos
@@ -18,7 +16,7 @@ router.get('/api/dashboard/stats', async (req, res) => {
     // 3. Proveedores
     const proveedores = await pool.query('SELECT COUNT(*) FROM proveedores');
     
-    // 4. Stock Bajo (INTELIGENTE: Compara stock vs stock_minimo de CADA producto)
+    // 4. Stock Bajo 
     const stockBajo = await pool.query("SELECT COUNT(*) FROM productos WHERE stock <= stock_minimo AND estado = 'Activo'");
 
     res.json({
@@ -33,9 +31,7 @@ router.get('/api/dashboard/stats', async (req, res) => {
   }
 });
 
-// ==========================================
-// 2. DATOS DE LA EMPRESA (Tabla configuracion_empresa)
-// ==========================================
+
 router.get('/api/empresa', requireAuth, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM configuracion_empresa ORDER BY id ASC LIMIT 1');
@@ -74,17 +70,13 @@ router.put('/api/empresa', requireAuth, async (req, res) => {
   }
 });
 
-// ==========================================
-// 3. CONFIGURACIÓN DE NEGOCIO (Ahora solo IVA desde tasas_iva)
-// ==========================================
+
 router.get('/api/configuracion/negocio', requireAuth, async (req, res) => {
   try {
-    // Ahora leemos la tasa GENERAL directamente de la tabla tasas_iva
-    // Asumimos que ID 1 es la general, o buscamos por tipo 'general'
+   
     const result = await pool.query("SELECT tasa FROM tasas_iva WHERE tipo = 'general' LIMIT 1");
     
-    // Mantenemos el formato que espera el frontend: { iva_rate: 16 }
-    // Si no encuentra tasa, devuelve 16 por defecto
+   
     const tasa = result.rows.length > 0 ? parseFloat(result.rows[0].tasa) : 16.00;
     
     res.json({ iva_rate: tasa });
@@ -98,7 +90,7 @@ router.put('/api/configuracion/negocio', requireAuth, async (req, res) => {
   try {
     const { iva_rate } = req.body; 
     
-    // Actualizamos la tasa GENERAL en la tabla tasas_iva
+    
     const result = await pool.query(`
         UPDATE tasas_iva 
         SET tasa = $1, fecha_actualizacion = CURRENT_TIMESTAMP
@@ -108,7 +100,6 @@ router.put('/api/configuracion/negocio', requireAuth, async (req, res) => {
     );
     
     if (result.rows.length === 0) {
-        // Si por alguna razón no existe la tasa general, la creamos
         await pool.query(`
             INSERT INTO tasas_iva (tasa, descripcion, tipo, estado)
             VALUES ($1, 'IVA General', 'general', 'Activa')`, 
@@ -126,15 +117,11 @@ router.put('/api/configuracion/negocio', requireAuth, async (req, res) => {
   }
 });
 
-// ==========================================
-// 4. MÉTODOS DE PAGO (Desde metodos_pago_config)
-// ==========================================
+
 router.get('/api/configuracion/metodos-pago', requireAuth, async (req, res) => {
     try {
-        // Consultar tabla real
         const result = await pool.query('SELECT metodo_id as id, nombre, habilitado FROM metodos_pago_config ORDER BY id');
         
-        // Si está vacía, llenarla con defaults (Auto-reparación)
         if (result.rows.length === 0) {
             console.log('🔧 Inicializando métodos de pago...');
             await pool.query(`
@@ -147,7 +134,6 @@ router.get('/api/configuracion/metodos-pago', requireAuth, async (req, res) => {
                 ('punto_venta', 'Punto de Venta', true),
                 ('mixto', 'Pago Mixto', true)
             `);
-            // Volver a consultar
             const newResult = await pool.query('SELECT metodo_id as id, nombre, habilitado FROM metodos_pago_config ORDER BY id');
             return res.json(newResult.rows);
         }

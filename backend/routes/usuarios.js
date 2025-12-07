@@ -97,7 +97,6 @@ router.put('/api/usuarios/:id', requireAuth, async (req, res) => {
         const { id } = req.params;
         const { nombre, nombre_usuario, password, rol, estado } = req.body;
 
-        // Verificar permisos
        if (req.session.user.rol !== 'Administrador' && req.session.user.rol !== 'Super Admin') {
     return res.status(403).json({ error: 'Solo administradores y super administradores pueden editar usuarios' });
 }
@@ -106,12 +105,10 @@ router.put('/api/usuarios/:id', requireAuth, async (req, res) => {
         let params = [];
 
         if (password) {
-            // Si hay nueva contraseña, hashearla
             const hashed = await bcrypt.hash(password, 10);
             query = `UPDATE usuarios SET nombre = $1, nombre_usuario = $2, password = $3, rol = $4, estado = $5 WHERE id = $6 RETURNING *`;
             params = [nombre, nombre_usuario, hashed, rol, estado, id];
         } else {
-            // Sin cambiar contraseña
             query = `UPDATE usuarios SET nombre = $1, nombre_usuario = $2, rol = $3, estado = $4 WHERE id = $5 RETURNING *`;
             params = [nombre, nombre_usuario, rol, estado, id];
         }
@@ -132,7 +129,6 @@ router.put('/api/usuarios/:id', requireAuth, async (req, res) => {
     }
 });
 
-// Cambiar contraseña
 router.put('/api/usuarios/:id/password', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -142,7 +138,6 @@ router.put('/api/usuarios/:id/password', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'La contraseña es requerida' });
     }
 
-    // Solo administradores pueden cambiar contraseñas de otros usuarios
     if (parseInt(id) !== req.session.user.id && req.session.user.rol !== 'Administrador' && req.session.user.rol !== 'Super Admin') {
       return res.status(403).json({ error: 'No tienes permisos para cambiar esta contraseña' });
     }
@@ -192,18 +187,15 @@ router.delete('/api/usuarios/:id', requireAuth, async (req,res) => {
   }
 });
 
-// Promover usuario a administrador temporal
 router.put('/api/usuarios/:id/promover', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { clave_confirmacion } = req.body;
 
-    // Solo administradores pueden promover
     if (req.session.user.rol !== 'Administrador' && req.session.user.rol !== 'Super Admin') {
       return res.status(403).json({ error: 'Solo administradores pueden promover usuarios' });
     }
 
-    // Verificar que el usuario existe y es vendedor
     const userResult = await pool.query(
       'SELECT * FROM usuarios WHERE id = $1',
       [id]
@@ -219,14 +211,12 @@ router.put('/api/usuarios/:id/promover', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Solo se pueden promover vendedores' });
     }
 
-    // Verificar clave de confirmación (puedes usar una clave fija o validar contra algo)
-    const CLAVE_VALIDA = 'NAGUARA2024'; // Cambia esta clave por una más segura
+    const CLAVE_VALIDA = 'NAGUARA2024'; 
     
     if (clave_confirmacion !== CLAVE_VALIDA) {
       return res.status(401).json({ error: 'Clave de confirmación incorrecta' });
     }
 
-    // Promover a administrador
     const updateResult = await pool.query(
       'UPDATE usuarios SET rol = $1 WHERE id = $2 RETURNING id, nombre, nombre_usuario, rol',
       ['Administrador', id]

@@ -20,10 +20,22 @@ class ProductosManager {
 
     async init() {
         try {
+            const params = new URLSearchParams(window.location.search);
+            const filtroUrl = params.get('filtro');
+
+            if (filtroUrl === 'bajo') {
+                this.filtros.stock = 'bajo'; 
+                setTimeout(() => {
+                    const select = document.querySelector('#filtro-stock');
+                    if(select) select.value = 'bajo';
+                }, 500);
+            }
+
             await this.cargarDatosIniciales();
             this.setupEventListeners();
             this.actualizarResumen();
             console.log('✅ Sistema de productos inicializado');
+            
         } catch (error) {
             console.error('Error inicializando productos:', error);
             this.mostrarError('Error al inicializar el sistema de productos');
@@ -200,8 +212,7 @@ class ProductosManager {
     }
 
     // ==================== RENDERIZADO DE TABLA ====================
-
-    renderizarProductos() {
+renderizarProductos() {
         const tbody = document.querySelector('.table-container tbody');
         if (!tbody) return;
 
@@ -212,10 +223,11 @@ class ProductosManager {
         }
 
         tbody.innerHTML = this.productos.map(producto => {
-            const precioVenta = this.parseNumber(producto.precio_venta);
-            const precioDolares = this.parseNumber(producto.precio_dolares);
-            const stock = this.parseNumber(producto.stock);
-            const stockMinimo = this.parseNumber(producto.stock_minimo);
+            // Aseguramos que TODO sea número aquí también
+            const precioVenta = Number(this.parseNumber(producto.precio_venta));
+            const precioDolares = Number(this.parseNumber(producto.precio_dolares));
+            const stock = Number(this.parseNumber(producto.stock));
+            const stockMinimo = Number(this.parseNumber(producto.stock_minimo));
 
             return `
             <tr data-product-id="${producto.id}">
@@ -629,17 +641,20 @@ class ProductosManager {
 
     // Helpers visuales
     getStockLevel(p) {
-        const s = this.parseNumber(p.stock);
-        const m = this.parseNumber(p.stock_minimo);
+        // Forzamos la conversión a Número con Number()
+        const s = Number(this.parseNumber(p.stock));
+        const m = Number(this.parseNumber(p.stock_minimo));
+        
         if (s <= 0) return 'empty';
         if (s <= m) return 'low';
         if (s <= m * 2) return 'medium';
         return 'high';
     }
-
-    getEstadoBadge(p) {
-        const s = this.parseNumber(p.stock);
-        const m = this.parseNumber(p.stock_minimo);
+   getEstadoBadge(p) {
+        // Forzamos la conversión a Número
+        const s = Number(this.parseNumber(p.stock));
+        const m = Number(this.parseNumber(p.stock_minimo));
+        
         if (s <= 0) return '<span class="badge badge-danger">Agotado</span>';
         if (s <= m) return '<span class="badge badge-warning">Bajo Stock</span>';
         return '<span class="badge badge-success">Disponible</span>';
@@ -684,3 +699,5 @@ class ProductosManager {
 document.addEventListener('DOMContentLoaded', () => {
     window.productosManager = new ProductosManager();
 });
+
+

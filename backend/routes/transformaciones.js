@@ -7,17 +7,19 @@ const router = express.Router();
 
 // POST /api/transformaciones - Procesar una nueva transformación
 router.post('/api/transformaciones', requireAuth, async (req, res) => {
-  const client = await pool.connect(); // Usamos client para la transacción
+  const client = await pool.connect(); 
   
   try {
-    await client.query('BEGIN'); // 1. INICIAR TRANSACCIÓN
+    await client.query('BEGIN'); 
     
-    const { producto_origen_id, cantidad_origen, observaciones, detalles } = req.body;
+ const { producto_origen_id, cantidad_origen, peso_origen_real, observaciones, detalles } = req.body;
     const usuario_id = req.session.user.id;
 
-    console.log('🔄 Iniciando transformación:', { producto_origen_id, cantidad: cantidad_origen });
+        const pesoReal = peso_origen_real || cantidad_origen;
 
-    // 2. VERIFICAR STOCK DEL ORIGEN (Ej: ¿Tenemos pollos suficientes?)
+    console.log('🔄 Transformación:', { origen: producto_origen_id, cant: cantidad_origen, peso: pesoReal });
+
+    // 2. VERIFICAR STOCK DEL ORIGEN
     const stockCheck = await client.query(
       'SELECT stock, nombre FROM productos WHERE id = $1',
       [producto_origen_id]
@@ -32,18 +34,18 @@ router.post('/api/transformaciones', requireAuth, async (req, res) => {
       throw new Error(`Stock insuficiente de ${productoOrigen.nombre}. Disponible: ${productoOrigen.stock}`);
     }
 
-    // 3. INSERTAR EL ENCABEZADO (El registro de la operación)
+    // 3. INSERTAR EL ENCABEZADO 
     const headerResult = await client.query(`
       INSERT INTO transformacion_producto 
-      (usuario_id, producto_origen_id, cantidad_origen, observaciones)
-      VALUES ($1, $2, $3, $4)
+      (usuario_id, producto_origen_id, cantidad_origen, peso_origen_real, observaciones)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING id, fecha_transformacion`,
-      [usuario_id, producto_origen_id, cantidad_origen, observaciones]
+      [usuario_id, producto_origen_id, cantidad_origen, pesoReal, observaciones]
     );
 
     const transformacionId = headerResult.rows[0].id;
 
-    // 4. RESTAR EL STOCK DEL PRODUCTO ORIGEN (Sacrificamos el pollo)
+    // 4. RESTAR EL STOCK DEL PRODUCTO ORIGEN 
     await client.query(`
       UPDATE productos 
       SET stock = stock - $1 
@@ -51,14 +53,12 @@ router.post('/api/transformaciones', requireAuth, async (req, res) => {
       [cantidad_origen, producto_origen_id]
     );
 
-    // 5. PROCESAR LOS DETALLES (Loop para crear milanesas, muslos, etc.)
-    // detalles es un array: [{ producto_destino_id: 12, cantidad_destino: 5 }, ...]
+
     if (!detalles || detalles.length === 0) {
         throw new Error('Debe especificar al menos un producto de salida');
     }
 
     for (const item of detalles) {
-      // 5.1 Insertar en la tabla de detalles
       await client.query(`
         INSERT INTO transformacion_detalles 
         (transformacion_id, producto_destino_id, cantidad_destino)
@@ -66,7 +66,6 @@ router.post('/api/transformaciones', requireAuth, async (req, res) => {
         [transformacionId, item.producto_destino_id, item.cantidad_destino]
       );
 
-      // 5.2 SUMAR STOCK AL PRODUCTO DESTINO (Ahora tenemos más milanesas)
       await client.query(`
         UPDATE productos 
         SET stock = stock + $1 
@@ -75,7 +74,7 @@ router.post('/api/transformaciones', requireAuth, async (req, res) => {
       );
     }
 
-    await client.query('COMMIT'); // 6. CONFIRMAR CAMBIOS SI TODO SALIÓ BIEN
+    await client.query('COMMIT'); 
     console.log('✅ Transformación completada ID:', transformacionId);
     
     res.status(201).json({ 
@@ -84,7 +83,7 @@ router.post('/api/transformaciones', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    await client.query('ROLLBACK'); // 7. REVERTIR TODO SI HUBO ERROR
+    await client.query('ROLLBACK');
     console.error('❌ Error en transformación:', error);
     res.status(500).json({ error: error.message });
   } finally {
@@ -95,7 +94,7 @@ router.post('/api/transformaciones', requireAuth, async (req, res) => {
 // GET /api/transformaciones - Ver historial
 router.get('/api/transformaciones', requireAuth, async (req, res) => {
   try {
-    // Esta consulta trae el encabezado con el nombre del producto origen y usuario
+   
     const result = await pool.query(`
       SELECT 
         t.id, 
@@ -115,12 +114,11 @@ router.get('/api/transformaciones', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/transformaciones/:id - Ver detalles de una transformación específica
+// GET /api/transformaciones/:id 
 router.get('/api/transformaciones/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Obtener detalles (lo que salió)
     const detalles = await pool.query(`
       SELECT 
         td.cantidad_destino,

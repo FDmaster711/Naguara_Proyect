@@ -350,30 +350,27 @@ tbody tr:hover {
     overflow: hidden;
 }
 
-.stock-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.3s ease;
-}
-
 .stock-fill.high {
-    background: var(--success);
-    width: 85%;
+    background: var(--success); /* Verde */
+    width: 100%;
 }
 
 .stock-fill.medium {
-    background: var(--warning);
-    width: 45%;
+    /* CAMBIO: Usar info (Azul) en vez de warning para diferenciar del bajo */
+    background: var(--info); 
+    width: 60%;
 }
 
 .stock-fill.low {
+    /* Naranja/Amarillo para alerta */
     background: var(--warning);
-    width: 15%;
+    width: 30%;
 }
 
 .stock-fill.empty {
+    /* Rojo para agotado */
     background: var(--danger);
-    width: 5%;
+    width: 10%; /* Un poco visible para que se note que está vacío */
 }
 
 /* Buttons */
