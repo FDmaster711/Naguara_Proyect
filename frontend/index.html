@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
@@ -18,7 +20,8 @@
     </div>
     <nav class="sidebar-menu" aria-label="Menú principal">
       <ul>
-        <li><a href="#" class="menu-item active" onclick="loadDashboard(); setActive(this);"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+        <li><a href="#" class="menu-item active" onclick="loadDashboard(); setActive(this);"><i class="fas fa-home"></i>
+            <span>Dashboard</span></a></li>
         <li>
           <button class="menu-item submenu-toggle" onclick="toggleSubmenu('ventas-submenu', this);">
             <i class="fas fa-shopping-cart"></i> <span>Ventas</span> <i class="fas fa-chevron-down submenu-arrow"></i>
@@ -47,14 +50,17 @@
             <li><a href="Compras/Pedidos y Facturas.html" class="submenu-item">Pedidos / Facturas</a></li>
           </ul>
         </li>
-        <li><a href="Reportes/Reportes.html" class="menu-item"><i class="fas fa-chart-line"></i> <span>Reportes</span></a></li>
-        <li><a href="Configuracion/Configuracion.html" class="menu-item"><i class="fas fa-cog"></i> <span>Configuración</span></a></li>
+        <li><a href="Reportes/Reportes.html" class="menu-item"><i class="fas fa-chart-line"></i>
+            <span>Reportes</span></a></li>
+        <li><a href="Configuracion/Configuracion.html" class="menu-item"><i class="fas fa-cog"></i>
+            <span>Configuración</span></a></li>
         <li>
           <a href="Clientes/clientes.html" class="menu-item">
             <i class="fas fa-users"></i> <span>Clientes</span>
           </a>
-        </li>   
-        <li><a href="GestionUsuarios/GestionU.html" class="menu-item"><i class="fas fa-user-shield"></i> <span>Usuarios</span></a></li>
+        </li>
+        <li><a href="GestionUsuarios/GestionU.html" class="menu-item"><i class="fas fa-user-shield"></i>
+            <span>Usuarios</span></a></li>
       </ul>
     </nav>
   </aside>
@@ -62,6 +68,21 @@
   <!-- Top bar -->
   <header class="top-bar">
     <span class="page-title">Dashboard</span>
+    <div class="notification-container" onclick="toggleNotifications()">
+      <div class="notification-badge" id="notiBadge">
+        <i class="fas fa-bell"></i>
+        <span class="badge-count" id="notiCount" style="display: none;">0</span>
+      </div>
+      <div class="notification-dropdown" id="notiDropdown">
+        <div class="notification-header">
+          <span>Notificaciones</span>
+          <span style="font-size: 0.8rem; opacity: 0.9;" id="notiCountText">0 nuevas</span>
+        </div>
+        <ul class="notification-list" id="notiList">
+          <li class="notification-empty">No hay notificaciones</li>
+        </ul>
+      </div>
+    </div>
     <div class="user-profile" tabindex="0" onclick="toggleUserMenu()" onblur="closeUserMenu()">
       <span class="user-avatar" id="userAvatar">U</span>
       <span class="user-info">
@@ -71,7 +92,8 @@
       <div class="user-dropdown" id="userDropdown">
         <a href="#" class="dropdown-item" onclick="goUsers()"><i class="fas fa-user"></i> Ver usuario</a>
         <div class="dropdown-divider"></div>
-        <a href="#" class="dropdown-item" id="logoutBtn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</a>
+        <a href="#" class="dropdown-item" id="logoutBtn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Cerrar
+          sesión</a>
       </div>
     </div>
   </header>
@@ -102,11 +124,11 @@
     async function loadDashboard() {
       const main = document.getElementById('contenidoPrincipal');
       main.innerHTML = `<div style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Cargando datos...</p></div>`;
-      
+
       try {
         // 1. Cargar Estadísticas Generales
         const stats = await fetchData('/dashboard/stats');
-        
+
         main.innerHTML = `
           <section class="dashboard-cards-custom">
             <div class="card_wrap">
@@ -170,63 +192,63 @@
 
     // Función separada para el gráfico (evita errores de anidación)
     async function renderizarGrafico() {
-        try {
-            // Destruir gráfico anterior si existe para evitar conflictos
-            if (dashboardChart) {
-                dashboardChart.destroy();
-                dashboardChart = null;
-            }
-
-            const ctx = document.getElementById('graficoTorta');
-            if (!ctx) return;
-
-            const resGrafico = await fetchData('/ventas/top-productos');
-            
-            if (!resGrafico || resGrafico.length === 0) {
-                // Mensaje si no hay datos
-                const parent = ctx.parentElement;
-                parent.innerHTML = '<div style="display:flex; height:100%; align-items:center; justify-content:center; color:#888;"><p>Sin ventas este mes</p></div>';
-                return;
-            }
-
-            const etiquetas = resGrafico.map(p => p.nombre);
-            const valores = resGrafico.map(p => parseFloat(p.cantidad));
-            
-            // Colores de la marca
-            const colores = ['#5a00b3', '#2ecc71', '#3498db', '#f59e0b', '#e74c3c', '#9b59b6'];
-
-            dashboardChart = new Chart(ctx.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: etiquetas,
-                    datasets: [{ 
-                        data: valores, 
-                        backgroundColor: colores.slice(0, valores.length),
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { 
-                            position: 'bottom', 
-                            labels: { 
-                                boxWidth: 12, 
-                                padding: 15,
-                                font: { size: 11 }
-                            } 
-                        }
-                    },
-                    layout: { padding: 10 }
-                }
-            });
-
-        } catch (error) {
-            console.error("Error gráfico:", error);
+      try {
+        // Destruir gráfico anterior si existe para evitar conflictos
+        if (dashboardChart) {
+          dashboardChart.destroy();
+          dashboardChart = null;
         }
+
+        const ctx = document.getElementById('graficoTorta');
+        if (!ctx) return;
+
+        const resGrafico = await fetchData('/ventas/top-productos');
+
+        if (!resGrafico || resGrafico.length === 0) {
+          // Mensaje si no hay datos
+          const parent = ctx.parentElement;
+          parent.innerHTML = '<div style="display:flex; height:100%; align-items:center; justify-content:center; color:#888;"><p>Sin ventas este mes</p></div>';
+          return;
+        }
+
+        const etiquetas = resGrafico.map(p => p.nombre);
+        const valores = resGrafico.map(p => parseFloat(p.cantidad));
+
+        // Colores de la marca
+        const colores = ['#5a00b3', '#2ecc71', '#3498db', '#f59e0b', '#e74c3c', '#9b59b6'];
+
+        dashboardChart = new Chart(ctx.getContext('2d'), {
+          type: 'doughnut',
+          data: {
+            labels: etiquetas,
+            datasets: [{
+              data: valores,
+              backgroundColor: colores.slice(0, valores.length),
+              borderWidth: 2,
+              borderColor: '#ffffff',
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  boxWidth: 12,
+                  padding: 15,
+                  font: { size: 11 }
+                }
+              }
+            },
+            layout: { padding: 10 }
+          }
+        });
+
+      } catch (error) {
+        console.error("Error gráfico:", error);
+      }
     }
 
     // Funciones de Usuario y Menú
@@ -237,7 +259,7 @@
         document.getElementById('userName').textContent = usuario.nombre;
         document.getElementById('userRole').textContent = usuario.rol;
         usuarioActual = usuario;
-        
+
         aplicarRestriccionesPorRol(usuario);
       }
     }
@@ -260,24 +282,24 @@
       };
 
       // Ocultar todo primero
-      Object.values(items).forEach(el => { if(el) el.style.display = 'none'; });
+      Object.values(items).forEach(el => { if (el) el.style.display = 'none'; });
 
       // Mostrar según rol
       if (rol === 'Vendedor') {
-        if(items.ventas) items.ventas.style.display = '';
-        if(items.inventario) items.inventario.style.display = '';
-      } 
+        if (items.ventas) items.ventas.style.display = '';
+        if (items.inventario) items.inventario.style.display = '';
+      }
       else if (rol === 'Administrador') {
-        if(items.dashboard) items.dashboard.style.display = '';
-        if(items.ventas) items.ventas.style.display = '';
-        if(items.inventario) items.inventario.style.display = '';
-        if(items.reportes) items.reportes.style.display = '';
-        if(items.clientes) items.clientes.style.display = '';
-        if(items.usuarios) items.usuarios.style.display = '';
-      } 
+        if (items.dashboard) items.dashboard.style.display = '';
+        if (items.ventas) items.ventas.style.display = '';
+        if (items.inventario) items.inventario.style.display = '';
+        if (items.reportes) items.reportes.style.display = '';
+        if (items.clientes) items.clientes.style.display = '';
+        if (items.usuarios) items.usuarios.style.display = '';
+      }
       else if (rol === 'Super Admin') {
         // Mostrar todo
-        Object.values(items).forEach(el => { if(el) el.style.display = ''; });
+        Object.values(items).forEach(el => { if (el) el.style.display = ''; });
       }
     }
 
@@ -313,53 +335,59 @@
     }
 
     async function logout() {
-        console.log('Cerrando sesión...');
-        
-        try {
-            // 1. Intentar matar sesión en servidor
-            await fetch(`${API_BASE.replace('/api', '')}/logout`, { 
-                method: 'POST', 
-                credentials: 'include' 
-            });
-        } catch (error) {
-            console.error('Error contactando servidor:', error);
-        } finally {
-            // 2. DESTRUIR datos locales (Esto es lo que rompe el bucle)
-            localStorage.removeItem('usuario');
-            sessionStorage.clear(); // Limpia cualquier rastro de redirección
-            
-            // 3. Redirigir al login
-            window.location.href = '/login.html';
-        }
+      console.log('Cerrando sesión...');
+
+      try {
+        // 1. Intentar matar sesión en servidor
+        await fetch(`${API_BASE.replace('/api', '')}/logout`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+      } catch (error) {
+        console.error('Error contactando servidor:', error);
+      } finally {
+        // 2. DESTRUIR datos locales (Esto es lo que rompe el bucle)
+        localStorage.removeItem('usuario');
+        sessionStorage.clear(); // Limpia cualquier rastro de redirección
+
+        // 3. Redirigir al login
+        window.location.href = '/login.html';
+      }
     }
 
     // Inicialización al cargar la página
     window.addEventListener('DOMContentLoaded', async () => {
       try {
-          // Usamos authChecker si está disponible, si no, fallback manual
-          let usuario = null;
-          if (window.authChecker) {
-              usuario = await authChecker.getCurrentUser();
-          } else {
-              const res = await fetch(`${API_BASE}/me`, { credentials: 'include' });
-              if (res.ok) usuario = await res.json();
-          }
-          
-          if (!usuario) {
-              window.location.href = '/login.html';
-              return;
-          }
-          
-          actualizarInfoUsuario(usuario);
-          loadDashboard();
-          
+        // Usamos authChecker si está disponible, si no, fallback manual
+        let usuario = null;
+        if (window.authChecker) {
+          usuario = await authChecker.getCurrentUser();
+        } else {
+          const res = await fetch(`${API_BASE}/me`, { credentials: 'include' });
+          if (res.ok) usuario = await res.json();
+        }
+
+        if (!usuario) {
+          window.location.href = '/login.html';
+          return;
+        }
+
+        actualizarInfoUsuario(usuario);
+        loadDashboard();
+        loadDashboard();
+        // checkNotifications(); // Now handled by notification.js
+        // setInterval(checkNotifications, 60000); 
+
+
       } catch (err) {
-          console.error('❌ Error inicializando app:', err);
+        console.error('❌ Error inicializando app:', err);
       }
     });
   </script>
 
   <!-- Script de autenticación -->
   <script src="auth-check.js"></script>
+  <script src="notifications.js"></script>
 </body>
+
 </html>

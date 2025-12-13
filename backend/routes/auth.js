@@ -63,7 +63,6 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Contraseña incorrecta' });
     }
 
-    // ACTUALIZAR ÚLTIMO ACCESO - AGREGAR ESTO
     await pool.query(
       'UPDATE usuarios SET ultimo_acceso = CURRENT_TIMESTAMP WHERE id = $1',
       [user.id]
